@@ -21,18 +21,33 @@ struct SonicMergeApp: App {
     /// development but will not be shared with the future Share Extension target.
     let modelContainer: ModelContainer = {
         let schema = Schema([AudioClip.self])
-        let config = ModelConfiguration(
-            schema: schema,
-            groupContainer: .identifier(AppConstants.appGroupID)
-        )
+        // Use App Group container when entitlement is available; fall back to the default
+        // sandbox container when not (e.g., unit test host process or simulator without
+        // App Group capability configured). The Share Extension (Phase 5) requires the
+        // App Group container on device.
+        //
+        // Note: We check whether the App Group container URL resolves BEFORE creating
+        // ModelConfiguration with groupContainer — ModelConfiguration asserts internally
+        // if the group identifier cannot be resolved in the current sandbox.
+        let useAppGroup = FileManager.default
+            .containerURL(forSecurityApplicationGroupIdentifier: AppConstants.appGroupID) != nil
+
+        if useAppGroup {
+            let config = ModelConfiguration(
+                schema: schema,
+                groupContainer: .identifier(AppConstants.appGroupID)
+            )
+            if let container = try? ModelContainer(for: schema, configurations: config) {
+                return container
+            }
+        }
+
+        // Fallback: default sandbox container (no App Group sharing)
+        let fallbackConfig = ModelConfiguration(schema: schema)
         do {
-            return try ModelContainer(for: schema, configurations: [config])
+            return try ModelContainer(for: schema, configurations: fallbackConfig)
         } catch {
-            // Fatal: if the SwiftData store cannot be created, the app cannot function.
-            // Most common cause: App Group entitlement missing from the target.
-            // Fix: Xcode > target > Signing & Capabilities > App Groups >
-            //      add "group.com.yourteam.SonicMerge"
-            fatalError("Failed to create ModelContainer: \(error). Check App Group entitlement.")
+            fatalError("Failed to create ModelContainer: \(error)")
         }
     }()
 
