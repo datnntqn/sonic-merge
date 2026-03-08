@@ -29,7 +29,13 @@ Decimal phases appear between their surrounding integers in numeric order.
   2. Clips imported from sources with different sample rates or channel layouts produce correct merged output (no silence, no duration drift).
   3. Imported files survive app relaunch — clips are available in the next session without re-importing.
   4. App Group shared container is configured and accessible from both the main app target and the future Share Extension target.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 01-01-PLAN.md — Test infrastructure: SonicMergeTests target, audio fixtures, failing @Test stubs (Wave 1)
+- [ ] 01-02-PLAN.md — Foundation types: AudioClip @Model, AppConstants, UTType+Audio, SonicMergeApp wiring (Wave 1, parallel)
+- [ ] 01-03-PLAN.md — AudioNormalizationService: AVAssetReader+Writer pipeline, mono upmix (Wave 2, TDD)
+- [ ] 01-04-PLAN.md — Import pipeline: ImportViewModel, ImportView, end-to-end verification checkpoint (Wave 3)
 
 ### Phase 2: Merge Pipeline + Mixing Station UI
 **Goal**: Users can arrange clips, configure gaps and crossfades, and export a finished merged audio file — the complete core workflow is functional end-to-end.
@@ -80,7 +86,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + Import Pipeline | 0/TBD | Not started | - |
+| 1. Foundation + Import Pipeline | 0/4 | Planned | - |
 | 2. Merge Pipeline + Mixing Station UI | 0/TBD | Not started | - |
 | 3. AI Denoising Pipeline | 0/TBD | Not started | - |
 | 4. LUFS Normalization + Export Polish | 0/TBD | Not started | - |
