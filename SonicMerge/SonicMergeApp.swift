@@ -57,8 +57,8 @@ struct SonicMergeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            // ContentView is a placeholder. ImportView (Plan 04) replaces this.
-            ContentView()
+            ImportView()
+                .environment(ImportViewModel(modelContext: modelContainer.mainContext))
         }
         .modelContainer(modelContainer)
     }
