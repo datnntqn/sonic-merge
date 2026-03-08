@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-foundation-import-pipeline-02-PLAN.md
-last_updated: "2026-03-08T14:34:37.785Z"
+stopped_at: Completed 01-01-PLAN.md (test infrastructure + fixtures)
+last_updated: "2026-03-08T14:39:27.127Z"
 last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
 progress:
   total_phases: 5
   completed_phases: 0
   total_plans: 4
-  completed_plans: 1
+  completed_plans: 2
   percent: 0
 ---
 
@@ -51,6 +51,7 @@ Progress: [░░░░░░░░░░] 0%
 
 *Updated after each plan completion*
 | Phase 01-foundation-import-pipeline P02 | 4 | 2 tasks | 4 files |
+| Phase 01-foundation-import-pipeline P01 | 35 | 2 tasks | 9 files |
 
 ## Accumulated Context
 
@@ -66,6 +67,9 @@ Recent decisions affecting current work:
 - [Phase 01-foundation-import-pipeline]: Store fileURLRelativePath (filename only) in SwiftData — absolute App Group paths shift between device/simulator; reconstruct at runtime via AppConstants.clipsDirectory()
 - [Phase 01-foundation-import-pipeline]: UTType.aac not available as static member on iOS SDK; use UTType('public.aac-audio')\! via identifier string
 - [Phase 01-foundation-import-pipeline]: AVAudioSession launch failure is non-fatal — normalization via AVAssetWriter does not require active session; Phase 2 retries before first playback
+- [Phase 01-01]: SonicMergeTests uses PBXFileSystemSynchronizedRootGroup for zero-configuration test file inclusion (Xcode 26.3+)
+- [Phase 01-01]: iOS 26.2 ModelContainer uses variadic ModelConfiguration arguments — plan templates should use variadic not array form
+- [Phase 01-01]: Fixtures generated via Python wave module + afconvert (not ffmpeg/Swift script) — these tools are reliably available on macOS
 
 ### Pending Todos
 
@@ -78,6 +82,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T14:34:37.782Z
-Stopped at: Completed 01-foundation-import-pipeline-02-PLAN.md
+Last session: 2026-03-08T14:39:27.125Z
+Stopped at: Completed 01-01-PLAN.md (test infrastructure + fixtures)
 Resume file: None
