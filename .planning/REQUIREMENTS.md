@@ -9,9 +9,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Import
 
-- [ ] **IMP-01**: User can import multiple audio files in a single document picker session (multi-select)
+- [x] **IMP-01**: User can import multiple audio files in a single document picker session (multi-select)
 - [ ] **IMP-02**: User can receive audio files (.m4a, .wav, .aac) via iOS Share Sheet from other apps
-- [ ] **IMP-03**: App normalizes all imported audio to a canonical format (sample rate, channel layout) on import to prevent silent composition corruption
+- [x] **IMP-03**: App normalizes all imported audio to a canonical format (sample rate, channel layout) on import to prevent silent composition corruption
 - [ ] **IMP-04**: Each imported clip displays a waveform preview thumbnail on its audio card
 
 ### Merge & Editing
@@ -81,9 +81,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| IMP-01 | Phase 1 | Pending |
+| IMP-01 | Phase 1 | Complete |
 | IMP-02 | Phase 5 | Pending |
-| IMP-03 | Phase 1 | Pending |
+| IMP-03 | Phase 1 | Complete |
 | IMP-04 | Phase 2 | Pending |
 | MRG-01 | Phase 2 | Pending |
 | MRG-02 | Phase 2 | Pending |

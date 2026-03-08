@@ -1,3 +1,19 @@
+---
+gsd_state_version: 1.0
+milestone: v1.0
+milestone_name: milestone
+status: planning
+stopped_at: Completed 01-foundation-import-pipeline-02-PLAN.md
+last_updated: "2026-03-08T14:34:37.785Z"
+last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
+progress:
+  total_phases: 5
+  completed_phases: 0
+  total_plans: 4
+  completed_plans: 1
+  percent: 0
+---
+
 # Project State
 
 ## Project Reference
@@ -34,6 +50,7 @@ Progress: [░░░░░░░░░░] 0%
 - Trend: —
 
 *Updated after each plan completion*
+| Phase 01-foundation-import-pipeline P02 | 4 | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -46,6 +63,9 @@ Recent decisions affecting current work:
 - [Research]: Normalize all audio to a canonical sample rate at import time — AVMutableComposition silently corrupts mismatched-format compositions.
 - [Research]: Share Extension must be a thin file relay only — 120 MB process memory ceiling; never process audio in the extension.
 - [Research]: Phase 3 (Denoising) requires /gsd:research-phase before planning — Core ML model selection and coremltools pipeline not yet resolved.
+- [Phase 01-foundation-import-pipeline]: Store fileURLRelativePath (filename only) in SwiftData — absolute App Group paths shift between device/simulator; reconstruct at runtime via AppConstants.clipsDirectory()
+- [Phase 01-foundation-import-pipeline]: UTType.aac not available as static member on iOS SDK; use UTType('public.aac-audio')\! via identifier string
+- [Phase 01-foundation-import-pipeline]: AVAudioSession launch failure is non-fatal — normalization via AVAssetWriter does not require active session; Phase 2 retries before first playback
 
 ### Pending Todos
 
@@ -58,6 +78,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08
-Stopped at: Roadmap written; REQUIREMENTS.md traceability updated; ready to run /gsd:plan-phase 1.
+Last session: 2026-03-08T14:34:37.782Z
+Stopped at: Completed 01-foundation-import-pipeline-02-PLAN.md
 Resume file: None
