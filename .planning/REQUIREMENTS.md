@@ -82,28 +82,28 @@ Which phases cover which requirements. Updated during roadmap creation.
 | Requirement | Phase | Status |
 |-------------|-------|--------|
 | IMP-01 | Phase 1 | Pending |
-| IMP-02 | Phase 3 | Pending |
+| IMP-02 | Phase 5 | Pending |
 | IMP-03 | Phase 1 | Pending |
 | IMP-04 | Phase 2 | Pending |
 | MRG-01 | Phase 2 | Pending |
 | MRG-02 | Phase 2 | Pending |
-| MRG-03 | Phase 1 | Pending |
-| MRG-04 | Phase 5 | Pending |
-| DNS-01 | Phase 4 | Pending |
-| DNS-02 | Phase 4 | Pending |
-| DNS-03 | Phase 4 | Pending |
-| EXP-01 | Phase 1 | Pending |
-| EXP-02 | Phase 1 | Pending |
-| EXP-03 | Phase 5 | Pending |
-| EXP-04 | Phase 1 | Pending |
+| MRG-03 | Phase 2 | Pending |
+| MRG-04 | Phase 2 | Pending |
+| DNS-01 | Phase 3 | Pending |
+| DNS-02 | Phase 3 | Pending |
+| DNS-03 | Phase 3 | Pending |
+| EXP-01 | Phase 2 | Pending |
+| EXP-02 | Phase 2 | Pending |
+| EXP-03 | Phase 4 | Pending |
+| EXP-04 | Phase 2 | Pending |
 | UX-01 | Phase 2 | Pending |
-| UX-02 | Phase 4 | Pending |
+| UX-02 | Phase 3 | Pending |
 
 **Coverage:**
-- v1 requirements: 16 total
-- Mapped to phases: 16
-- Unmapped: 0 ✓
+- v1 requirements: 17 total
+- Mapped to phases: 17
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 after initial definition*
+*Last updated: 2026-03-08 — traceability updated after roadmap creation*
