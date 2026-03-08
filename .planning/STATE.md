@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 01-03-PLAN.md (AudioNormalizationService implementation)
-last_updated: "2026-03-08T15:04:31.324Z"
+stopped_at: "Paused at checkpoint: 01-04 Task 3 human-verify — awaiting App Group entitlement setup and simulator verification"
+last_updated: "2026-03-08T15:20:33.692Z"
 last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
 progress:
   total_phases: 5
-  completed_phases: 0
+  completed_phases: 1
   total_plans: 4
-  completed_plans: 3
+  completed_plans: 4
   percent: 0
 ---
 
@@ -53,6 +53,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation-import-pipeline P02 | 4 | 2 tasks | 4 files |
 | Phase 01-foundation-import-pipeline P01 | 35 | 2 tasks | 9 files |
 | Phase 01-foundation-import-pipeline P03 | 23min | 1 tasks | 3 files |
+| Phase 01-foundation-import-pipeline P04 | 15min | 2 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -74,6 +75,8 @@ Recent decisions affecting current work:
 - [Phase 01-foundation-import-pipeline]: Guard FileManager.containerURL before ModelConfiguration(groupContainer:) — prevents assertion crash in test host when App Group entitlement is absent
 - [Phase 01-foundation-import-pipeline]: AVAudioFormat on iOS 26.2 requires commonFormat:sampleRate:interleaved:channelLayout: signature — interleaved parameter is required before channelLayout
 - [Phase 01-foundation-import-pipeline]: ImportViewModel stub added to app target in Plan 03 to allow test compilation; Plan 04 replaces with full implementation
+- [Phase 01-foundation-import-pipeline]: ImportViewModel is @MainActor because ModelContext is main-actor-bound; actor hop to AudioNormalizationService is safe per RESEARCH.md Pitfall 4
+- [Phase 01-foundation-import-pipeline]: ContentView.swift retained as EmptyView stub for Xcode target membership rather than deleted from project.pbxproj
 
 ### Pending Todos
 
@@ -86,6 +89,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T15:04:31.322Z
-Stopped at: Completed 01-03-PLAN.md (AudioNormalizationService implementation)
+Last session: 2026-03-08T15:20:33.689Z
+Stopped at: Paused at checkpoint: 01-04 Task 3 human-verify — awaiting App Group entitlement setup and simulator verification
 Resume file: None

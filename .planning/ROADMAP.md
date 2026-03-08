@@ -12,7 +12,7 @@ SonicMerge delivers a complete on-device audio merge and denoising workflow in f
 
 Decimal phases appear between their surrounding integers in numeric order.
 
-- [ ] **Phase 1: Foundation + Import Pipeline** - Stable data models, audio session, and correct import with format normalization
+- [x] **Phase 1: Foundation + Import Pipeline** - Stable data models, audio session, and correct import with format normalization (completed 2026-03-08)
 - [ ] **Phase 2: Merge Pipeline + Mixing Station UI** - Full clip editing workflow and export to .m4a/.wav
 - [ ] **Phase 3: AI Denoising Pipeline** - Core ML on-device denoising with A/B comparison
 - [ ] **Phase 4: LUFS Normalization + Export Polish** - Podcast-standard loudness and polished export completion UX
@@ -86,7 +86,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Foundation + Import Pipeline | 3/4 | In Progress|  |
+| 1. Foundation + Import Pipeline | 4/4 | Complete   | 2026-03-08 |
 | 2. Merge Pipeline + Mixing Station UI | 0/TBD | Not started | - |
 | 3. AI Denoising Pipeline | 0/TBD | Not started | - |
 | 4. LUFS Normalization + Export Polish | 0/TBD | Not started | - |
