@@ -47,7 +47,14 @@ Plans:
   3. User can swipe left on a clip to delete it, and the clip is removed from the composition immediately.
   4. User can tap a gap control between clips and choose 0.5 s, 1.0 s, or 2.0 s of silence; the exported file contains the gap at the correct position.
   5. User can tap Export, see a progress indicator with a Cancel button, and receive a valid .m4a or .wav file in the system share sheet on completion.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 02-01-PLAN.md — Wave 0 test stubs: WaveformServiceTests, MixingStationViewModelTests, AudioMergerServiceTests (Wave 1)
+- [ ] 02-02-PLAN.md — Foundation: GapTransition model, WaveformService, AudioClip extensions (Wave 2)
+- [ ] 02-03-PLAN.md — MixingStationViewModel: clip management, import, export orchestration (Wave 2)
+- [ ] 02-04-PLAN.md — AudioMergerService: composition builder, m4a export, wav export, crossfade (Wave 3)
+- [ ] 02-05-PLAN.md — Mixing Station UI: MixingStationView, ClipCardView, GapRowView, export sheets, app rewire (Wave 4)
 
 ### Phase 3: AI Denoising Pipeline
 **Goal**: Users can apply on-device Core ML noise reduction to the merged audio, control suppression intensity, and verify the improvement with a live A/B comparison — entirely offline.
@@ -87,7 +94,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + Import Pipeline | 4/4 | Complete   | 2026-03-10 |
-| 2. Merge Pipeline + Mixing Station UI | 0/TBD | Not started | - |
+| 2. Merge Pipeline + Mixing Station UI | 0/5 | Not started | - |
 | 3. AI Denoising Pipeline | 0/TBD | Not started | - |
 | 4. LUFS Normalization + Export Polish | 0/TBD | Not started | - |
 | 5. Share Extension | 0/TBD | Not started | - |
