@@ -3,8 +3,8 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: "Paused at checkpoint: 01-04 Task 3 human-verify — awaiting App Group entitlement setup and simulator verification"
-last_updated: "2026-03-08T15:20:33.692Z"
+stopped_at: Completed 01-foundation-import-pipeline 01-04-PLAN.md — Phase 1 fully complete
+last_updated: "2026-03-10T14:21:11.793Z"
 last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
 progress:
   total_phases: 5
@@ -54,6 +54,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation-import-pipeline P01 | 35 | 2 tasks | 9 files |
 | Phase 01-foundation-import-pipeline P03 | 23min | 1 tasks | 3 files |
 | Phase 01-foundation-import-pipeline P04 | 15min | 2 tasks | 4 files |
+| Phase 01-foundation-import-pipeline P04 | 15min | 3 tasks | 4 files |
 
 ## Accumulated Context
 
@@ -77,6 +78,7 @@ Recent decisions affecting current work:
 - [Phase 01-foundation-import-pipeline]: ImportViewModel stub added to app target in Plan 03 to allow test compilation; Plan 04 replaces with full implementation
 - [Phase 01-foundation-import-pipeline]: ImportViewModel is @MainActor because ModelContext is main-actor-bound; actor hop to AudioNormalizationService is safe per RESEARCH.md Pitfall 4
 - [Phase 01-foundation-import-pipeline]: ContentView.swift retained as EmptyView stub for Xcode target membership rather than deleted from project.pbxproj
+- [Phase 01-foundation-import-pipeline]: Human-verified import pipeline on simulator 2026-03-10: clips import, normalize to 48kHz stereo AAC, list, and persist across relaunch confirmed
 
 ### Pending Todos
 
@@ -89,6 +91,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-08T15:20:33.689Z
-Stopped at: Paused at checkpoint: 01-04 Task 3 human-verify — awaiting App Group entitlement setup and simulator verification
+Last session: 2026-03-10T14:21:07.371Z
+Stopped at: Completed 01-foundation-import-pipeline 01-04-PLAN.md — Phase 1 fully complete
 Resume file: None
