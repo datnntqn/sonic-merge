@@ -19,6 +19,11 @@ struct AudioMergerServiceTests {
             .url(forResource: "stereo_48000", withExtension: "m4a")!
     }
 
+    /// Bundle resource root — stereo_48000.m4a is copied here as a flat bundle resource.
+    private func fixtureBaseURL() -> URL {
+        Bundle(for: BundleLocator.self).resourceURL!
+    }
+
     private func makeClip(sortOrder: Int) -> AudioClip {
         let clip = AudioClip(displayName: "clip\(sortOrder)", fileURLRelativePath: "stereo_48000.m4a", duration: 1.0)
         clip.sortOrder = sortOrder
@@ -38,7 +43,7 @@ struct AudioMergerServiceTests {
         let destURL = FileManager.default.temporaryDirectory
             .appending(path: UUID().uuidString + ".m4a")
         var finalProgress: Float = 0
-        for await p in await service.export(clips: [clipA, clipB], transitions: [gap], format: .m4a, destinationURL: destURL) {
+        for await p in await service.export(clips: [clipA, clipB], transitions: [gap], format: .m4a, destinationURL: destURL, clipsBaseURL: fixtureBaseURL()) {
             finalProgress = p
         }
 
@@ -59,7 +64,7 @@ struct AudioMergerServiceTests {
 
         let destURL = FileManager.default.temporaryDirectory
             .appending(path: UUID().uuidString + ".m4a")
-        for await _ in await service.export(clips: [clipA, clipB], transitions: [crossfade], format: .m4a, destinationURL: destURL) {}
+        for await _ in await service.export(clips: [clipA, clipB], transitions: [crossfade], format: .m4a, destinationURL: destURL, clipsBaseURL: fixtureBaseURL()) {}
 
         // Verify file exists and has audio track (crossfade rendered correctly)
         let asset = AVURLAsset(url: destURL)
@@ -78,7 +83,7 @@ struct AudioMergerServiceTests {
         let destURL = FileManager.default.temporaryDirectory
             .appending(path: UUID().uuidString + ".m4a")
 
-        for await _ in await service.export(clips: [clip], transitions: [], format: .m4a, destinationURL: destURL) {}
+        for await _ in await service.export(clips: [clip], transitions: [], format: .m4a, destinationURL: destURL, clipsBaseURL: fixtureBaseURL()) {}
 
         let attrs = try FileManager.default.attributesOfItem(atPath: destURL.path)
         let size = attrs[.size] as! Int
@@ -97,7 +102,7 @@ struct AudioMergerServiceTests {
         let destURL = FileManager.default.temporaryDirectory
             .appending(path: UUID().uuidString + ".wav")
 
-        for await _ in await service.export(clips: [clip], transitions: [], format: .wav, destinationURL: destURL) {}
+        for await _ in await service.export(clips: [clip], transitions: [], format: .wav, destinationURL: destURL, clipsBaseURL: fixtureBaseURL()) {}
 
         let attrs = try FileManager.default.attributesOfItem(atPath: destURL.path)
         let size = attrs[.size] as! Int
