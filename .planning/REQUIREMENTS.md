@@ -36,7 +36,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### UI / UX
 
-- [ ] **UX-01**: App applies "Minimalist Soft Professional" theme throughout (background #F8F9FA, accent #007AFF, AI accent #5856D6, card #FFFFFF, text #1C1C1E; corner radius 2pt; SF font)
+- [x] **UX-01**: App applies "Minimalist Soft Professional" theme throughout (background #F8F9FA, accent #007AFF, AI accent #5856D6, card #FFFFFF, text #1C1C1E; corner radius 2pt; SF font)
 - [ ] **UX-02**: User receives haptic feedback when toggling Before/After comparison
 
 ## v2 Requirements
@@ -96,7 +96,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXP-02 | Phase 2 | Complete |
 | EXP-03 | Phase 4 | Pending |
 | EXP-04 | Phase 2 | Complete |
-| UX-01 | Phase 2 | Pending |
+| UX-01 | Phase 2 | Complete |
 | UX-02 | Phase 3 | Pending |
 
 **Coverage:**
