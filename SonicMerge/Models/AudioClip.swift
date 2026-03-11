@@ -61,4 +61,13 @@ final class AudioClip {
             try AppConstants.clipsDirectory().appending(path: fileURLRelativePath)
         }
     }
+
+    /// The crossfade or silence gap that follows this clip (nil for the last clip).
+    var gapTransition: GapTransition?
+
+    /// URL of the 50-peak waveform sidecar file in the App Group clips directory.
+    /// Returns nil if the App Group container is inaccessible (e.g. in unit tests).
+    var waveformSidecarURL: URL? {
+        try? AppConstants.waveformURL(forClipFilename: fileURLRelativePath)
+    }
 }

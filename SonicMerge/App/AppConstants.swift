@@ -32,6 +32,18 @@ enum AppConstants {
         )
         return dir
     }
+
+    /// Returns the URL for the waveform sidecar file corresponding to a normalized clip.
+    ///
+    /// Sidecar file name: UUID stem of the clip filename + ".waveform"
+    /// Example: "A1B2C3D4-....m4a" → "A1B2C3D4-....waveform"
+    ///
+    /// - Parameter clipFilename: The `fileURLRelativePath` value stored in AudioClip (filename only).
+    /// - Throws: `AppGroupError.containerNotFound` when App Group container is inaccessible.
+    static func waveformURL(forClipFilename clipFilename: String) throws -> URL {
+        let stem = URL(fileURLWithPath: clipFilename).deletingPathExtension().lastPathComponent
+        return try clipsDirectory().appending(path: stem + ".waveform")
+    }
 }
 
 /// Errors thrown by App Group container operations.
