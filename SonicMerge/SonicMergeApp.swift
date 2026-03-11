@@ -20,7 +20,7 @@ struct SonicMergeApp: App {
     /// nil and ModelConfiguration falls back to the app sandbox — which is acceptable during
     /// development but will not be shared with the future Share Extension target.
     let modelContainer: ModelContainer = {
-        let schema = Schema([AudioClip.self])
+        let schema = Schema([AudioClip.self, GapTransition.self])
         // Use App Group container when entitlement is available; fall back to the default
         // sandbox container when not (e.g., unit test host process or simulator without
         // App Group capability configured). The Share Extension (Phase 5) requires the
@@ -57,8 +57,8 @@ struct SonicMergeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            ImportView()
-                .environment(ImportViewModel(modelContext: modelContainer.mainContext))
+            MixingStationView()
+                .environment(MixingStationViewModel(modelContext: modelContainer.mainContext))
         }
         .modelContainer(modelContainer)
     }
