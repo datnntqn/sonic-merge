@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 02-03-PLAN.md
-last_updated: "2026-03-11T15:50:46.627Z"
+stopped_at: Completed 02-04-PLAN.md
+last_updated: "2026-03-11T16:08:26.577Z"
 last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 9
-  completed_plans: 6
+  completed_plans: 7
   percent: 0
 ---
 
@@ -57,6 +57,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation-import-pipeline P04 | 15min | 3 tasks | 4 files |
 | Phase 02-merge-pipeline-mixing-station-ui P01 | 3min | 3 tasks | 3 files |
 | Phase 02-merge-pipeline-mixing-station-ui P03 | 25min | 2 tasks | 7 files |
+| Phase 02-merge-pipeline-mixing-station-ui P04 | 20min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -87,6 +88,7 @@ Recent decisions affecting current work:
 - [Phase 02-merge-pipeline-mixing-station-ui]: MixingStationViewModel.fetchAll() is async to match test call sites (await vm.fetchAll())
 - [Phase 02-merge-pipeline-mixing-station-ui]: ExportFormat kept as top-level enum (not AudioMergerService.ExportFormat) to match existing Plan 02-02 stub API
 - [Phase 02-merge-pipeline-mixing-station-ui]: MixingStationView stub created in Plan 03 to enable app target compilation; Plan 05 replaces with full UI
+- [Phase 02-merge-pipeline-mixing-station-ui]: ExportFormat kept as top-level enum matching stub API; clipsBaseURL injection for test fixture resolution; iOS 17 compatible exportAsynchronously; WAV via AVAssetReader+AVAssetWriter not AVAssetExportSession
 
 ### Pending Todos
 
@@ -99,6 +101,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-11T15:50:46.624Z
-Stopped at: Completed 02-03-PLAN.md
+Last session: 2026-03-11T16:08:26.574Z
+Stopped at: Completed 02-04-PLAN.md
 Resume file: None
