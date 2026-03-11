@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Phase 2 context gathered
-last_updated: "2026-03-10T14:44:16.583Z"
+stopped_at: Completed 02-01-PLAN.md
+last_updated: "2026-03-11T15:14:44.838Z"
 last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
 progress:
   total_phases: 5
   completed_phases: 1
-  total_plans: 4
-  completed_plans: 4
+  total_plans: 9
+  completed_plans: 5
   percent: 0
 ---
 
@@ -55,6 +55,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 01-foundation-import-pipeline P03 | 23min | 1 tasks | 3 files |
 | Phase 01-foundation-import-pipeline P04 | 15min | 2 tasks | 4 files |
 | Phase 01-foundation-import-pipeline P04 | 15min | 3 tasks | 4 files |
+| Phase 02-merge-pipeline-mixing-station-ui P01 | 3min | 3 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -79,6 +80,9 @@ Recent decisions affecting current work:
 - [Phase 01-foundation-import-pipeline]: ImportViewModel is @MainActor because ModelContext is main-actor-bound; actor hop to AudioNormalizationService is safe per RESEARCH.md Pitfall 4
 - [Phase 01-foundation-import-pipeline]: ContentView.swift retained as EmptyView stub for Xcode target membership rather than deleted from project.pbxproj
 - [Phase 01-foundation-import-pipeline]: Human-verified import pipeline on simulator 2026-03-10: clips import, normalize to 48kHz stereo AAC, list, and persist across relaunch confirmed
+- [Phase 02-merge-pipeline-mixing-station-ui]: WaveformService actor: generate(audioURL:destinationURL:) writes exactly 50 Float peaks to sidecar file
+- [Phase 02-merge-pipeline-mixing-station-ui]: AudioMergerService.export returns AsyncStream<Float> progress (0.0-1.0); ExportFormat enum: .m4a, .wav
+- [Phase 02-merge-pipeline-mixing-station-ui]: Crossfade overlap fixed at 0.5s — tests assert 1.5s total for two 1s clips
 
 ### Pending Todos
 
@@ -91,6 +95,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-10T14:44:16.575Z
-Stopped at: Phase 2 context gathered
-Resume file: .planning/phases/02-merge-pipeline-mixing-station-ui/02-CONTEXT.md
+Last session: 2026-03-11T15:14:38.004Z
+Stopped at: Completed 02-01-PLAN.md
+Resume file: None

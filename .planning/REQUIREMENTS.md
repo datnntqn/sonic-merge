@@ -12,14 +12,14 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **IMP-01**: User can import multiple audio files in a single document picker session (multi-select)
 - [ ] **IMP-02**: User can receive audio files (.m4a, .wav, .aac) via iOS Share Sheet from other apps
 - [x] **IMP-03**: App normalizes all imported audio to a canonical format (sample rate, channel layout) on import to prevent silent composition corruption
-- [ ] **IMP-04**: Each imported clip displays a waveform preview thumbnail on its audio card
+- [x] **IMP-04**: Each imported clip displays a waveform preview thumbnail on its audio card
 
 ### Merge & Editing
 
-- [ ] **MRG-01**: User can reorder clips via drag-and-drop in a vertical timeline
-- [ ] **MRG-02**: User can delete a clip via swipe-left gesture
-- [ ] **MRG-03**: User can insert a silent gap between clips (0.5s, 1.0s, or 2.0s)
-- [ ] **MRG-04**: User can apply a crossfade transition between adjacent segments
+- [x] **MRG-01**: User can reorder clips via drag-and-drop in a vertical timeline
+- [x] **MRG-02**: User can delete a clip via swipe-left gesture
+- [x] **MRG-03**: User can insert a silent gap between clips (0.5s, 1.0s, or 2.0s)
+- [x] **MRG-04**: User can apply a crossfade transition between adjacent segments
 
 ### AI Denoising
 
@@ -29,10 +29,10 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Export
 
-- [ ] **EXP-01**: User can export merged audio as high-quality .m4a
-- [ ] **EXP-02**: User can export merged audio as lossless .wav
+- [x] **EXP-01**: User can export merged audio as high-quality .m4a
+- [x] **EXP-02**: User can export merged audio as lossless .wav
 - [ ] **EXP-03**: User can apply LUFS loudness normalization (-16 LUFS podcast standard) before export
-- [ ] **EXP-04**: User can see export progress and cancel an in-progress export
+- [x] **EXP-04**: User can see export progress and cancel an in-progress export
 
 ### UI / UX
 
@@ -84,18 +84,18 @@ Which phases cover which requirements. Updated during roadmap creation.
 | IMP-01 | Phase 1 | Complete |
 | IMP-02 | Phase 5 | Pending |
 | IMP-03 | Phase 1 | Complete |
-| IMP-04 | Phase 2 | Pending |
-| MRG-01 | Phase 2 | Pending |
-| MRG-02 | Phase 2 | Pending |
-| MRG-03 | Phase 2 | Pending |
-| MRG-04 | Phase 2 | Pending |
+| IMP-04 | Phase 2 | Complete |
+| MRG-01 | Phase 2 | Complete |
+| MRG-02 | Phase 2 | Complete |
+| MRG-03 | Phase 2 | Complete |
+| MRG-04 | Phase 2 | Complete |
 | DNS-01 | Phase 3 | Pending |
 | DNS-02 | Phase 3 | Pending |
 | DNS-03 | Phase 3 | Pending |
-| EXP-01 | Phase 2 | Pending |
-| EXP-02 | Phase 2 | Pending |
+| EXP-01 | Phase 2 | Complete |
+| EXP-02 | Phase 2 | Complete |
 | EXP-03 | Phase 4 | Pending |
-| EXP-04 | Phase 2 | Pending |
+| EXP-04 | Phase 2 | Complete |
 | UX-01 | Phase 2 | Pending |
 | UX-02 | Phase 3 | Pending |
 

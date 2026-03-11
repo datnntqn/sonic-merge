@@ -94,7 +94,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Foundation + Import Pipeline | 4/4 | Complete   | 2026-03-10 |
-| 2. Merge Pipeline + Mixing Station UI | 0/5 | Not started | - |
+| 2. Merge Pipeline + Mixing Station UI | 1/5 | In Progress|  |
 | 3. AI Denoising Pipeline | 0/TBD | Not started | - |
 | 4. LUFS Normalization + Export Polish | 0/TBD | Not started | - |
 | 5. Share Extension | 0/TBD | Not started | - |
