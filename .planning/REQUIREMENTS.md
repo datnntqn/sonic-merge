@@ -23,9 +23,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### AI Denoising
 
-- [ ] **DNS-01**: User can apply on-device noise reduction to merged audio using a Core ML model (not AVAudioEngine Voice Processing — see PITFALLS.md)
-- [ ] **DNS-02**: User can adjust noise suppression intensity via a 0–100% slider
-- [ ] **DNS-03**: User can hold a "Listen Original" button to temporarily hear the unprocessed audio for A/B comparison
+- [x] **DNS-01**: User can apply on-device noise reduction to merged audio using a Core ML model (not AVAudioEngine Voice Processing — see PITFALLS.md)
+- [x] **DNS-02**: User can adjust noise suppression intensity via a 0–100% slider
+- [x] **DNS-03**: User can hold a "Listen Original" button to temporarily hear the unprocessed audio for A/B comparison
 
 ### Export
 
@@ -89,9 +89,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MRG-02 | Phase 2 | Complete |
 | MRG-03 | Phase 2 | Complete |
 | MRG-04 | Phase 2 | Complete |
-| DNS-01 | Phase 3 | Pending |
-| DNS-02 | Phase 3 | Pending |
-| DNS-03 | Phase 3 | Pending |
+| DNS-01 | Phase 3 | Complete |
+| DNS-02 | Phase 3 | Complete |
+| DNS-03 | Phase 3 | Complete |
 | EXP-01 | Phase 2 | Complete |
 | EXP-02 | Phase 2 | Complete |
 | EXP-03 | Phase 4 | Pending |
