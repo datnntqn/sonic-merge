@@ -442,9 +442,9 @@ private func computeVorbisWindow(size: Int) -> [Float] {
 
 // MARK: ERB Filterbank
 
-/// Compute the ERB (Equivalent Rectangular Bandwidth) forward filterbank.
-/// Returns a [freqBins * erbBands] matrix (row-major: [freqBins][erbBands]).
-private func computeERBFilterbank(freqBins: Int, erbBands: Int, fftSize: Int, sampleRate: Int) -> [Float] {
+/// Compute ERB band widths (number of FFT bins per ERB band).
+/// Shared helper used by both forward and inverse filterbank computation.
+private func computeERBBandWidths(freqBins: Int, erbBands: Int, fftSize: Int, sampleRate: Int) -> [Int] {
     let sr = Float(sampleRate)
     let minFreqsPerBand = 2
 
@@ -469,6 +469,13 @@ private func computeERBFilterbank(freqBins: Int, erbBands: Int, fftSize: Int, sa
         totalBins += width
     }
     if totalBins != freqBins { widths[erbBands - 1] += (freqBins - totalBins) }
+    return widths
+}
+
+/// Compute the ERB (Equivalent Rectangular Bandwidth) forward filterbank.
+/// Returns a [freqBins * erbBands] matrix (row-major: [freqBins][erbBands]).
+private func computeERBFilterbank(freqBins: Int, erbBands: Int, fftSize: Int, sampleRate: Int) -> [Float] {
+    let widths = computeERBBandWidths(freqBins: freqBins, erbBands: erbBands, fftSize: fftSize, sampleRate: sampleRate)
 
     // Forward filterbank [freqBins, erbBands]: each entry = 1/width for its band
     var forward = [Float](repeating: 0, count: freqBins * erbBands)
@@ -486,30 +493,7 @@ private func computeERBFilterbank(freqBins: Int, erbBands: Int, fftSize: Int, sa
 
 /// Compute the ERB inverse filterbank [erbBands * freqBins] (row-major: [erbBands][freqBins]).
 private func computeERBInverseFilterbank(freqBins: Int, erbBands: Int, fftSize: Int, sampleRate: Int) -> [Float] {
-    let sr = Float(sampleRate)
-    let minFreqsPerBand = 2
-
-    func freq2erb(_ f: Float) -> Float { 9.265 * log(1.0 + f / (24.7 * 9.265)) }
-    func erb2freq(_ e: Float) -> Float { 24.7 * 9.265 * (exp(e / 9.265) - 1.0) }
-
-    let nyquist = sr / 2.0
-    let erbLow = freq2erb(0)
-    let erbHigh = freq2erb(nyquist)
-    let step = (erbHigh - erbLow) / Float(erbBands)
-
-    var widths = [Int](repeating: 0, count: erbBands)
-    var totalBins = 0
-    for band in 0..<erbBands {
-        let freqLow  = erb2freq(erbLow + Float(band) * step)
-        let freqHigh = erb2freq(erbLow + Float(band + 1) * step)
-        let binLow   = Int(round(freqLow  * Float(fftSize) / sr))
-        let binHigh  = Int(round(freqHigh * Float(fftSize) / sr))
-        var width = max(minFreqsPerBand, binHigh - binLow)
-        if band == erbBands - 1 { width = freqBins - totalBins }
-        widths[band] = width
-        totalBins += width
-    }
-    if totalBins != freqBins { widths[erbBands - 1] += (freqBins - totalBins) }
+    let widths = computeERBBandWidths(freqBins: freqBins, erbBands: erbBands, fftSize: fftSize, sampleRate: sampleRate)
 
     var inverse = [Float](repeating: 0, count: erbBands * freqBins)
     var binOffset = 0
