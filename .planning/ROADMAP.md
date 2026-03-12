@@ -65,7 +65,13 @@ Plans:
   2. User can drag a slider from 0% to 100% and the denoised output audibly reflects the chosen suppression intensity.
   3. User can hold the "Listen Original" button and hear the unprocessed audio; releasing it returns to the denoised playback.
   4. Toggling between Before and After comparison produces a distinct haptic tap.
-**Plans**: TBD
+**Plans**: 4 plans
+
+Plans:
+- [ ] 03-01-PLAN.md — Wave 0: failing test stubs (NoiseReductionServiceTests, WetDryBlendTests, ABPlaybackTests) + coremltools conversion script and developer setup guide (Wave 1)
+- [ ] 03-02-PLAN.md — NoiseReductionService actor: DeepFilterNet3 Core ML inference, streaming 480-sample chunks, explicit RNN state, vDSP wet/dry blend (Wave 2, TDD)
+- [ ] 03-03-PLAN.md — CleaningLabViewModel: @Observable orchestration, A/B dual-player, haptic, stale banner, intensity blend (Wave 3)
+- [ ] 03-04-PLAN.md — CleaningLabView: full UI + MixingStationView Denoise toolbar integration + human verification checkpoint (Wave 4)
 
 ### Phase 4: LUFS Normalization + Export Polish
 **Goal**: Exported files meet podcast loudness standards and the export completion experience feels professional — users can normalize to -16 LUFS and share or save the output file with a single tap.
@@ -95,6 +101,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foundation + Import Pipeline | 4/4 | Complete   | 2026-03-10 |
 | 2. Merge Pipeline + Mixing Station UI | 1/5 | In Progress|  |
-| 3. AI Denoising Pipeline | 0/TBD | Not started | - |
+| 3. AI Denoising Pipeline | 0/4 | Not started | - |
 | 4. LUFS Normalization + Export Polish | 0/TBD | Not started | - |
 | 5. Share Extension | 0/TBD | Not started | - |
