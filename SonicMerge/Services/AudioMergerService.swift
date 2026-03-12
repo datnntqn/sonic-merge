@@ -86,6 +86,70 @@ actor AudioMergerService {
         }
     }
 
+    // MARK: - Single-File Export (used by CleaningLabView)
+
+    /// Export a single pre-built audio file (e.g., the intensity-blended denoised .wav)
+    /// to the given format without re-merging clips.
+    ///
+    /// Used by CleaningLabView to export the intensity-blended denoised output.
+    /// The source file is treated as a single-track composition.
+    ///
+    /// - Parameters:
+    ///   - inputURL: URL of the pre-built audio file to export.
+    ///   - format: Target output format (.m4a or .wav).
+    ///   - destinationURL: Output file path.
+    /// - Returns: AsyncStream of progress values 0.0...1.0.
+    func exportFile(
+        inputURL: URL,
+        format: ExportFormat,
+        destinationURL: URL
+    ) -> AsyncStream<Float> {
+        AsyncStream { continuation in
+            Task {
+                do {
+                    let asset = AVURLAsset(url: inputURL)
+                    let composition = AVMutableComposition()
+                    guard let track = composition.addMutableTrack(
+                        withMediaType: .audio,
+                        preferredTrackID: kCMPersistentTrackID_Invalid
+                    ) else {
+                        continuation.finish()
+                        return
+                    }
+                    guard let sourceTrack = try await asset.loadTracks(withMediaType: .audio).first else {
+                        continuation.finish()
+                        return
+                    }
+                    let duration = try await asset.load(.duration)
+                    try track.insertTimeRange(
+                        CMTimeRange(start: .zero, duration: duration),
+                        of: sourceTrack,
+                        at: .zero
+                    )
+                    let audioMix = AVMutableAudioMix()
+                    switch format {
+                    case .m4a:
+                        try await exportM4A(
+                            composition: composition,
+                            audioMix: audioMix,
+                            to: destinationURL,
+                            progress: continuation
+                        )
+                    case .wav:
+                        try await exportWAV(
+                            composition: composition,
+                            to: destinationURL,
+                            progress: continuation
+                        )
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish()
+                }
+            }
+        }
+    }
+
     // MARK: - Composition
 
     private func buildComposition(

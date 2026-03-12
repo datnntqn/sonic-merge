@@ -17,6 +17,8 @@ struct MixingStationView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
     @State private var showDocumentPicker = false
     @State private var showExportSheet = false
+    @State private var showCleaningLab = false
+    @State private var mergedFileURLForCleaning: URL?
 
     var body: some View {
         NavigationStack {
@@ -33,6 +35,11 @@ struct MixingStationView: View {
             .navigationTitle("SonicMerge")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
+            .navigationDestination(isPresented: $showCleaningLab) {
+                if let url = mergedFileURLForCleaning {
+                    CleaningLabView(mergedFileURL: url)
+                }
+            }
             // Export format picker (bottom sheet)
             .sheet(isPresented: $showExportSheet) {
                 ExportFormatSheet(isPresented: $showExportSheet) { format in
@@ -151,6 +158,41 @@ struct MixingStationView: View {
                 Label("Export", systemImage: "square.and.arrow.up")
             }
             .disabled(viewModel.clips.isEmpty || viewModel.isExporting)
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                navigateToCleaningLab()
+            } label: {
+                Label("Denoise", systemImage: "wand.and.sparkles")
+            }
+            .disabled(viewModel.clips.isEmpty)
+        }
+    }
+
+    // MARK: - Cleaning Lab Navigation
+
+    /// Produces a temp merged file from the current clips, then pushes CleaningLabView.
+    ///
+    /// Uses AudioMergerService to build a merged .wav file matching the current clip
+    /// arrangement. The URL is passed into CleaningLabView as the source for denoising.
+    private func navigateToCleaningLab() {
+        let destURL = FileManager.default.temporaryDirectory
+            .appending(path: "SonicMerge-CleaningLab-\(UUID().uuidString).wav")
+
+        Task {
+            let mergerService = AudioMergerService()
+            let stream = await mergerService.export(
+                clips: viewModel.clips.sorted(by: { $0.sortOrder < $1.sortOrder }),
+                transitions: viewModel.transitions,
+                format: .wav,
+                destinationURL: destURL
+            )
+            // Consume the stream to completion (wait for merge to finish)
+            for await _ in stream {}
+            if FileManager.default.fileExists(atPath: destURL.path) {
+                mergedFileURLForCleaning = destURL
+                showCleaningLab = true
+            }
         }
     }
 }
