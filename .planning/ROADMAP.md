@@ -14,7 +14,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 - [x] **Phase 1: Foundation + Import Pipeline** - Stable data models, audio session, and correct import with format normalization (completed 2026-03-08)
 - [ ] **Phase 2: Merge Pipeline + Mixing Station UI** - Full clip editing workflow and export to .m4a/.wav
-- [ ] **Phase 3: AI Denoising Pipeline** - Core ML on-device denoising with A/B comparison
+- [x] **Phase 3: AI Denoising Pipeline** - Core ML on-device denoising with A/B comparison (completed 2026-03-12)
 - [ ] **Phase 4: LUFS Normalization + Export Polish** - Podcast-standard loudness and polished export completion UX
 - [ ] **Phase 5: Share Extension** - Receive audio from any app via iOS Share Sheet
 
@@ -101,6 +101,6 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 |-------|----------------|--------|-----------|
 | 1. Foundation + Import Pipeline | 4/4 | Complete   | 2026-03-10 |
 | 2. Merge Pipeline + Mixing Station UI | 1/5 | In Progress|  |
-| 3. AI Denoising Pipeline | 2/4 | In Progress|  |
+| 3. AI Denoising Pipeline | 4/4 | Complete   | 2026-03-12 |
 | 4. LUFS Normalization + Export Polish | 0/TBD | Not started | - |
 | 5. Share Extension | 0/TBD | Not started | - |

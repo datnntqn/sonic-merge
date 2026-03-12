@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 03-ai-denoising-pipeline-03-03-PLAN.md
-last_updated: "2026-03-12T16:21:37.913Z"
+stopped_at: Completed 03-ai-denoising-pipeline-03-04-PLAN.md Task 1 — awaiting human-verify checkpoint
+last_updated: "2026-03-12T16:29:27.738Z"
 last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
 progress:
   total_phases: 5
-  completed_phases: 1
+  completed_phases: 2
   total_plans: 13
-  completed_plans: 11
+  completed_plans: 12
   percent: 0
 ---
 
@@ -61,6 +61,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 03-ai-denoising-pipeline P01 | 15min | 2 tasks | 5 files |
 | Phase 03-ai-denoising-pipeline P02 | 22min | 3 tasks | 3 files |
 | Phase 03-ai-denoising-pipeline P03 | 12min | 1 tasks | 2 files |
+| Phase 03-ai-denoising-pipeline P04 | 8min | 1 tasks | 3 files |
 
 ## Accumulated Context
 
@@ -97,6 +98,8 @@ Recent decisions affecting current work:
 - [Phase 03-ai-denoising-pipeline]: DeepFilterNet3 uses batch STFT interface (feat_erb/feat_spec), NOT chunk-RNN — signal processing embedded in NoiseReductionService.swift
 - [Phase 03-ai-denoising-pipeline]: vDSP.add() Swift overlay uses (a:b:)/(c:d:) labels not (a:scalar:) — RESEARCH.md Pattern 4 had incorrect labels
 - [Phase 03-ai-denoising-pipeline]: CleaningLabViewModel uses dependency injection init(noiseReductionService:waveformService:) for testability — no ModelContext needed; mergedFileURL received from MixingStationViewModel at NavigationLink call site
+- [Phase 03-ai-denoising-pipeline]: AudioMergerService.exportFile(inputURL:format:destinationURL:) added for CleaningLabView single-file export path — existing API is clips-based, single-file method wraps input in AVMutableComposition and reuses existing exportM4A/exportWAV methods
+- [Phase 03-ai-denoising-pipeline]: CleaningLabView is a pure rendering layer over CleaningLabViewModel; navigateToCleaningLab() merges clips to temp .wav before pushing CleaningLabView, matching ViewModel's single mergedFileURL contract
 
 ### Pending Todos
 
@@ -109,6 +112,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T16:21:37.910Z
-Stopped at: Completed 03-ai-denoising-pipeline-03-03-PLAN.md
+Last session: 2026-03-12T16:29:27.735Z
+Stopped at: Completed 03-ai-denoising-pipeline-03-04-PLAN.md Task 1 — awaiting human-verify checkpoint
 Resume file: None
