@@ -2,11 +2,9 @@
 //  WetDryBlendTests.swift
 //  SonicMergeTests
 //
-//  Failing stubs for DNS-02: wet/dry blend behaviors.
-//  RED state: NoiseReductionService blend function does not exist until Wave 2 (Plan 03-03).
-//
-//  Note: WetDryBlendTests is pure math — no model or audio file needed.
-//  Tests will turn green in Wave 2 when NoiseReductionService implements the blend function.
+//  Green tests for DNS-02: wet/dry blend behaviors.
+//  Pure math tests — no model or audio file needed.
+//  Tests verify the blend(original:denoised:intensity:) function in NoiseReductionService.swift.
 //
 
 import Testing
@@ -18,24 +16,37 @@ struct WetDryBlendTests {
     // MARK: - DNS-02: Zero intensity returns original
 
     @Test func testZeroIntensityReturnsOriginal() {
-        // Stub: blend(intensity:0.0) must return the original (dry) signal unchanged.
-        // Wave 2 must verify output equals the original buffer when intensity == 0.0.
-        Issue.record("not implemented — DNS-02: blend(intensity:0.0) must equal original")
+        let original: [Float] = [1, 2, 3]
+        let denoised: [Float] = [4, 5, 6]
+        let result = blend(original: original, denoised: denoised, intensity: 0.0)
+        #expect(result.count == 3)
+        #expect(abs(result[0] - 1.0) < 1e-5)
+        #expect(abs(result[1] - 2.0) < 1e-5)
+        #expect(abs(result[2] - 3.0) < 1e-5)
     }
 
     // MARK: - DNS-02: Full intensity returns denoised
 
     @Test func testFullIntensityReturnsDenoised() {
-        // Stub: blend(intensity:1.0) must return the fully denoised (wet) signal.
-        // Wave 2 must verify output equals the denoised buffer when intensity == 1.0.
-        Issue.record("not implemented — DNS-02: blend(intensity:1.0) must equal denoised")
+        let original: [Float] = [1, 2, 3]
+        let denoised: [Float] = [4, 5, 6]
+        let result = blend(original: original, denoised: denoised, intensity: 1.0)
+        #expect(result.count == 3)
+        #expect(abs(result[0] - 4.0) < 1e-5)
+        #expect(abs(result[1] - 5.0) < 1e-5)
+        #expect(abs(result[2] - 6.0) < 1e-5)
     }
 
     // MARK: - DNS-02: Half intensity is linear midpoint
 
     @Test func testHalfIntensityIsLinearMid() {
-        // Stub: blend(intensity:0.5) must equal (original + denoised) / 2 for each sample.
-        // Wave 2 must verify linear interpolation: output[i] = original[i] * 0.5 + denoised[i] * 0.5.
-        Issue.record("not implemented — DNS-02: blend(intensity:0.5) must equal (original + denoised) / 2")
+        // blend(original:[0,0,0], denoised:[2,2,2], intensity:0.5) → [1,1,1]
+        let original: [Float] = [0, 0, 0]
+        let denoised: [Float] = [2, 2, 2]
+        let result = blend(original: original, denoised: denoised, intensity: 0.5)
+        #expect(result.count == 3)
+        #expect(abs(result[0] - 1.0) < 1e-5)
+        #expect(abs(result[1] - 1.0) < 1e-5)
+        #expect(abs(result[2] - 1.0) < 1e-5)
     }
 }
