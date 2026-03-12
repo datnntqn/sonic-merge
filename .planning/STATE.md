@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 03-ai-denoising-pipeline-03-02-PLAN.md
-last_updated: "2026-03-12T16:13:59.343Z"
+stopped_at: Completed 03-ai-denoising-pipeline-03-03-PLAN.md
+last_updated: "2026-03-12T16:21:37.913Z"
 last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
 progress:
   total_phases: 5
   completed_phases: 1
   total_plans: 13
-  completed_plans: 10
+  completed_plans: 11
   percent: 0
 ---
 
@@ -60,6 +60,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 02-merge-pipeline-mixing-station-ui P04 | 20min | 1 tasks | 2 files |
 | Phase 03-ai-denoising-pipeline P01 | 15min | 2 tasks | 5 files |
 | Phase 03-ai-denoising-pipeline P02 | 22min | 3 tasks | 3 files |
+| Phase 03-ai-denoising-pipeline P03 | 12min | 1 tasks | 2 files |
 
 ## Accumulated Context
 
@@ -95,6 +96,7 @@ Recent decisions affecting current work:
 - [Phase 03-ai-denoising-pipeline]: RNN hidden states exported as explicit ct.TensorType I/O in conversion script — MLState requires iOS 18+, deployment target is iOS 17+
 - [Phase 03-ai-denoising-pipeline]: DeepFilterNet3 uses batch STFT interface (feat_erb/feat_spec), NOT chunk-RNN — signal processing embedded in NoiseReductionService.swift
 - [Phase 03-ai-denoising-pipeline]: vDSP.add() Swift overlay uses (a:b:)/(c:d:) labels not (a:scalar:) — RESEARCH.md Pattern 4 had incorrect labels
+- [Phase 03-ai-denoising-pipeline]: CleaningLabViewModel uses dependency injection init(noiseReductionService:waveformService:) for testability — no ModelContext needed; mergedFileURL received from MixingStationViewModel at NavigationLink call site
 
 ### Pending Todos
 
@@ -107,6 +109,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-12T16:13:59.340Z
-Stopped at: Completed 03-ai-denoising-pipeline-03-02-PLAN.md
+Last session: 2026-03-12T16:21:37.910Z
+Stopped at: Completed 03-ai-denoising-pipeline-03-03-PLAN.md
 Resume file: None
