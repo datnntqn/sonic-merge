@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node:*)",
+      "WebSearch",
+      "WebFetch(domain:apps.apple.com)",
+      "WebFetch(domain:snakamura.github.io)",
+      "WebFetch(domain:swiftpackageindex.com)",
+      "WebFetch(domain:www.kodeco.com)",
+      "WebFetch(domain:nshipster.com)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:castos.com)",
+      "WebFetch(domain:www.fleksy.com)",
+      "WebFetch(domain:dmtopolog.com)",
+      "Bash(git:*)",
+      "Bash(echo exit: $?:*)",
+      "Bash(find:*)",
+      "Bash(ls:*)",
+      "Bash(echo === $f ===:*)",
+      "Bash(xcodebuild build-for-testing:*)",
+      "Bash(xcodebuild -list -project /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge.xcodeproj 2>&1)",
+      "Bash(xcrun simctl:*)",
+      "Bash(xcodebuild test:*)",
+      "Bash(xcodebuild -scheme SonicMerge -showdestinations 2>&1 | grep -E \"name:|platform:\" | head -20)",
+      "Bash(xcodebuild build:*)",
+      "Read(//Users/datnnt/Desktop/**)",
+      "Bash(swift --version 2>&1 | head -3)",
+      "Bash(xcodebuild -project /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge.xcodeproj -scheme SonicMerge -destination 'id=5C4641C3-ED84-4FC7-81C0-44E3758C6ED4' build 2>&1 | grep -E \"BUILD SUCCEEDED|BUILD FAILED|error:\" | head -30)",
+      "Bash(xcodebuild -project /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge.xcodeproj -scheme SonicMerge -sdk iphonesimulator build 2>&1 | grep -E \"BUILD SUCCEEDED|BUILD FAILED|error:|note:\" | head -30)",
+      "Bash(xcodebuild -project /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge.xcodeproj -scheme SonicMerge -sdk iphonesimulator build 2>&1 | grep -E \"BUILD SUCCEEDED|BUILD FAILED|error:\" | head -20)",
+      "Bash(echo 'No App Group path found, trying alternate...' find ~/Library/Developer/CoreSimulator -name *.waveform)",
+      "WebFetch(domain:forums.swift.org)",
+      "WebFetch(domain:krisp.ai)",
+      "WebFetch(domain:picovoice.ai)",
+      "WebFetch(domain:gist.github.com)",
+      "WebFetch(domain:apple.github.io)",
+      "WebFetch(domain:www.photoroom.com)",
+      "WebFetch(domain:noisereducerai.com)"
+    ]
+  }
+}

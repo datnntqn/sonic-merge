@@ -142,3 +142,15 @@ None - no external service configuration required.
 ---
 *Phase: 01-foundation-import-pipeline*
 *Completed: 2026-03-08*
+
+## Self-Check: PASSED
+
+- FOUND: SonicMergeTests/AudioNormalizationServiceTests.swift
+- FOUND: SonicMergeTests/ImportViewModelTests.swift
+- FOUND: SonicMergeTests/PersistenceTests.swift
+- FOUND: SonicMergeTests/AppGroupTests.swift
+- FOUND: SonicMergeTests/Fixtures/mono_44100.wav
+- FOUND: SonicMergeTests/Fixtures/stereo_48000.m4a
+- FOUND: SonicMergeTests/Fixtures/aac_22050.aac
+- FOUND commit b00c63b (Task 1: SonicMergeTests target + fixtures)
+- FOUND commit b8a65cc (Task 2: failing test stubs)
