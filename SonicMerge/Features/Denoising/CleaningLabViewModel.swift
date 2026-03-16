@@ -137,7 +137,7 @@ final class CleaningLabViewModel {
                     inputURL: mergedFileURL,
                     outputURL: tempURL
                 )
-                for await p in stream {
+                for try await p in stream {
                     guard !Task.isCancelled else { break }
                     progress = p
                 }

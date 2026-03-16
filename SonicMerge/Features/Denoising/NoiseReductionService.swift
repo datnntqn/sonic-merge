@@ -54,16 +54,21 @@ actor NoiseReductionService {
     /// - Throws: `DenoiseError.modelNotFound` if DeepFilterNet3.mlpackage is absent from the bundle.
     private func loadModel() throws -> MLModel {
         if let m = _model { return m }
-        guard let modelURL = Bundle.main.url(forResource: "DeepFilterNet3", withExtension: "mlpackage") else {
+        // Xcode compiles .mlpackage → .mlmodelc at build time; the bundle contains .mlmodelc.
+        // Fall back to runtime compilation of .mlpackage for non-Xcode workflows.
+        let compiledURL: URL
+        if let bundledCompiled = Bundle.main.url(forResource: "DeepFilterNet3", withExtension: "mlmodelc") {
+            compiledURL = bundledCompiled
+        } else if let packageURL = Bundle.main.url(forResource: "DeepFilterNet3", withExtension: "mlpackage") {
+            compiledURL = try MLModel.compileModel(at: packageURL)
+        } else {
             throw DenoiseError.modelNotFound(
-                "DeepFilterNet3.mlpackage not found in app bundle. " +
-                "Run scripts/convert_deepfilternet3.py, then add the .mlpackage to the Xcode target. " +
-                "See docs/DENOISING_SETUP.md."
+                "DeepFilterNet3.mlmodelc not found in app bundle. " +
+                "Ensure DeepFilterNet3.mlpackage is added to the Xcode target and the project is rebuilt."
             )
         }
         let config = MLModelConfiguration()
         config.computeUnits = .all  // ANE + GPU + CPU — best latency on A13–A17
-        let compiledURL = try MLModel.compileModel(at: modelURL)
         let m = try MLModel(contentsOf: compiledURL, configuration: config)
         _model = m
         return m
@@ -83,14 +88,14 @@ actor NoiseReductionService {
     ///   - inputURL: Path to the merged .wav or .m4a (48 kHz stereo, Float32 capable).
     ///   - outputURL: Path to write the denoised Float32 PCM .wav.
     /// - Returns: AsyncStream<Float> yielding monotonically increasing progress values 0.0...1.0.
-    func denoise(inputURL: URL, outputURL: URL) -> AsyncStream<Float> {
-        AsyncStream { continuation in
+    func denoise(inputURL: URL, outputURL: URL) -> AsyncThrowingStream<Float, Error> {
+        AsyncThrowingStream { continuation in
             Task {
                 do {
                     try await self.runDenoising(inputURL: inputURL, outputURL: outputURL, continuation: continuation)
-                } catch {
-                    // Surface error via progress finish; callers should verify the output file exists
                     continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
                 }
             }
         }
@@ -101,7 +106,7 @@ actor NoiseReductionService {
     private func runDenoising(
         inputURL: URL,
         outputURL: URL,
-        continuation: AsyncStream<Float>.Continuation
+        continuation: AsyncThrowingStream<Float, Error>.Continuation
     ) async throws {
         // Load model
         let model = try loadModel()
@@ -208,7 +213,7 @@ actor NoiseReductionService {
 
         // --- STFT ---
         var analysisMem = [Float](repeating: 0, count: fftSize - hopSize)
-        let window = computeVorbisWindow(size: fftSize)
+        let window = nrsComputeVorbisWindow(size: fftSize)
         let (specReal, specImag) = computeSTFT(
             audio: paddedSamples, window: window,
             fftSize: fftSize, hopSize: hopSize, freqBins: freqBins,
@@ -221,7 +226,7 @@ actor NoiseReductionService {
         let erbFb = computeERBFilterbank(
             freqBins: freqBins, erbBands: erbBands, fftSize: fftSize, sampleRate: config.sampleRate
         )
-        var erbFeats = computeERBFeatures(
+        var erbFeats = nrsComputeERBFeatures(
             real: specReal, imag: specImag, erbFb: erbFb,
             freqBins: freqBins, erbBands: erbBands, numFrames: numFrames
         )
@@ -242,63 +247,84 @@ actor NoiseReductionService {
             hopSize: hopSize, sampleRate: config.sampleRate
         )
 
-        // --- Build Core ML inputs ---
-        // ERB: [1, 1, T, 32]
-        let erbInput = try MLMultiArray(
-            shape: [1, 1, numFrames as NSNumber, erbBands as NSNumber],
-            dataType: .float32
-        )
-        let erbPtr = erbInput.dataPointer.assumingMemoryBound(to: Float.self)
-        erbFeats.withUnsafeBufferPointer { src in
-            erbPtr.update(from: src.baseAddress!, count: numFrames * erbBands)
-        }
+        // --- Run Core ML inference in chunks (model T dimension is capped at 6000) ---
+        // Process in chunks of ≤ chunkMaxFrames, accumulating erbMask and coefsFlat for all frames.
+        let chunkMaxFrames = 4000  // safely below the model's max T=6000
 
-        // Spec: [1, 2, T, 96] — channel 0 = real, channel 1 = imag
-        let specInput = try MLMultiArray(
-            shape: [1, 2, numFrames as NSNumber, dfBins as NSNumber],
-            dataType: .float32
-        )
-        let specPtr = specInput.dataPointer.assumingMemoryBound(to: Float.self)
-        let channelStride = numFrames * dfBins
-        specFeatReal.withUnsafeBufferPointer { src in
-            specPtr.update(from: src.baseAddress!, count: channelStride)
-        }
-        specFeatImag.withUnsafeBufferPointer { src in
-            (specPtr + channelStride).update(from: src.baseAddress!, count: channelStride)
-        }
+        var erbMaskFlat = [Float](repeating: 0, count: numFrames * erbBands)
+        var coefsFlat   = [Float](repeating: 0, count: dfOrder * numFrames * dfBins * 2)
 
-        // --- Run Core ML inference ---
-        let inputProvider = try MLDictionaryFeatureProvider(dictionary: [
-            "feat_erb": MLFeatureValue(multiArray: erbInput),
-            "feat_spec": MLFeatureValue(multiArray: specInput)
-        ])
-        let outputProvider = try model.prediction(from: inputProvider)
+        var chunkStart = 0
+        while chunkStart < numFrames {
+            let chunkEnd    = min(chunkStart + chunkMaxFrames, numFrames)
+            let chunkFrames = chunkEnd - chunkStart
 
-        guard let erbMaskArray = outputProvider.featureValue(for: "erb_mask")?.multiArrayValue,
-              let dfCoefsArray = outputProvider.featureValue(for: "df_coefs")?.multiArrayValue else {
-            throw DenoiseError.predictionFailed("Model output tensors 'erb_mask' or 'df_coefs' not found.")
-        }
+            // ERB: [1, 1, chunkFrames, 32]
+            let erbInput = try MLMultiArray(
+                shape: [1, 1, chunkFrames as NSNumber, erbBands as NSNumber],
+                dataType: .float32
+            )
+            erbFeats.withUnsafeBufferPointer { src in
+                erbInput.dataPointer.assumingMemoryBound(to: Float.self)
+                    .update(from: src.baseAddress! + chunkStart * erbBands,
+                            count: chunkFrames * erbBands)
+            }
 
-        // --- Extract outputs ---
-        let erbMaskCount = numFrames * erbBands
-        var erbMaskFlat = [Float](repeating: 0, count: erbMaskCount)
-        extractMLArray(erbMaskArray, into: &erbMaskFlat, count: erbMaskCount)
+            // Spec: [1, 2, chunkFrames, 96]
+            let specInput = try MLMultiArray(
+                shape: [1, 2, chunkFrames as NSNumber, dfBins as NSNumber],
+                dataType: .float32
+            )
+            let specPtr = specInput.dataPointer.assumingMemoryBound(to: Float.self)
+            let chunkSpecStride = chunkFrames * dfBins
+            specFeatReal.withUnsafeBufferPointer { src in
+                specPtr.update(from: src.baseAddress! + chunkStart * dfBins, count: chunkSpecStride)
+            }
+            specFeatImag.withUnsafeBufferPointer { src in
+                (specPtr + chunkSpecStride).update(from: src.baseAddress! + chunkStart * dfBins,
+                                                   count: chunkSpecStride)
+            }
 
-        let coefsCount = dfOrder * numFrames * dfBins * 2
-        var coefsRaw = [Float](repeating: 0, count: coefsCount)
-        extractMLArray(dfCoefsArray, into: &coefsRaw, count: coefsCount)
+            // Predict
+            let inputProvider = try MLDictionaryFeatureProvider(dictionary: [
+                "feat_erb": MLFeatureValue(multiArray: erbInput),
+                "feat_spec": MLFeatureValue(multiArray: specInput)
+            ])
+            let outputProvider = try model.prediction(from: inputProvider)
 
-        // Reshape coefs from Core ML layout [O, T, F, 2] → [T, F, O, 2]
-        var coefsFlat = [Float](repeating: 0, count: coefsCount)
-        for t in 0..<numFrames {
-            for f in 0..<dfBins {
-                for o in 0..<dfOrder {
-                    let srcIdx = ((o * numFrames + t) * dfBins + f) * 2
-                    let dstIdx = ((t * dfBins + f) * dfOrder + o) * 2
-                    coefsFlat[dstIdx]     = coefsRaw[srcIdx]
-                    coefsFlat[dstIdx + 1] = coefsRaw[srcIdx + 1]
+            guard let erbMaskArray = outputProvider.featureValue(for: "erb_mask")?.multiArrayValue,
+                  let dfCoefsArray = outputProvider.featureValue(for: "df_coefs")?.multiArrayValue else {
+                throw DenoiseError.predictionFailed("Model output tensors 'erb_mask' or 'df_coefs' not found.")
+            }
+
+            // Copy erbMask [1, 1, chunkFrames, 32] → erbMaskFlat[chunkStart*erbBands...]
+            let chunkErbCount = chunkFrames * erbBands
+            var chunkErbMask = [Float](repeating: 0, count: chunkErbCount)
+            extractMLArray(erbMaskArray, into: &chunkErbMask, count: chunkErbCount)
+            chunkErbMask.withUnsafeBufferPointer { src in
+                erbMaskFlat.withUnsafeMutableBufferPointer { dst in
+                    (dst.baseAddress! + chunkStart * erbBands)
+                        .update(from: src.baseAddress!, count: chunkErbCount)
                 }
             }
+
+            // Reshape coefs [O, chunkFrames, F, 2] → [chunkFrames, F, O, 2], write to coefsFlat
+            let chunkCoefsCount = dfOrder * chunkFrames * dfBins * 2
+            var chunkCoefsRaw = [Float](repeating: 0, count: chunkCoefsCount)
+            extractMLArray(dfCoefsArray, into: &chunkCoefsRaw, count: chunkCoefsCount)
+            for t in 0..<chunkFrames {
+                let globalT = chunkStart + t
+                for f in 0..<dfBins {
+                    for o in 0..<dfOrder {
+                        let srcIdx = ((o * chunkFrames + t) * dfBins + f) * 2
+                        let dstIdx = ((globalT * dfBins + f) * dfOrder + o) * 2
+                        coefsFlat[dstIdx]     = chunkCoefsRaw[srcIdx]
+                        coefsFlat[dstIdx + 1] = chunkCoefsRaw[srcIdx + 1]
+                    }
+                }
+            }
+
+            chunkStart = chunkEnd
         }
 
         // --- Apply ERB mask to full spectrum ---
@@ -307,14 +333,14 @@ actor NoiseReductionService {
         )
         var enhancedReal = specReal
         var enhancedImag = specImag
-        applyERBMask(
+        nrsApplyERBMask(
             specReal: &enhancedReal, specImag: &enhancedImag,
             erbMask: erbMaskFlat, erbInvFb: erbInvFb,
             erbBands: erbBands, freqBins: freqBins, numFrames: numFrames
         )
 
         // --- Apply deep filtering to lowest dfBins ---
-        let (dfReal, dfImag) = applyDeepFiltering(
+        let (dfReal, dfImag) = nrsApplyDeepFiltering(
             specReal: specReal, specImag: specImag,
             coefs: coefsFlat,
             dfBins: dfBins, dfOrder: dfOrder, dfLookahead: config.dfLookahead,
@@ -429,7 +455,7 @@ struct DeepFilterNet3InferenceConfig {
 
 /// Compute the Vorbis analysis/synthesis window used by DeepFilterNet3.
 /// Formula: w[n] = sin(π/2 * sin²(π * (n + 0.5) / N))
-private func computeVorbisWindow(size: Int) -> [Float] {
+private func nrsComputeVorbisWindow(size: Int) -> [Float] {
     var window = [Float](repeating: 0, count: size)
     let n = Float(size)
     for i in 0..<size {
@@ -623,7 +649,7 @@ private func computeISTFT(
 // MARK: ERB Feature Extraction
 
 /// Compute ERB power features: [numFrames * erbBands] in dB.
-private func computeERBFeatures(
+private func nrsComputeERBFeatures(
     real: [Float], imag: [Float], erbFb: [Float],
     freqBins: Int, erbBands: Int, numFrames: Int
 ) -> [Float] {
@@ -690,7 +716,7 @@ private func applyUnitNormalization(
 // MARK: ERB Mask Application
 
 /// Apply ERB mask to the full spectrum (in place).
-private func applyERBMask(
+private func nrsApplyERBMask(
     specReal: inout [Float], specImag: inout [Float],
     erbMask: [Float], erbInvFb: [Float],
     erbBands: Int, freqBins: Int, numFrames: Int
@@ -705,7 +731,7 @@ private func applyERBMask(
 // MARK: Deep Filtering
 
 /// Apply deep filter coefficients to the spectrum.
-private func applyDeepFiltering(
+private func nrsApplyDeepFiltering(
     specReal: [Float], specImag: [Float],
     coefs: [Float],
     dfBins: Int, dfOrder: Int, dfLookahead: Int,
