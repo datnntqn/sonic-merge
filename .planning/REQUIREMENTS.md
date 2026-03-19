@@ -31,7 +31,7 @@ Requirements for initial release. Each maps to roadmap phases.
 
 - [x] **EXP-01**: User can export merged audio as high-quality .m4a
 - [x] **EXP-02**: User can export merged audio as lossless .wav
-- [ ] **EXP-03**: User can apply LUFS loudness normalization (-16 LUFS podcast standard) before export
+- [x] **EXP-03**: User can apply LUFS loudness normalization (-16 LUFS podcast standard) before export
 - [x] **EXP-04**: User can see export progress and cancel an in-progress export
 
 ### UI / UX
@@ -94,7 +94,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DNS-03 | Phase 3 | Complete |
 | EXP-01 | Phase 2 | Complete |
 | EXP-02 | Phase 2 | Complete |
-| EXP-03 | Phase 4 | Pending |
+| EXP-03 | Phase 4 | Complete |
 | EXP-04 | Phase 2 | Complete |
 | UX-01 | Phase 2 | Complete |
 | UX-02 | Phase 3 | Complete |
