@@ -80,8 +80,8 @@ struct CleaningLabView: View {
         .toolbar { toolbarContent }
         // 6. Export format picker
         .sheet(isPresented: $showExportSheet) {
-            ExportFormatSheet(isPresented: $showExportSheet) { format in
-                startExport(format: format)
+            ExportFormatSheet(isPresented: $showExportSheet) { options in
+                startExport(options: options)
             }
         }
         // Export progress sheet
@@ -284,10 +284,10 @@ struct CleaningLabView: View {
     /// Guards that denoisedTempURL is non-nil (written by CleaningLabViewModel).
     /// Calls AudioMergerService.exportFile(inputURL:format:destinationURL:) which
     /// handles format conversion (m4a via AVAssetExportSession, wav via AVAssetReader+Writer).
-    private func startExport(format: ExportFormat) {
+    private func startExport(options: ExportOptions) {
         guard let sourceURL = viewModel.denoisedTempURL else { return }
 
-        let ext = format == .m4a ? "m4a" : "wav"
+        let ext = options.format == .m4a ? "m4a" : "wav"
         let destinationURL = FileManager.default.temporaryDirectory
             .appending(path: "SonicMerge-DenoisedExport-\(UUID().uuidString).\(ext)")
 
@@ -298,7 +298,7 @@ struct CleaningLabView: View {
         exportTask = Task {
             let stream = await mergerService.exportFile(
                 inputURL: sourceURL,
-                format: format,
+                format: options.format,
                 destinationURL: destinationURL
             )
             for await p in stream {

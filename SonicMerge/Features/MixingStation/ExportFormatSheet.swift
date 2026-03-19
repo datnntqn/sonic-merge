@@ -3,13 +3,21 @@
 
 import SwiftUI
 
+/// Carries export configuration from ExportFormatSheet to the export callback.
+/// Introduced in Phase 4 to add the LUFS normalization flag alongside format.
+struct ExportOptions: Sendable {
+    let format: ExportFormat
+    let lufsNormalize: Bool
+}
+
 /// Bottom sheet presented when user taps Export.
 /// User selects .m4a or .wav, then taps the Export button to begin.
 struct ExportFormatSheet: View {
     @Binding var isPresented: Bool
-    let onExport: (ExportFormat) -> Void
+    let onExport: (ExportOptions) -> Void
 
     @State private var selectedFormat: ExportFormat = .m4a
+    @AppStorage("lufsNormalizationEnabled") private var lufsEnabled: Bool = false
 
     var body: some View {
         VStack(spacing: 24) {
@@ -25,9 +33,13 @@ struct ExportFormatSheet: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)
 
+            Toggle("Normalize Loudness (-16 LUFS)", isOn: $lufsEnabled)
+                .font(.system(.subheadline))
+                .padding(.horizontal, 24)
+
             Button(action: {
                 isPresented = false
-                onExport(selectedFormat)
+                onExport(ExportOptions(format: selectedFormat, lufsNormalize: lufsEnabled))
             }) {
                 Text("Export")
                     .font(.system(.body, design: .default, weight: .semibold))
@@ -40,6 +52,6 @@ struct ExportFormatSheet: View {
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
-        .presentationDetents([.height(200)])
+        .presentationDetents([.height(280)])
     }
 }

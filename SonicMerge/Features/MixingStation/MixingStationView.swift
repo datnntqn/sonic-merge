@@ -42,8 +42,8 @@ struct MixingStationView: View {
             }
             // Export format picker (bottom sheet)
             .sheet(isPresented: $showExportSheet) {
-                ExportFormatSheet(isPresented: $showExportSheet) { format in
-                    viewModel.exportMerged(format: format)
+                ExportFormatSheet(isPresented: $showExportSheet) { options in
+                    viewModel.exportMerged(format: options.format)
                 }
             }
             // Export progress (non-dismissible)
