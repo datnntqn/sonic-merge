@@ -3,14 +3,14 @@ gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
 status: planning
-stopped_at: Completed 04-03-PLAN.md
-last_updated: "2026-03-19T15:23:22.617Z"
+stopped_at: Completed 04-04-PLAN.md
+last_updated: "2026-03-19T15:39:35.957Z"
 last_activity: 2026-03-08 — Roadmap created; all 17 v1 requirements mapped to 5 phases.
 progress:
   total_phases: 5
   completed_phases: 2
   total_plans: 18
-  completed_plans: 15
+  completed_plans: 16
   percent: 0
 ---
 
@@ -65,6 +65,7 @@ Progress: [░░░░░░░░░░] 0%
 | Phase 04-lufs-normalization-export-polish P01 | 4min | 3 tasks | 3 files |
 | Phase 04-lufs-normalization-export-polish P02 | 24min | 3 tasks | 6 files |
 | Phase 04-lufs-normalization-export-polish PP03 | 10min | 2 tasks | 6 files |
+| Phase 04-lufs-normalization-export-polish P04 | 8min | 1 tasks | 1 files |
 
 ## Accumulated Context
 
@@ -109,6 +110,8 @@ Recent decisions affecting current work:
 - [Phase 04-lufs-normalization-export-polish]: LUFS gain for multi-clip export uses first clip as proxy — exact two-pass measure deferred to v2
 - [Phase 04-lufs-normalization-export-polish]: ExportProgressSheet.isNormalizing uses var with default false for backward compatibility at call sites not yet passing the parameter
 - [Phase 04-lufs-normalization-export-polish]: ActivityViewController.completionWithItemsHandler wired to coordinator.onDismiss ensuring state reset fires on every share sheet dismissal path
+- [Phase 04-lufs-normalization-export-polish]: CleaningLabView share sheet uses .sheet + ActivityViewController wrapper — onDismiss resets exportProgress, exportedFileURL, isNormalizingExport atomically fixing stuck-at-1.0 progress
+- [Phase 04-lufs-normalization-export-polish]: isNormalizingExport @State snapshots lufsNormalize at export Task launch so ExportProgressSheet title stays correct for the duration of the export
 
 ### Pending Todos
 
@@ -121,6 +124,6 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-03-19T15:23:22.615Z
-Stopped at: Completed 04-03-PLAN.md
+Last session: 2026-03-19T15:39:35.954Z
+Stopped at: Completed 04-04-PLAN.md
 Resume file: None
