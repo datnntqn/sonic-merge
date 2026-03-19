@@ -7,12 +7,13 @@ import SwiftUI
 /// Shows a ProgressView, percentage text, and a Cancel button.
 /// .interactiveDismissDisabled(true) prevents swipe-to-dismiss.
 struct ExportProgressSheet: View {
+    var isNormalizing: Bool = false
     let progress: Float
     let onCancel: () -> Void
 
     var body: some View {
         VStack(spacing: 20) {
-            Text("Exporting...")
+            Text(isNormalizing ? "Exporting & Normalizing..." : "Exporting...")
                 .font(.system(.headline))
                 .foregroundStyle(Color(red: 0.110, green: 0.110, blue: 0.118))
                 .padding(.top, 28)

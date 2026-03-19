@@ -33,9 +33,22 @@ struct ExportFormatSheet: View {
             .pickerStyle(.segmented)
             .padding(.horizontal, 24)
 
-            Toggle("Normalize Loudness (-16 LUFS)", isOn: $lufsEnabled)
-                .font(.system(.subheadline))
-                .padding(.horizontal, 24)
+            // LUFS normalization toggle row
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Normalize to -16 LUFS")
+                        .font(.system(.body))
+                        .foregroundStyle(Color(red: 0.110, green: 0.110, blue: 0.118))
+                    Text("Podcast standard (-16 LUFS)")
+                        .font(.system(.caption))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Toggle("", isOn: $lufsEnabled)
+                    .labelsHidden()
+                    .tint(Color(red: 0, green: 0.478, blue: 1.0))
+            }
+            .padding(.horizontal, 24)
 
             Button(action: {
                 isPresented = false
