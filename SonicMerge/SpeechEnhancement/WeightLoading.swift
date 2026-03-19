@@ -1,5 +1,16 @@
 import Foundation
-import AudioCommon
+
+public enum WeightLoadingError: Error, LocalizedError {
+    case noWeightsFound(URL)
+    case missingRequiredWeight(String)
+
+    public var errorDescription: String? {
+        switch self {
+        case .noWeightsFound(let url): return "No weights found at \(url.path)"
+        case .missingRequiredWeight(let msg): return msg
+        }
+    }
+}
 
 /// Weight loading for DeepFilterNet3 Core ML model.
 ///

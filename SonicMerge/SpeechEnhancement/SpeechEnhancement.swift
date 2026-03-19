@@ -1,6 +1,5 @@
 import Foundation
 import CoreML
-import AudioCommon
 
 /// Speech enhancement using DeepFilterNet3 on Core ML (FP16, Neural Engine).
 ///
@@ -215,42 +214,14 @@ public final class SpeechEnhancer {
         unitNormState = unitNormStateInit
     }
 
-    /// Load a pretrained DeepFilterNet3 model.
+    /// Load a SpeechEnhancer from a local directory containing
+    /// DeepFilterNet3.mlpackage and auxiliary.npz.
     ///
-    /// Downloads Core ML model and auxiliary data on first use, then caches locally.
-    ///
-    /// - Parameters:
-    ///   - modelId: HuggingFace model ID
-    ///   - progressHandler: Callback for download progress
-    /// - Returns: Ready-to-use speech enhancer
-    public static func fromPretrained(
-        modelId: String = defaultModelId,
-        progressHandler: ((Double, String) -> Void)? = nil
-    ) async throws -> SpeechEnhancer {
-        progressHandler?(0.0, "Downloading model...")
-
-        let cacheDir = try HuggingFaceDownloader.getCacheDirectory(for: modelId)
-
-        try await HuggingFaceDownloader.downloadWeights(
-            modelId: modelId,
-            to: cacheDir,
-            additionalFiles: [
-                "no_weights.safetensors",  // suppress default *.safetensors glob
-                "DeepFilterNet3.mlpackage/**",
-                "auxiliary.npz",
-            ],
-            progressHandler: { progress in
-                progressHandler?(progress * 0.8, "Downloading model...")
-            }
-        )
-
-        progressHandler?(0.8, "Loading model...")
-
+    /// - Parameter directory: URL to the folder containing the model files.
+    /// - Returns: Ready-to-use speech enhancer.
+    public static func fromLocalDirectory(_ directory: URL) throws -> SpeechEnhancer {
         let config = DeepFilterNet3Config.default
-        let (network, auxData) = try DeepFilterNet3WeightLoader.load(from: cacheDir)
-
-        progressHandler?(1.0, "Ready")
-
+        let (network, auxData) = try DeepFilterNet3WeightLoader.load(from: directory)
         return SpeechEnhancer(network: network, config: config, auxData: auxData)
     }
 

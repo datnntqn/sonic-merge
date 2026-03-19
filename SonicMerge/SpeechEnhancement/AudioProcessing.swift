@@ -1,6 +1,5 @@
 import Foundation
 import Accelerate
-import MLX
 
 // MARK: - Vorbis Window
 

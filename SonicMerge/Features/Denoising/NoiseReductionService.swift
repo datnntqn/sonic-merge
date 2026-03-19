@@ -68,7 +68,13 @@ actor NoiseReductionService {
             )
         }
         let config = MLModelConfiguration()
+        #if targetEnvironment(simulator)
+        // Simulator's Espresso engine lacks MPSGraph support; .all causes inference failure.
+        // cpuOnly avoids the "Espresso compiled without MPSGraph engine" crash path.
+        config.computeUnits = .cpuOnly
+        #else
         config.computeUnits = .all  // ANE + GPU + CPU — best latency on A13–A17
+        #endif
         let m = try MLModel(contentsOf: compiledURL, configuration: config)
         _model = m
         return m

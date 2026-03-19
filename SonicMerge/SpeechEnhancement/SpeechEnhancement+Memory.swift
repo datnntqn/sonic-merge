@@ -1,6 +1,4 @@
-import AudioCommon
-
-extension SpeechEnhancer: ModelMemoryManageable {
+extension SpeechEnhancer {
     public var isLoaded: Bool { _isLoaded }
 
     public func unload() {
@@ -10,7 +8,6 @@ extension SpeechEnhancer: ModelMemoryManageable {
     }
 
     public var memoryFootprint: Int {
-        // CoreML models don't expose weight memory easily; return 0
         guard _isLoaded else { return 0 }
         return 0
     }

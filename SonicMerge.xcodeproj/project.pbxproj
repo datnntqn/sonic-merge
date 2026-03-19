@@ -42,6 +42,13 @@
 			);
 			target = 3FA1001D2F5E000000000001 /* SonicMergeTests */;
 		};
+		3FCEB1BB2F6851D700901F90 /* Exceptions for "SonicMerge" folder in "SonicMergeTests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Resources/DeepFilterNet3.mlpackage,
+			);
+			target = 3FA1001D2F5E000000000001 /* SonicMergeTests */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -55,6 +62,9 @@
 		};
 		3FCEB0152F5DAED600901F90 /* SonicMerge */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3FCEB1BB2F6851D700901F90 /* Exceptions for "SonicMerge" folder in "SonicMergeTests" target */,
+			);
 			path = SonicMerge;
 			sourceTree = "<group>";
 		};

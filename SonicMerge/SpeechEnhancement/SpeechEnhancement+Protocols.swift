@@ -1,5 +1,3 @@
-import AudioCommon
-
-extension SpeechEnhancer: SpeechEnhancementModel {
+extension SpeechEnhancer {
     public var inputSampleRate: Int { Self.sampleRate }
 }
