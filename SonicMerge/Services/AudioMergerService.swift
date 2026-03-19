@@ -15,6 +15,7 @@
 //
 
 import AVFoundation
+import Accelerate
 import Foundation
 
 /// Export output format — kept as top-level enum to match the stub API locked by Plan 02-03.
@@ -47,13 +48,16 @@ actor AudioMergerService {
     ///   - destinationURL: Output file path.
     ///   - clipsBaseURL: Override clips directory (used in tests to point to bundle fixtures).
     ///                   Defaults to nil — resolves via AppConstants.clipsDirectory().
+    ///   - lufsNormalize: When true, measures integrated loudness and applies gain to reach -16 LUFS.
+    ///                    Defaults to false — preserves existing behavior exactly.
     /// - Returns: AsyncStream of progress values 0.0...1.0.
     func export(
         clips: [AudioClip],
         transitions: [GapTransition],
         format: ExportFormat,
         destinationURL: URL,
-        clipsBaseURL: URL? = nil
+        clipsBaseURL: URL? = nil,
+        lufsNormalize: Bool = false
     ) -> AsyncStream<Float> {
         AsyncStream { continuation in
             Task {
@@ -63,19 +67,45 @@ actor AudioMergerService {
                         transitions: transitions,
                         clipsBaseURL: clipsBaseURL
                     )
+
+                    // Compute LUFS gain scalar if normalization requested.
+                    // For multi-clip export, measure LUFS on the first clip as a proxy
+                    // (acceptable approximation for MVP — exact measurement deferred to v2
+                    // which would require a temp-WAV measure pass).
+                    var lufsGainScalar: Float = 1.0
+                    if lufsNormalize, let firstClip = clips.sorted(by: { $0.sortOrder < $1.sortOrder }).first {
+                        continuation.yield(0.05)
+                        let lufsService = LUFSNormalizationService()
+                        let clipURL: URL
+                        if let base = clipsBaseURL {
+                            clipURL = base.appending(path: firstClip.fileURLRelativePath)
+                        } else if let url = try? firstClip.fileURL {
+                            clipURL = url
+                        } else {
+                            clipURL = destinationURL  // fallback — no-op
+                        }
+                        let scalar = await lufsService.gainScalar(for: clipURL)
+                        lufsGainScalar = Float(scalar)
+                        continuation.yield(0.15)
+                    }
+
                     switch format {
                     case .m4a:
                         try await exportM4A(
                             composition: composition,
                             audioMix: audioMix,
                             to: destinationURL,
-                            progress: continuation
+                            progress: continuation,
+                            gainScalar: lufsGainScalar,
+                            progressRange: lufsNormalize ? (0.15, 1.0) : (0.0, 1.0)
                         )
                     case .wav:
                         try await exportWAV(
                             composition: composition,
                             to: destinationURL,
-                            progress: continuation
+                            progress: continuation,
+                            gainScalar: lufsGainScalar,
+                            progressRange: lufsNormalize ? (0.15, 1.0) : (0.0, 1.0)
                         )
                     }
                     continuation.finish()
@@ -98,11 +128,14 @@ actor AudioMergerService {
     ///   - inputURL: URL of the pre-built audio file to export.
     ///   - format: Target output format (.m4a or .wav).
     ///   - destinationURL: Output file path.
+    ///   - lufsNormalize: When true, measures LUFS on inputURL and applies gain to reach -16 LUFS.
+    ///                    Defaults to false — preserves existing behavior exactly.
     /// - Returns: AsyncStream of progress values 0.0...1.0.
     func exportFile(
         inputURL: URL,
         format: ExportFormat,
-        destinationURL: URL
+        destinationURL: URL,
+        lufsNormalize: Bool = false
     ) -> AsyncStream<Float> {
         AsyncStream { continuation in
             Task {
@@ -127,19 +160,34 @@ actor AudioMergerService {
                         at: .zero
                     )
                     let audioMix = AVMutableAudioMix()
+
+                    // Measure LUFS on the source file directly (single-file path is exact).
+                    var lufsGainScalar: Float = 1.0
+                    if lufsNormalize {
+                        continuation.yield(0.05)
+                        let lufsService = LUFSNormalizationService()
+                        let scalar = await lufsService.gainScalar(for: inputURL)
+                        lufsGainScalar = Float(scalar)
+                        continuation.yield(0.15)
+                    }
+
                     switch format {
                     case .m4a:
                         try await exportM4A(
                             composition: composition,
                             audioMix: audioMix,
                             to: destinationURL,
-                            progress: continuation
+                            progress: continuation,
+                            gainScalar: lufsGainScalar,
+                            progressRange: lufsNormalize ? (0.15, 1.0) : (0.0, 1.0)
                         )
                     case .wav:
                         try await exportWAV(
                             composition: composition,
                             to: destinationURL,
-                            progress: continuation
+                            progress: continuation,
+                            gainScalar: lufsGainScalar,
+                            progressRange: lufsNormalize ? (0.15, 1.0) : (0.0, 1.0)
                         )
                     }
                     continuation.finish()
@@ -275,7 +323,9 @@ actor AudioMergerService {
         composition: AVMutableComposition,
         audioMix: AVAudioMix,
         to url: URL,
-        progress: AsyncStream<Float>.Continuation
+        progress: AsyncStream<Float>.Continuation,
+        gainScalar: Float = 1.0,
+        progressRange: (Float, Float) = (0.0, 1.0)
     ) async throws {
         guard let session = AVAssetExportSession(
             asset: composition,
@@ -284,14 +334,28 @@ actor AudioMergerService {
 
         session.outputFileType = .m4a
         session.outputURL = url
-        session.audioMix = audioMix
         try? FileManager.default.removeItem(at: url)
+
+        // Apply LUFS gain via AVMutableAudioMixInputParameters when gainScalar != 1.0.
+        // Merges with existing crossfade parameters — does NOT replace them.
+        if gainScalar != 1.0, let firstTrack = composition.tracks(withMediaType: .audio).first {
+            let mutableMix = AVMutableAudioMix()
+            let existingParams = (audioMix as? AVMutableAudioMix)?.inputParameters ?? audioMix.inputParameters
+            let gainParams = AVMutableAudioMixInputParameters(track: firstTrack)
+            gainParams.setVolume(gainScalar, at: .zero)
+            mutableMix.inputParameters = existingParams + [gainParams]
+            session.audioMix = mutableMix
+        } else {
+            session.audioMix = audioMix
+        }
 
         // Poll progress at 100ms intervals.
         // KVO does not work reliably on AVAssetExportSession.progress across all iOS versions.
         let pollingTask = Task {
             while !Task.isCancelled {
-                progress.yield(session.progress)
+                let rawProgress = session.progress
+                let mapped = progressRange.0 + rawProgress * (progressRange.1 - progressRange.0)
+                progress.yield(mapped)
                 try? await Task.sleep(nanoseconds: 100_000_000)  // 100ms
             }
         }
@@ -315,22 +379,28 @@ actor AudioMergerService {
     // MARK: - WAV Export (EXP-02)
     //
     // CRITICAL: Cannot use AVAssetExportSession for WAV from an AAC source — Pitfall 1.
-    // Decode with AVAssetReader (Linear PCM float32 output), re-encode to int16 via
-    // AVAssetWriter using the .wav file type.
+    // Decode with AVAssetReader (Linear PCM float32 output when gainScalar != 1.0,
+    // int16 otherwise), apply gain via vDSP_vsmul, re-encode to int16 via AVAssetWriter.
 
     private func exportWAV(
         composition: AVMutableComposition,
         to url: URL,
-        progress: AsyncStream<Float>.Continuation
+        progress: AsyncStream<Float>.Continuation,
+        gainScalar: Float = 1.0,
+        progressRange: (Float, Float) = (0.0, 1.0)
     ) async throws {
         let reader = try AVAssetReader(asset: composition)
+
+        // Use float32 when gain is applied so vDSP_vsmul works correctly.
+        // Use int16 otherwise (no precision loss, matches original behavior).
+        let useFloat = gainScalar != 1.0
         let readerOutput = AVAssetReaderAudioMixOutput(
             audioTracks: composition.tracks(withMediaType: .audio),
             audioSettings: [
                 AVFormatIDKey: Int(kAudioFormatLinearPCM),
-                AVLinearPCMBitDepthKey: 16,
+                AVLinearPCMBitDepthKey: useFloat ? 32 : 16,
                 AVLinearPCMIsBigEndianKey: false,
-                AVLinearPCMIsFloatKey: false,
+                AVLinearPCMIsFloatKey: useFloat,
                 AVLinearPCMIsNonInterleaved: false
             ]
         )
@@ -364,8 +434,12 @@ actor AudioMergerService {
                 while writerInput.isReadyForMoreMediaData {
                     if let buf = readerOutput.copyNextSampleBuffer() {
                         let pts = CMSampleBufferGetPresentationTimeStamp(buf).seconds
-                        progress.yield(Float(min(pts / max(totalSeconds, 1), 0.99)))
-                        writerInput.append(buf)
+                        let rawProgress = Float(min(pts / max(totalSeconds, 1), 0.99))
+                        let mappedProgress = progressRange.0 + rawProgress * (progressRange.1 - progressRange.0)
+                        progress.yield(mappedProgress)
+                        // Apply gain in-place when gainScalar != 1.0 (float32 buffers only)
+                        let gained = self.applyGain(to: buf, scalar: gainScalar)
+                        writerInput.append(gained ?? buf)
                     } else {
                         writerInput.markAsFinished()
                         Task {
@@ -382,6 +456,34 @@ actor AudioMergerService {
             throw writer.error ?? MergeError.exportFailed
         }
         progress.yield(1.0)
+    }
+
+    // MARK: - Gain Application (EXP-03 LUFS normalization)
+
+    /// Applies a linear gain scalar to a float32 PCM CMSampleBuffer in-place via vDSP.
+    /// Returns nil if the buffer cannot be modified or scalar is 1.0 (no-op).
+    /// Caller falls back to appending the original buffer when nil is returned.
+    ///
+    /// REQUIRES: Reader output settings use AVLinearPCMIsFloatKey: true.
+    private func applyGain(to sampleBuffer: CMSampleBuffer, scalar: Float) -> CMSampleBuffer? {
+        guard scalar != 1.0 else { return nil }
+        guard let blockBuffer = CMSampleBufferGetDataBuffer(sampleBuffer) else { return nil }
+        let numSamples = CMSampleBufferGetNumSamples(sampleBuffer)
+        guard numSamples > 0 else { return nil }
+
+        var dataLength = 0
+        var dataPointer: UnsafeMutablePointer<Int8>?
+        guard CMBlockBufferGetDataPointer(
+            blockBuffer, atOffset: 0,
+            lengthAtOffsetOut: nil, totalLengthOut: &dataLength,
+            dataPointerOut: &dataPointer
+        ) == noErr, let ptr = dataPointer else { return nil }
+
+        let floatPtr = UnsafeMutableRawPointer(ptr).assumingMemoryBound(to: Float.self)
+        let floatCount = vDSP_Length(dataLength / MemoryLayout<Float>.size)
+        var s = scalar
+        vDSP_vsmul(floatPtr, 1, &s, floatPtr, 1, floatCount)
+        return sampleBuffer  // modified in-place
     }
 }
 

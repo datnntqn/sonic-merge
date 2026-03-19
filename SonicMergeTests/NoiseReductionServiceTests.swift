@@ -65,7 +65,7 @@ struct NoiseReductionServiceTests {
 
         let service = NoiseReductionService()
         let stream = await service.denoise(inputURL: inputURL, outputURL: outputURL)
-        for await _ in stream {}
+        for try await _ in stream {}
 
         let exists = FileManager.default.fileExists(atPath: outputURL.path)
         #expect(exists, "Denoised output file must exist after denoise() completes")
@@ -81,7 +81,7 @@ struct NoiseReductionServiceTests {
 
         let service = NoiseReductionService()
         let stream = await service.denoise(inputURL: inputURL, outputURL: outputURL)
-        for await _ in stream {}
+        for try await _ in stream {}
 
         let outputFile = try AVAudioFile(forReading: outputURL)
         let fmt = outputFile.processingFormat
@@ -102,7 +102,7 @@ struct NoiseReductionServiceTests {
         let stream = await service.denoise(inputURL: inputURL, outputURL: outputURL)
 
         var values: [Float] = []
-        for await value in stream {
+        for try await value in stream {
             values.append(value)
         }
 
