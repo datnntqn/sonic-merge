@@ -36,6 +36,9 @@ struct CleaningLabView: View {
     @State private var showExportProgressSheet = false
     @State private var exportProgress: Float = 0.0
     @State private var exportTask: Task<Void, Never>?
+    @State private var showShareSheet = false
+    @State private var exportedFileURL: URL? = nil
+    @State private var isNormalizingExport = false
 
     // MARK: - Computed Bindings
 
@@ -87,14 +90,28 @@ struct CleaningLabView: View {
         // Export progress sheet
         .sheet(isPresented: $showExportProgressSheet) {
             ExportProgressSheet(
+                isNormalizing: isNormalizingExport,
                 progress: exportProgress,
                 onCancel: {
                     exportTask?.cancel()
                     exportTask = nil
                     showExportProgressSheet = false
+                    exportProgress = 0
+                    isNormalizingExport = false
                 }
             )
             .interactiveDismissDisabled(true)
+        }
+        // Share sheet after successful export (replaces imperative shareExportedFile helper)
+        .sheet(isPresented: $showShareSheet) {
+            if let url = exportedFileURL {
+                ActivityViewController(activityItems: [url], onDismiss: {
+                    exportedFileURL = nil
+                    exportProgress = 0
+                    isNormalizingExport = false
+                    showShareSheet = false
+                })
+            }
         }
         // 7. Progress modal (non-dismissible) — reuses ExportProgressSheet
         .sheet(isPresented: .constant(viewModel.isProcessing)) {
@@ -293,13 +310,15 @@ struct CleaningLabView: View {
 
         showExportProgressSheet = true
         exportProgress = 0.0
+        isNormalizingExport = options.lufsNormalize
 
         let mergerService = AudioMergerService()
         exportTask = Task {
             let stream = await mergerService.exportFile(
                 inputURL: sourceURL,
                 format: options.format,
-                destinationURL: destinationURL
+                destinationURL: destinationURL,
+                lufsNormalize: options.lufsNormalize   // NEW — threads LUFS flag
             )
             for await p in stream {
                 guard !Task.isCancelled else { break }
@@ -307,23 +326,16 @@ struct CleaningLabView: View {
             }
             if !Task.isCancelled {
                 exportProgress = 1.0
-                // Brief delay so the user sees 100% before sheet dismisses
+                // Brief delay so user sees 100% before sheet dismisses
                 try? await Task.sleep(nanoseconds: 300_000_000)
                 showExportProgressSheet = false
-                // Present share sheet with the exported file
                 if FileManager.default.fileExists(atPath: destinationURL.path) {
-                    await shareExportedFile(destinationURL)
+                    // Use sheet-based ActivityViewController instead of imperative present()
+                    exportedFileURL = destinationURL
+                    showShareSheet = true
                 }
             }
         }
-    }
-
-    @MainActor
-    private func shareExportedFile(_ url: URL) {
-        guard let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let rootVC = windowScene.windows.first?.rootViewController else { return }
-        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
-        rootVC.present(activityVC, animated: true)
     }
 }
 
