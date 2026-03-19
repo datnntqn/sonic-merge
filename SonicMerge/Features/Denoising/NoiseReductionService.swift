@@ -373,7 +373,14 @@ actor NoiseReductionService {
         let trimStart = hopSize
         let trimEnd = min(trimStart + samples.count, rawOutput.count)
         guard trimEnd > trimStart else { return samples }
-        return Array(rawOutput[trimStart..<trimEnd])
+        
+        // Ensure output length exactly matches input length for blend() compatibility
+        var result = Array(rawOutput[trimStart..<trimEnd])
+        if result.count < samples.count {
+            // Pad with zeros if STFT produced fewer samples than expected
+            result.append(contentsOf: [Float](repeating: 0, count: samples.count - result.count))
+        }
+        return result
     }
 
     // MARK: - MLMultiArray extraction (handles Float16 output from Core ML)
