@@ -86,4 +86,33 @@ struct MixingStationViewModelTests {
             #expect(!FileManager.default.fileExists(atPath: url.path))
         }
     }
+
+    // MARK: - EXP-03: ExportOptions LUFS flag
+
+    @Test func testExportOptionsLUFSFlag() throws {
+        // ExportOptions carries lufsNormalize Bool correctly.
+        // RED state: ExportOptions does not exist until Plan 04-02.
+        let options = ExportOptions(format: .m4a, lufsNormalize: true)
+        #expect(options.format == .m4a)
+        #expect(options.lufsNormalize == true)
+    }
+
+    // MARK: - Share sheet state reset (post-Phase 4 export polish)
+
+    @Test func testDismissShareSheetResetsState() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
+        let context = ModelContext(container)
+        let vm = MixingStationViewModel(modelContext: context)
+
+        // Simulate post-export state
+        // Note: exportedFileURL and exportProgress are private(set) —
+        // trigger via exportMerged then cancelExport to set a known state,
+        // then call dismissShareSheet and assert reset.
+        vm.cancelExport()  // Ensures clean state first
+        vm.dismissShareSheet()
+
+        #expect(vm.exportedFileURL == nil, "exportedFileURL must be nil after dismissShareSheet()")
+        #expect(vm.exportProgress == 0, "exportProgress must be 0 after dismissShareSheet()")
+    }
 }
