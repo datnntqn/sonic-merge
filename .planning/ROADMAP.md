@@ -80,7 +80,14 @@ Plans:
 **Success Criteria** (what must be TRUE):
   1. User can enable LUFS normalization before export and the exported file measures -16 LUFS when analyzed in an external tool.
   2. Export completion presents a share/save sheet so the user can send the file to Files, AirDrop, or another app without leaving SonicMerge.
-**Plans**: TBD
+**Plans**: 5 plans
+
+Plans:
+- [ ] 04-01-PLAN.md — Wave 0: test stubs (LUFSNormalizationServiceTests), MixingStationViewModelTests additions, stereo_-24lufs_48000.wav fixture (Wave 1)
+- [ ] 04-02-PLAN.md — LUFSNormalizationService actor (BS.1770-3 K-weighting, gainScalar), ExportOptions struct, AudioMergerService LUFS gain integration (Wave 2, TDD)
+- [ ] 04-03-PLAN.md — MixingStation UI wiring: ExportFormatSheet toggle, ExportProgressSheet dynamic title, MixingStationViewModel.exportMerged(options:), ActivityViewController state reset (Wave 3)
+- [ ] 04-04-PLAN.md — CleaningLabView export path polish: ExportOptions threading, ActivityViewController wrapper, state reset on dismiss (Wave 4)
+- [ ] 04-05-PLAN.md — Full test suite validation + human verification checkpoint (Wave 5)
 
 ### Phase 5: Share Extension
 **Goal**: Users can send audio files from Voice Memos, Files, or any app to SonicMerge via the iOS Share Sheet, and those files appear as clips ready for editing in the Mixing Station.
@@ -102,5 +109,5 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 1. Foundation + Import Pipeline | 4/4 | Complete   | 2026-03-10 |
 | 2. Merge Pipeline + Mixing Station UI | 1/5 | In Progress|  |
 | 3. AI Denoising Pipeline | 4/4 | Complete   | 2026-03-12 |
-| 4. LUFS Normalization + Export Polish | 0/TBD | Not started | - |
+| 4. LUFS Normalization + Export Polish | 0/5 | Not started | - |
 | 5. Share Extension | 0/TBD | Not started | - |
