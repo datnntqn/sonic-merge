@@ -12,7 +12,11 @@ struct ActivityViewController: UIViewControllerRepresentable {
     var onDismiss: (() -> Void)? = nil
 
     func makeUIViewController(context: Context) -> UIActivityViewController {
-        UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        let vc = UIActivityViewController(activityItems: activityItems, applicationActivities: nil)
+        vc.completionWithItemsHandler = { [weak coordinator = context.coordinator] _, _, _, _ in
+            coordinator?.onDismiss?()
+        }
+        return vc
     }
 
     func updateUIViewController(_ uiViewController: UIActivityViewController, context: Context) {}

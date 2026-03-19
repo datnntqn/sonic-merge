@@ -37,6 +37,7 @@ final class MixingStationViewModel {
     private(set) var exportProgress: Float = 0
     private(set) var exportedFileURL: URL? = nil
     private(set) var showShareSheet = false
+    private(set) var isNormalizingExport: Bool = false
     var importErrors: [String] = []
 
     // MARK: - Private
@@ -207,12 +208,14 @@ final class MixingStationViewModel {
 
     // MARK: - Export (EXP-01, EXP-02, EXP-04)
 
-    func exportMerged(format: ExportFormat) {
+    func exportMerged(options: ExportOptions) {
         guard !clips.isEmpty else { return }
         isExporting = true
         exportProgress = 0
         exportedFileURL = nil
+        isNormalizingExport = options.lufsNormalize
 
+        let format = options.format
         let ext = format == .m4a ? "m4a" : "wav"
         let destURL = FileManager.default.temporaryDirectory
             .appending(path: "SonicMerge-Export-\(UUID().uuidString).\(ext)")
@@ -222,7 +225,8 @@ final class MixingStationViewModel {
                 clips: clips.sorted(by: { $0.sortOrder < $1.sortOrder }),
                 transitions: transitions,
                 format: format,
-                destinationURL: destURL
+                destinationURL: destURL,
+                lufsNormalize: options.lufsNormalize
             )
             for await progress in stream {
                 guard !Task.isCancelled else { break }
@@ -233,6 +237,7 @@ final class MixingStationViewModel {
                 showShareSheet = true
             }
             isExporting = false
+            isNormalizingExport = false
         }
     }
 
@@ -256,5 +261,6 @@ final class MixingStationViewModel {
     func dismissShareSheet() {
         showShareSheet = false
         exportedFileURL = nil
+        exportProgress = 0   // FIX: was missing — testDismissShareSheetResetsState now GREEN
     }
 }

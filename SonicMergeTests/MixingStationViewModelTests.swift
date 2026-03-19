@@ -77,7 +77,7 @@ struct MixingStationViewModelTests {
         let vm = MixingStationViewModel(modelContext: context)
 
         // Start an export (will fail fast since no clips) then cancel immediately
-        vm.exportMerged(format: .m4a)
+        vm.exportMerged(options: ExportOptions(format: .m4a, lufsNormalize: false))
         vm.cancelExport()
 
         // Assert: not exporting and no partial file

@@ -43,7 +43,7 @@ struct MixingStationView: View {
             // Export format picker (bottom sheet)
             .sheet(isPresented: $showExportSheet) {
                 ExportFormatSheet(isPresented: $showExportSheet) { options in
-                    viewModel.exportMerged(format: options.format)
+                    viewModel.exportMerged(options: options)
                 }
             }
             // Export progress (non-dismissible)
@@ -52,6 +52,7 @@ struct MixingStationView: View {
                 set: { _ in }
             )) {
                 ExportProgressSheet(
+                    isNormalizing: viewModel.isNormalizingExport,
                     progress: viewModel.exportProgress,
                     onCancel: { viewModel.cancelExport() }
                 )
