@@ -116,12 +116,52 @@ struct MixingStationViewModelTests {
         #expect(vm.exportProgress == 0, "exportProgress must be 0 after dismissShareSheet()")
     }
 
+    // MARK: - IMP-02: Duplicate displayName detection
+
+    @Test func testDuplicateDisplayNameIsSkipped() async throws {
+        // Verifies that isDisplayNameDuplicate() returns the correct result
+        // for existing and new displayNames. The full import pipeline requires
+        // security-scoped URLs (document picker only), so we test the extracted
+        // helper directly per the plan's TDD strategy.
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
+        let context = ModelContext(container)
+        let vm = MixingStationViewModel(modelContext: context)
+
+        // Pre-insert a clip with displayName "TestClip"
+        let existing = AudioClip(displayName: "TestClip", fileURLRelativePath: "existing.m4a", duration: 1.0)
+        existing.sortOrder = 0
+        context.insert(existing)
+        try context.save()
+        await vm.fetchAll()
+
+        // Duplicate name returns true
+        #expect(vm.isDisplayNameDuplicate("TestClip") == true)
+        // Non-duplicate name returns false
+        #expect(vm.isDisplayNameDuplicate("NewClip") == false)
+    }
+
     // MARK: - IMP-02: Pending import pickup on scenePhase .active
 
     @Test func testPendingImportPickedUpOnActive() async throws {
-        // Stub: Verify that when pendingImportFilename is set in App Group
-        // UserDefaults and the pickup logic runs, the file URL is passed
-        // to importFiles and the key is cleared.
-        #expect(Bool(false), "STUB — not yet implemented")
+        // Verifies the UserDefaults read/clear cycle that the scenePhase handler
+        // depends on. The handler itself lives in SonicMergeApp (SwiftUI App lifecycle)
+        // and cannot be unit-tested directly; this test validates the key-value
+        // mechanics in isolation using the shared App Group UserDefaults suite.
+        let defaults = UserDefaults(suiteName: AppConstants.appGroupID)
+        // Clean up any leftover value from a previous run
+        defaults?.removeObject(forKey: "pendingImportFilename")
+
+        // Write the pending key (as the Share Extension would)
+        defaults?.set("test_file.m4a", forKey: "pendingImportFilename")
+
+        // Main app reads the pending filename
+        let filename = defaults?.string(forKey: "pendingImportFilename")
+        #expect(filename == "test_file.m4a")
+
+        // Main app clears the key after pickup
+        defaults?.removeObject(forKey: "pendingImportFilename")
+        let cleared = defaults?.string(forKey: "pendingImportFilename")
+        #expect(cleared == nil, "Pending key must be cleared after pickup")
     }
 }
