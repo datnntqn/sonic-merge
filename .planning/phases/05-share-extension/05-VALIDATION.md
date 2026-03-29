@@ -2,8 +2,8 @@
 phase: 5
 slug: share-extension
 status: draft
-nyquist_compliant: false
-wave_0_complete: false
+nyquist_compliant: true
+wave_0_complete: true
 created: 2026-03-29
 ---
 
@@ -17,7 +17,7 @@ created: 2026-03-29
 
 | Property | Value |
 |----------|-------|
-| **Framework** | XCTest (Xcode built-in) |
+| **Framework** | Swift Testing (`import Testing`) |
 | **Config file** | SonicMergeTests/SonicMergeTests.xctest |
 | **Quick run command** | `xcodebuild test -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 16' -only-testing:SonicMergeTests` |
 | **Full suite command** | `xcodebuild test -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 16'` |
@@ -38,9 +38,10 @@ created: 2026-03-29
 
 | Task ID | Plan | Wave | Requirement | Test Type | Automated Command | File Exists | Status |
 |---------|------|------|-------------|-----------|-------------------|-------------|--------|
-| 05-01-01 | 01 | 1 | IMP-02 | unit | `xcodebuild test -scheme SonicMerge -only-testing:SonicMergeTests/ShareExtensionTests` | ❌ W0 | ⬜ pending |
-| 05-01-02 | 01 | 1 | IMP-02 | unit | `xcodebuild test -scheme SonicMerge -only-testing:SonicMergeTests/ShareExtensionTests/testLargeFileCopy` | ❌ W0 | ⬜ pending |
-| 05-01-03 | 01 | 1 | IMP-02 | unit | `xcodebuild test -scheme SonicMerge -only-testing:SonicMergeTests/ShareExtensionTests/testDuplicatePrevention` | ❌ W0 | ⬜ pending |
+| 05-01-00 | 01 | 1 | IMP-02 | stub | `xcodebuild build-for-testing -scheme SonicMerge` | Plan 01 Task 0 creates | ⬜ pending |
+| 05-01-01 | 01 | 1 | IMP-02 | unit | `xcodebuild test -scheme SonicMerge -only-testing:SonicMergeTests/ShareExtensionTests` | Created by 05-01-00 | ⬜ pending |
+| 05-01-02 | 01 | 1 | IMP-02 | unit | `xcodebuild test -scheme SonicMerge -only-testing:SonicMergeTests/MixingStationViewModelTests/testDuplicateDisplayNameIsSkipped` | Created by 05-01-00 | ⬜ pending |
+| 05-01-03 | 01 | 1 | IMP-02 | unit | `xcodebuild test -scheme SonicMerge -only-testing:SonicMergeTests/MixingStationViewModelTests/testPendingImportPickedUpOnActive` | Created by 05-01-00 | ⬜ pending |
 | 05-02-01 | 02 | 2 | IMP-02 | integration | Manual — requires Share Sheet interaction | N/A | ⬜ pending |
 
 *Status: ⬜ pending · ✅ green · ❌ red · ⚠️ flaky*
@@ -49,10 +50,11 @@ created: 2026-03-29
 
 ## Wave 0 Requirements
 
-- [ ] `SonicMergeTests/ShareExtensionTests.swift` — test stubs for IMP-02 (file copy, large file, duplicate prevention)
+- [x] `SonicMergeTests/ShareExtensionTests.swift` — 3 failing test stubs: testFileCopyToClipsDirectory, testLargeFileCopyDoesNotCrash, testPendingKeyWrittenAndCleared (created by Plan 01 Task 0)
+- [x] `SonicMergeTests/MixingStationViewModelTests.swift` — 1 failing test stub: testPendingImportPickedUpOnActive (created by Plan 01 Task 0)
 - [ ] App Group entitlement configured in both targets before any handoff code runs
 
-*Existing XCTest infrastructure covers the framework; only test stubs and entitlement setup are new.*
+*Wave 0 stubs are created by Plan 05-01 Task 0 before implementation tasks begin.*
 
 ---
 
@@ -69,11 +71,11 @@ created: 2026-03-29
 
 ## Validation Sign-Off
 
-- [ ] All tasks have `<automated>` verify or Wave 0 dependencies
-- [ ] Sampling continuity: no 3 consecutive tasks without automated verify
-- [ ] Wave 0 covers all MISSING references
+- [x] All tasks have `<automated>` verify or Wave 0 dependencies
+- [x] Sampling continuity: no 3 consecutive tasks without automated verify
+- [x] Wave 0 covers all MISSING references
 - [ ] No watch-mode flags
 - [ ] Feedback latency < 60s
-- [ ] `nyquist_compliant: true` set in frontmatter
+- [x] `nyquist_compliant: true` set in frontmatter
 
 **Approval:** pending
