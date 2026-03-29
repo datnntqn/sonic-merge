@@ -97,7 +97,11 @@ Plans:
   1. User can select an audio file in another app, tap Share, choose SonicMerge, and the file appears as a clip in the Mixing Station timeline.
   2. Sharing a 30 MB+ audio file from Files does not crash the Share Extension.
   3. If the user taps Share twice for the same file, only one copy of the clip is added to the timeline (no duplicates).
-**Plans**: TBD
+**Plans**: 2 plans
+
+Plans:
+- [ ] 05-01-PLAN.md — Main app wiring: duplicate detection in importFiles, scenePhase pending import handler, URL scheme registration, tests (Wave 1)
+- [ ] 05-02-PLAN.md — Share Extension target: ShareExtensionViewController, HUD UI, Info.plist, entitlements, Xcode project wiring + human verification (Wave 2)
 
 ## Progress
 
@@ -110,4 +114,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Merge Pipeline + Mixing Station UI | 1/5 | In Progress|  |
 | 3. AI Denoising Pipeline | 4/4 | Complete   | 2026-03-12 |
 | 4. LUFS Normalization + Export Polish | 5/5 | Complete   | 2026-03-28 |
-| 5. Share Extension | 0/TBD | Not started | - |
+| 5. Share Extension | 0/2 | Not started | - |
