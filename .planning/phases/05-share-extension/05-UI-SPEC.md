@@ -48,6 +48,8 @@ Exceptions:
 - HUD card: fixed height 220pt (matches ExportProgressSheet `.presentationDetents([.height(220)])`).
 - Corner radius: 12pt for all cards and buttons (established pattern across ClipCardView, CleaningLabView, ExportProgressSheet). Exception: waveform thumbnail uses 6pt corner radius.
 
+**Exception justification: 12px, 20px, and 28px are existing production constants extracted from Phase 2–4 Swift sources (ExportProgressSheet.swift, CleaningLabView.swift, ClipCardView.swift). They cannot be rounded to the standard set without breaking visual parity with the main app.**
+
 Source: Extracted from ClipCardView.swift, CleaningLabView.swift, ExportProgressSheet.swift, MixingStationView.swift.
 
 ---
@@ -60,15 +62,15 @@ All fonts use `.system()` API — no hardcoded font name.
 |------|------|--------|-------------|-------------|
 | Heading | `.headline` (~17pt) | semibold (600) | 1.2 | `.font(.system(.headline))` |
 | Body | `.body` (~17pt) | regular (400) | 1.5 | `.font(.system(.body))` |
-| Label | `.subheadline` (~15pt) | medium (500) or semibold (600) | 1.3 | `.font(.system(.subheadline, weight: .medium))` |
+| Label | `.subheadline` (~15pt) | semibold (600) | 1.3 | `.font(.system(.subheadline, weight: .semibold))` |
 | Caption | `.caption` (~12pt) | regular (400) | 1.3 | `.font(.system(.caption))` |
 
 **HUD-specific typography:**
-- Filename text: `.subheadline` weight `.medium` — single line, truncated with `.lineLimit(1)` and `.truncationMode(.middle)`
+- Filename text: `.subheadline` weight `.semibold` — single line, truncated with `.lineLimit(1)` and `.truncationMode(.middle)`
 - Status text ("Adding to SonicMerge..."): `.body` weight regular
 - Completion text: `.body` weight `.semibold`
 
-Source: Established across ExportProgressSheet.swift, ClipCardView.swift, CleaningLabView.swift. Four sizes maximum; no additional sizes may be introduced in this phase.
+Source: Established across ExportProgressSheet.swift, ClipCardView.swift, CleaningLabView.swift. Four sizes maximum; no additional sizes may be introduced in this phase. Two weights only: regular (400) and semibold (600).
 
 ---
 
@@ -85,7 +87,6 @@ Source: Established across ExportProgressSheet.swift, ClipCardView.swift, Cleani
 
 **Accent reserved for:**
 - Spinner tint (`.tint(accentBlue)` on ProgressView/spinner)
-- Primary action button fill ("Open in SonicMerge" button background in error recovery)
 - ProgressView linear indicator tint
 
 **Accent NOT used for:** filename text, status text, sheet background, HUD card background.
@@ -110,7 +111,7 @@ A `UIViewController` subclass hosting a SwiftUI view via `UIHostingController`. 
 │   [SF Symbol: doc.badge.plus]   │  ← 32pt, accent #007AFF
 │                                 │
 │   "Adding to SonicMerge..."     │  ← .body, regular, #1C1C1E
-│   [filename truncated middle]   │  ← .subheadline, medium, .secondary
+│   [filename truncated middle]   │  ← .subheadline, semibold, .secondary
 │                                 │
 │   ────────[ProgressView]─────── │  ← linear, tint #007AFF, indeterminate
 │                                 │
