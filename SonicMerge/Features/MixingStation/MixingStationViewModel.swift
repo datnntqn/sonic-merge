@@ -80,6 +80,14 @@ final class MixingStationViewModel {
         }
     }
 
+    /// Returns true if any currently-loaded clip has the given displayName.
+    ///
+    /// Extracted as a public helper so tests can directly verify duplicate detection
+    /// without going through the full security-scoped import pathway.
+    func isDisplayNameDuplicate(_ name: String) -> Bool {
+        clips.contains { $0.displayName == name }
+    }
+
     private func performImport(urls: [URL]) async {
         let clipsDir: URL
         do { clipsDir = try AppConstants.clipsDirectory() } catch {
@@ -92,6 +100,13 @@ final class MixingStationViewModel {
         for url in urls {
             guard url.startAccessingSecurityScopedResource() else { continue }
             defer { url.stopAccessingSecurityScopedResource() }
+
+            // D-10 / D-11: Deduplicate by displayName before normalization.
+            // Check both persisted clips AND clips being imported in the current batch.
+            let displayName = url.deletingPathExtension().lastPathComponent
+            let isDuplicate = isDisplayNameDuplicate(displayName) ||
+                              newClips.contains { $0.displayName == displayName }
+            guard !isDuplicate else { continue }
 
             let filename = UUID().uuidString + ".m4a"
             let destURL = clipsDir.appending(path: filename)
@@ -108,7 +123,6 @@ final class MixingStationViewModel {
                 let asset = AVURLAsset(url: destURL)
                 let duration = (try? await asset.load(.duration))?.seconds ?? 0
 
-                let displayName = url.deletingPathExtension().lastPathComponent
                 let clip = AudioClip(
                     displayName: displayName,
                     fileURLRelativePath: filename,

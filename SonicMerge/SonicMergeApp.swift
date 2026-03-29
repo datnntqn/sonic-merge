@@ -12,6 +12,8 @@ import AVFAudio
 @main
 struct SonicMergeApp: App {
 
+    @Environment(\.scenePhase) private var scenePhase
+
     /// SwiftData ModelContainer configured with the App Group shared container.
     ///
     /// The App Group entitlement must be added in Xcode > target > Signing & Capabilities
@@ -55,10 +57,52 @@ struct SonicMergeApp: App {
         configureAudioSession()
     }
 
+    /// Retained so the scenePhase handler and onOpenURL handler can call importFiles.
+    @State private var viewModel: MixingStationViewModel?
+
     var body: some Scene {
         WindowGroup {
-            MixingStationView()
-                .environment(MixingStationViewModel(modelContext: modelContainer.mainContext))
+            Group {
+                if let viewModel {
+                    MixingStationView()
+                        .environment(viewModel)
+                }
+            }
+            .onAppear {
+                if viewModel == nil {
+                    viewModel = MixingStationViewModel(modelContext: modelContainer.mainContext)
+                }
+            }
+            // Pattern 3 (RESEARCH.md): Main app picks up pending import file from App Group
+            // UserDefaults whenever the scene becomes active. This is the primary handoff
+            // mechanism from the Share Extension — extensionContext.open() is unsupported
+            // for Share Extensions (RESEARCH.md Pitfall 1, overrides D-09).
+            .onChange(of: scenePhase) { _, newPhase in
+                guard newPhase == .active else { return }
+                let defaults = UserDefaults(suiteName: AppConstants.appGroupID)
+                guard let filename = defaults?.string(forKey: "pendingImportFilename") else { return }
+                defaults?.removeObject(forKey: "pendingImportFilename")
+                guard let clipsDir = try? AppConstants.clipsDirectory() else { return }
+                let fileURL = clipsDir.appending(path: filename)
+                guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+                viewModel?.importFiles([fileURL])
+            }
+            // D-08 fallback: onOpenURL for sonicmerge:// scheme (complementary to scenePhase).
+            // This fires if the OS is able to open the URL scheme, which may work on future
+            // OS versions or via other callers. The Share Extension itself cannot use this
+            // (extensionContext.open is Today-widget-only), but keeping it as a fallback
+            // is harmless and allows manual deep-link testing via Safari.
+            .onOpenURL { url in
+                guard url.scheme == "sonicmerge",
+                      url.host() == "import",
+                      let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+                      let filename = components.queryItems?.first(where: { $0.name == "file" })?.value
+                else { return }
+                guard let clipsDir = try? AppConstants.clipsDirectory() else { return }
+                let fileURL = clipsDir.appending(path: filename)
+                guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+                viewModel?.importFiles([fileURL])
+            }
         }
         .modelContainer(modelContainer)
     }

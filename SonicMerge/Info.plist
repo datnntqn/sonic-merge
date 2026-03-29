@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<!-- URL scheme registration for sonicmerge:// deep link (D-07) -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.dtech.SonicMerge</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>sonicmerge</string>
+			</array>
+		</dict>
+	</array>
+	<!-- UIApplicationSceneManifest — previously INFOPLIST_KEY_UIApplicationSceneManifest_Generation -->
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+	</dict>
+	<!-- Previously INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents -->
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<!-- Launch screen — previously INFOPLIST_KEY_UILaunchScreen_Generation -->
+	<key>UILaunchScreen</key>
+	<dict/>
+	<!-- Status bar style — previously INFOPLIST_KEY_UIStatusBarStyle -->
+	<key>UIStatusBarStyle</key>
+	<string>UIStatusBarStyleDefault</string>
+	<!-- Supported orientations iPad — previously INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad -->
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<!-- Supported orientations iPhone — previously INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone -->
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+</dict>
+</plist>
