@@ -115,4 +115,13 @@ struct MixingStationViewModelTests {
         #expect(vm.exportedFileURL == nil, "exportedFileURL must be nil after dismissShareSheet()")
         #expect(vm.exportProgress == 0, "exportProgress must be 0 after dismissShareSheet()")
     }
+
+    // MARK: - IMP-02: Pending import pickup on scenePhase .active
+
+    @Test func testPendingImportPickedUpOnActive() async throws {
+        // Stub: Verify that when pendingImportFilename is set in App Group
+        // UserDefaults and the pickup logic runs, the file URL is passed
+        // to importFiles and the key is cleared.
+        #expect(Bool(false), "STUB — not yet implemented")
+    }
 }
