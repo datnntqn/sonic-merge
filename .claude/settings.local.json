@@ -35,7 +35,9 @@
       "WebFetch(domain:gist.github.com)",
       "WebFetch(domain:apple.github.io)",
       "WebFetch(domain:www.photoroom.com)",
-      "WebFetch(domain:noisereducerai.com)"
+      "WebFetch(domain:noisereducerai.com)",
+      "Skill(gsd:plan-phase)",
+      "Skill(gsd:discuss-phase)"
     ]
   }
 }
