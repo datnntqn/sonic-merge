@@ -15,6 +15,7 @@ struct GapRowView: View {
     let transition: GapTransition
     let onUpdate: (_ gapDuration: Double?, _ isCrossfade: Bool?) -> Void
 
+    @Environment(\.sonicMergeSemantic) private var semantic
     @State private var selection: GapOption
 
     enum GapOption: String, CaseIterable, Hashable {
@@ -49,11 +50,12 @@ struct GapRowView: View {
             }
         }
         .pickerStyle(.segmented)
+        .tint(Color(uiColor: semantic.accentAction))
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .accessibilityElement(children: .combine)
         .accessibilityLabel(GapRowAccessibility.label)
-        .background(Color(uiColor: SonicMergeTheme.ColorPalette.cardSurface).opacity(0.55))
+        .background(Color(uiColor: semantic.surfaceElevated).opacity(0.65))
         .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.chip, style: .continuous))
         .padding(.horizontal, 16)
         .padding(.vertical, 6)

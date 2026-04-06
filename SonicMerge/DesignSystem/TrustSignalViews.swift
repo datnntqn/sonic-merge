@@ -14,25 +14,31 @@ enum TrustSignalCopy {
 }
 
 struct LocalFirstTrustStrip: View {
+    @Environment(\.sonicMergeSemantic) private var semantic
+
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "lock.shield.fill")
                 .font(.title3)
-                .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.aiAccent))
+                .foregroundStyle(Color(uiColor: semantic.trustIcon))
             VStack(alignment: .leading, spacing: 4) {
                 Text(TrustSignalCopy.localFirstTitle)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
                 Text(TrustSignalCopy.localFirstSubtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(uiColor: semantic.textSecondary))
                     .fixedSize(horizontal: false, vertical: true)
             }
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(Color(uiColor: SonicMergeTheme.ColorPalette.cardSurface))
+        .background(Color(uiColor: semantic.surfaceElevated))
         .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous))
-        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
+        .overlay(
+            RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous)
+                .strokeBorder(Color(uiColor: semantic.trustIcon).opacity(0.25), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
     }
 }

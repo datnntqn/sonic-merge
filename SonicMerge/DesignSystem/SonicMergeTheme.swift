@@ -7,6 +7,7 @@ import UIKit
 
 enum SonicMergeTheme {
 
+    /// Prefer `SonicMergeSemantic` from the SwiftUI environment for screens that support light/dark conveyor styling (`SonicMergeTheme+Appearance.swift`).
     enum ColorPalette {
         /// UX-01 canvas `#F8F9FA` (existing MixingStation background)
         static let canvasBackground = UIColor(red: 0.973, green: 0.976, blue: 0.980, alpha: 1)

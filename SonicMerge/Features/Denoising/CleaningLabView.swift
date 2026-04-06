@@ -32,6 +32,8 @@ struct CleaningLabView: View {
 
     let mergedFileURL: URL
 
+    @Environment(\.sonicMergeSemantic) private var semantic
+
     @State private var viewModel = CleaningLabViewModel()
     @State private var showExportSheet = false
     @State private var showExportProgressSheet = false
@@ -81,6 +83,7 @@ struct CleaningLabView: View {
             .padding(.horizontal, 16)
             .padding(.vertical, 20)
         }
+        .background(Color(uiColor: semantic.surfaceBase))
         .navigationTitle("Cleaning Lab")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
@@ -134,24 +137,28 @@ struct CleaningLabView: View {
 
     // MARK: - Subviews
 
-    private var onDeviceAIHero: some View {
+     private var onDeviceAIHero: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: "cpu")
-                .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.aiAccent))
+                .foregroundStyle(Color(uiColor: semantic.trustIcon))
             VStack(alignment: .leading, spacing: 4) {
                 Text(TrustSignalCopy.aiDenoiseTitle)
                     .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
                 Text(TrustSignalCopy.aiDenoiseSubtitle)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color(uiColor: semantic.textSecondary))
             }
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(Color(uiColor: SonicMergeTheme.ColorPalette.cardSurface))
+        .background(Color(uiColor: semantic.surfaceElevated))
         .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous))
-        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous)
+                .strokeBorder(Color(uiColor: semantic.trustIcon).opacity(0.28), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
     }
 
     // 1. Stale result banner
@@ -187,12 +194,12 @@ struct CleaningLabView: View {
         GeometryReader { geometry in
             ZStack {
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(red: 0.11, green: 0.11, blue: 0.12))
+                    .fill(Color(uiColor: semantic.surfaceSlot))
 
                 if viewModel.isProcessing && viewModel.waveformPeaks.isEmpty {
                     Text("Processing...")
                         .font(.system(.caption))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 } else if !viewModel.waveformPeaks.isEmpty {
                     WaveformCanvasView(peaks: viewModel.waveformPeaks)
                         .padding(.horizontal, 8)
@@ -200,10 +207,10 @@ struct CleaningLabView: View {
                     VStack(spacing: 8) {
                         Image(systemName: "waveform")
                             .font(.system(size: 32))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(uiColor: semantic.textSecondary))
                         Text("Tap \"Denoise Audio\" to begin")
                             .font(.system(.caption))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(Color(uiColor: semantic.textSecondary))
                     }
                 }
             }
@@ -217,11 +224,11 @@ struct CleaningLabView: View {
             HStack {
                 Text("Noise Reduction")
                     .font(.system(.subheadline, weight: .medium))
-                    .foregroundStyle(Color(red: 0.11, green: 0.11, blue: 0.12))
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
                 Spacer()
                 Text("\(Int(viewModel.intensity * 100))%")
                     .font(.system(.subheadline, weight: .semibold))
-                    .foregroundStyle(Color(red: 0, green: 0.478, blue: 1.0))
+                    .foregroundStyle(Color(uiColor: semantic.accentAction))
                     .monospacedDigit()
                     .frame(minWidth: 40, alignment: .trailing)
             }
@@ -233,14 +240,14 @@ struct CleaningLabView: View {
                 ),
                 in: 0...1
             )
-            .tint(Color(red: 0, green: 0.478, blue: 1.0))
+            .tint(Color(uiColor: semantic.accentAction))
             .disabled(viewModel.isProcessing)
             .opacity(viewModel.isProcessing ? 0.5 : 1.0)
         }
         .padding(16)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .background(Color(uiColor: semantic.surfaceElevated))
+        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
     }
 
     // 4. A/B comparison button
@@ -253,18 +260,22 @@ struct CleaningLabView: View {
                     Text(viewModel.isHoldingOriginal ? "Original" : "Denoised")
                         .font(.system(.body, weight: .semibold))
                 }
-                .foregroundStyle(viewModel.isHoldingOriginal ? .white : Color(red: 0, green: 0.478, blue: 1.0))
+                .foregroundStyle(
+                    viewModel.isHoldingOriginal
+                        ? Color(uiColor: semantic.surfaceBase)
+                        : Color(uiColor: semantic.accentAction)
+                )
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 12)
                 .background(
                     viewModel.isHoldingOriginal
-                        ? Color(red: 0, green: 0.478, blue: 1.0)
-                        : Color(red: 0, green: 0.478, blue: 1.0).opacity(0.1)
+                        ? Color(uiColor: semantic.accentAction)
+                        : Color(uiColor: semantic.accentAction).opacity(0.12)
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .stroke(Color(red: 0, green: 0.478, blue: 1.0), lineWidth: 1.5)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .stroke(Color(uiColor: semantic.accentAction), lineWidth: 1.5)
                 )
             }
             .onLongPressGesture(
@@ -281,7 +292,7 @@ struct CleaningLabView: View {
 
             Text("Hold to compare with original")
                 .font(.system(.caption))
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
         }
     }
 
@@ -291,16 +302,31 @@ struct CleaningLabView: View {
             viewModel.startDenoising(mergedFileURL: mergedFileURL)
         } label: {
             Text(viewModel.hasDenoisedResult ? "Re-process" : "Denoise Audio")
-                .font(.system(.body, weight: .semibold))
-                .foregroundStyle(.white)
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(
+                    viewModel.hasDenoisedResult
+                        ? Color(uiColor: semantic.textPrimary)
+                        : Color(uiColor: semantic.surfaceBase)
+                )
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .background(
-                    viewModel.hasDenoisedResult
-                        ? Color(red: 0.3, green: 0.3, blue: 0.35)
-                        : Color(red: 0, green: 0.478, blue: 1.0)
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(
+                            viewModel.hasDenoisedResult
+                                ? Color(uiColor: semantic.surfaceElevated)
+                                : Color(uiColor: semantic.accentAction)
+                        )
                 )
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .strokeBorder(
+                            viewModel.hasDenoisedResult
+                                ? Color(uiColor: semantic.textSecondary).opacity(0.4)
+                                : Color.clear,
+                            lineWidth: 1
+                        )
+                )
         }
     }
 
@@ -369,6 +395,8 @@ struct CleaningLabView: View {
 private struct WaveformCanvasView: View {
     let peaks: [Float]
 
+    @Environment(\.sonicMergeSemantic) private var semantic
+
     var body: some View {
         Canvas { context, size in
             guard !peaks.isEmpty else { return }
@@ -390,7 +418,7 @@ private struct WaveformCanvasView: View {
                 )
 
                 let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
-                context.fill(path, with: .color(Color(red: 0, green: 0.478, blue: 1.0).opacity(0.85)))
+                context.fill(path, with: .color(Color(uiColor: semantic.accentWaveform).opacity(0.88)))
             }
 
             // Scrub line (center)

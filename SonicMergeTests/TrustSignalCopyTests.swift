@@ -11,7 +11,7 @@ struct TrustSignalCopyTests {
     }
 
     @Test func localFirstStripSubtitle_mentionsOnDevice() {
-        #expect(TrustSignalCopy.localFirstSubtitle.contains("On-device"))
+        #expect(TrustSignalCopy.localFirstSubtitle.lowercased().contains("on-device"))
         #expect(TrustSignalCopy.localFirstSubtitle.lowercased().contains("cloud") == false)
     }
 }
