@@ -21,6 +21,7 @@ struct SonicMergeApp: App {
     /// nil and ModelConfiguration falls back to the app sandbox — which is acceptable during
     /// development but will not be shared with the future Share Extension target.
     let modelContainer: ModelContainer = {
+        AppConstants.prepareAppGroupPersistentStoreDirectory()
         let schema = Schema([AudioClip.self, GapTransition.self])
         // Use App Group container when entitlement is available; fall back to the default
         // sandbox container when not (e.g., unit test host process or simulator without

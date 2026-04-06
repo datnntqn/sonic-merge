@@ -13,6 +13,25 @@ enum AppConstants {
     /// Signing & Capabilities > App Groups for both the main target and any extensions.
     static let appGroupID = "group.com.yourteam.SonicMerge"
 
+    /// Creates `Library/Application Support` under the App Group container if missing.
+    ///
+    /// SwiftData stores `default.store` there. If the directory does not exist yet, Core Data
+    /// logs `Failed to stat ... Application Support` and `Sandbox access to file-write-create denied`
+    /// on Simulator before recovering — pre-creating the path avoids that noisy failure.
+    static func prepareAppGroupPersistentStoreDirectory() {
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else { return }
+        let appSupport = container
+            .appending(path: "Library", directoryHint: .isDirectory)
+            .appending(path: "Application Support", directoryHint: .isDirectory)
+        try? FileManager.default.createDirectory(
+            at: appSupport,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+    }
+
     /// Returns the URL for the shared clips directory inside the App Group container,
     /// creating it if it does not already exist.
     ///
