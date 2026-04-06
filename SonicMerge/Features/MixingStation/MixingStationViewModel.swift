@@ -220,6 +220,12 @@ final class MixingStationViewModel {
         transitions = (try? modelContext.fetch(FetchDescriptor<GapTransition>())) ?? []
     }
 
+    /// Deletes a single clip by stable id (avoids index mismatch with List/Section layouts).
+    func deleteClip(id: UUID) {
+        guard let index = clips.firstIndex(where: { $0.id == id }) else { return }
+        deleteClip(atOffsets: IndexSet(integer: index))
+    }
+
     // MARK: - Gap/Crossfade Update
 
     func updateTransition(_ transition: GapTransition, gapDuration: Double? = nil, isCrossfade: Bool? = nil) {

@@ -68,6 +68,24 @@ struct MixingStationViewModelTests {
         #expect(remaining.isEmpty)
     }
 
+    @Test func deleteClipById_removesClip() async throws {
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
+        let context = ModelContext(container)
+        let vm = MixingStationViewModel(modelContext: context)
+
+        let clip = AudioClip(displayName: "ById", fileURLRelativePath: "byid.m4a", duration: 1)
+        clip.sortOrder = 0
+        context.insert(clip)
+        try context.save()
+        await vm.fetchAll()
+
+        let id = clip.id
+        vm.deleteClip(id: id)
+
+        #expect(vm.clips.isEmpty)
+    }
+
     // MARK: - EXP-04: Cancel export
 
     @Test func cancelExportStopsExportTaskAndCleansUp() async throws {

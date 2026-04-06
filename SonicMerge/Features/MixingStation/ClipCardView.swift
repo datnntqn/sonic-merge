@@ -10,6 +10,7 @@ struct ClipCardView: View {
     let clip: AudioClip
     let isPreviewing: Bool
     let onPreviewTap: () -> Void
+    var onDelete: (() -> Void)? = nil
 
     @State private var peaks: [Float] = Array(repeating: 0, count: 50)
 
@@ -47,6 +48,15 @@ struct ClipCardView: View {
         .background(Color(uiColor: SonicMergeTheme.ColorPalette.cardSurface))
         .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous))
         .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
+        .contextMenu {
+            if let onDelete {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete Clip", systemImage: "trash")
+                }
+            }
+        }
         .task { loadPeaks() }
     }
 

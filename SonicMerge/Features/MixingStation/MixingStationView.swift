@@ -82,6 +82,12 @@ struct MixingStationView: View {
                 }
             }
         }
+        .onChange(of: showCleaningLab) { _, isShowing in
+            if !isShowing, let url = mergedFileURLForCleaning {
+                try? FileManager.default.removeItem(at: url)
+                mergedFileURLForCleaning = nil
+            }
+        }
         .task {
             await viewModel.fetchAll()
         }
@@ -144,16 +150,15 @@ struct MixingStationView: View {
                     ClipCardView(
                         clip: clip,
                         isPreviewing: viewModel.previewingClipID == clip.id,
-                        onPreviewTap: { viewModel.toggleClipPreview(clip) }
+                        onPreviewTap: { viewModel.toggleClipPreview(clip) },
+                        onDelete: { viewModel.deleteClip(id: clip.id) }
                     )
                     .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button(role: .destructive) {
-                            if let idx = MixingStationClipIndexResolver.index(for: clip.id, in: viewModel.clips) {
-                                viewModel.deleteClip(atOffsets: IndexSet(integer: idx))
-                            }
+                            viewModel.deleteClip(id: clip.id)
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
