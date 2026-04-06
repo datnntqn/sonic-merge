@@ -82,6 +82,17 @@ struct MixingStationView: View {
                 case .failure: break
                 }
             }
+            .onDrop(of: UTType.audioDropTypes, isTargeted: nil) { providers in
+                guard !providers.isEmpty else { return false }
+                Task {
+                    let urls = await AudioDropImport.urls(from: providers)
+                    guard !urls.isEmpty else { return }
+                    await MainActor.run {
+                        viewModel.importFiles(urls)
+                    }
+                }
+                return true
+            }
         }
         .environment(\.sonicMergeSemantic, semantic)
         .onChange(of: showCleaningLab) { _, isShowing in
@@ -176,5 +187,53 @@ struct MixingStationView: View {
                 showCleaningLab = true
             }
         }
+    }
+}
+
+// MARK: - Drag & drop
+
+private enum AudioDropImport {
+    static func urls(from providers: [NSItemProvider]) async -> [URL] {
+        await withTaskGroup(of: URL?.self) { group in
+            for provider in providers {
+                group.addTask { await url(from: provider) }
+            }
+            var result: [URL] = []
+            for await url in group {
+                if let url {
+                    result.append(url)
+                }
+            }
+            return result
+        }
+    }
+
+    private static func url(from provider: NSItemProvider) async -> URL? {
+        if provider.canLoadObject(ofClass: URL.self) {
+            return await withCheckedContinuation { continuation in
+                _ = provider.loadObject(ofClass: URL.self) { object, _ in
+                    continuation.resume(returning: object)
+                }
+            }
+        }
+        for ut in UTType.audioDropTypes where provider.hasItemConformingToTypeIdentifier(ut.identifier) {
+            return await withCheckedContinuation { continuation in
+                provider.loadFileRepresentation(forTypeIdentifier: ut.identifier) { tempURL, error in
+                    guard let tempURL, error == nil else {
+                        continuation.resume(returning: nil)
+                        return
+                    }
+                    let dest = FileManager.default.temporaryDirectory
+                        .appending(path: "SonicMerge-drop-\(UUID().uuidString)-\(tempURL.lastPathComponent)")
+                    do {
+                        try FileManager.default.copyItem(at: tempURL, to: dest)
+                        continuation.resume(returning: dest)
+                    } catch {
+                        continuation.resume(returning: nil)
+                    }
+                }
+            }
+        }
+        return nil
     }
 }

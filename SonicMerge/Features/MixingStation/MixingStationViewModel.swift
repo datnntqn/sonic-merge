@@ -103,8 +103,15 @@ final class MixingStationViewModel {
         var newClips: [AudioClip] = []
 
         for url in urls {
-            guard url.startAccessingSecurityScopedResource() else { continue }
-            defer { url.stopAccessingSecurityScopedResource() }
+            // Document-picker URLs are security-scoped and require a matching `stop` only when this returns true.
+            // Paths from drag-and-drop, Simulator, or the temp sandbox are not scoped — `startAccessing` returns
+            // false but the file is still readable; skipping on false used to drop imports silently.
+            let accessed = url.startAccessingSecurityScopedResource()
+            defer {
+                if accessed {
+                    url.stopAccessingSecurityScopedResource()
+                }
+            }
 
             // D-10 / D-11: Deduplicate by displayName before normalization.
             // Check both persisted clips AND clips being imported in the current batch.

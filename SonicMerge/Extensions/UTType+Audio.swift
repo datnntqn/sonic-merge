@@ -23,4 +23,13 @@ extension UTType {
     static var audioImportTypes: [UTType] {
         [.wav, aacAudio, .mpeg4Audio]
     }
+
+    /// Broader type list for SwiftUI `.onDrop` so drag-from-Finder / Files matches common audio payloads.
+    static var audioDropTypes: [UTType] {
+        var list: [UTType] = [.audio, .mp3]
+        for t in audioImportTypes where !list.contains(where: { $0.identifier == t.identifier }) {
+            list.append(t)
+        }
+        return list
+    }
 }
