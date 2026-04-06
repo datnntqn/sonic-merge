@@ -40,6 +40,9 @@ final class MixingStationViewModel {
     private(set) var isNormalizingExport: Bool = false
     var importErrors: [String] = []
 
+    /// Set while a clip preview is actively playing (`AVAudioPlayer`).
+    private(set) var previewingClipID: UUID?
+
     // MARK: - Private
 
     private let modelContext: ModelContext
@@ -47,6 +50,7 @@ final class MixingStationViewModel {
     private let waveformService = WaveformService()
     private let mergerService = AudioMergerService()
     private var exportTask: Task<Void, Never>?
+    private var previewPlayer: AVAudioPlayer?
 
     // MARK: - Init
 
@@ -71,6 +75,7 @@ final class MixingStationViewModel {
     // MARK: - Import
 
     func importFiles(_ urls: [URL]) {
+        stopClipPreview()
         isImporting = true
         importErrors = []
         Task {
@@ -171,6 +176,9 @@ final class MixingStationViewModel {
 
     func deleteClip(atOffsets offsets: IndexSet) {
         let toDelete = offsets.map { clips[$0] }
+        if toDelete.contains(where: { $0.id == previewingClipID }) {
+            stopClipPreview()
+        }
         for clip in toDelete {
             // Delete gap transition
             if let gap = clip.gapTransition {
@@ -224,6 +232,7 @@ final class MixingStationViewModel {
 
     func exportMerged(options: ExportOptions) {
         guard !clips.isEmpty else { return }
+        stopClipPreview()
         isExporting = true
         exportProgress = 0
         exportedFileURL = nil
@@ -276,5 +285,32 @@ final class MixingStationViewModel {
         showShareSheet = false
         exportedFileURL = nil
         exportProgress = 0   // FIX: was missing — testDismissShareSheetResetsState now GREEN
+    }
+
+    // MARK: - Clip preview
+
+    func toggleClipPreview(_ clip: AudioClip) {
+        if previewingClipID == clip.id {
+            stopClipPreview()
+            return
+        }
+        stopClipPreview()
+        guard let url = try? clip.fileURL else { return }
+        do {
+            let player = try AVAudioPlayer(contentsOf: url)
+            player.prepareToPlay()
+            guard player.play() else { return }
+            previewPlayer = player
+            previewingClipID = clip.id
+        } catch {
+            previewPlayer = nil
+            previewingClipID = nil
+        }
+    }
+
+    func stopClipPreview() {
+        previewPlayer?.stop()
+        previewPlayer = nil
+        previewingClipID = nil
     }
 }

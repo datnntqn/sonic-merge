@@ -17,6 +17,7 @@
 // + Error alert
 
 import SwiftUI
+import UIKit
 import AVFoundation
 
 // MARK: - CleaningLabView
@@ -54,6 +55,8 @@ struct CleaningLabView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 20) {
+                onDeviceAIHero
+
                 // 1. Stale result banner
                 if viewModel.showsStaleResultBanner && viewModel.hasDenoisedResult {
                     staleBanner
@@ -130,6 +133,26 @@ struct CleaningLabView: View {
     }
 
     // MARK: - Subviews
+
+    private var onDeviceAIHero: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "cpu")
+                .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.aiAccent))
+            VStack(alignment: .leading, spacing: 4) {
+                Text(TrustSignalCopy.aiDenoiseTitle)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
+                Text(TrustSignalCopy.aiDenoiseSubtitle)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .background(Color(uiColor: SonicMergeTheme.ColorPalette.cardSurface))
+        .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous))
+        .shadow(color: Color.black.opacity(0.04), radius: 4, x: 0, y: 2)
+    }
 
     // 1. Stale result banner
     private var staleBanner: some View {

@@ -2,6 +2,11 @@
 // SonicMerge
 
 import SwiftUI
+import UIKit
+
+enum GapRowAccessibility {
+    static let label = "Transition between clips"
+}
 
 /// Inline row between two clip cards allowing the user to select a gap duration or crossfade.
 /// The segmented control options are: 0.5s | 1.0s | 2.0s | Crossfade.
@@ -44,8 +49,14 @@ struct GapRowView: View {
             }
         }
         .pickerStyle(.segmented)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(GapRowAccessibility.label)
+        .background(Color(uiColor: SonicMergeTheme.ColorPalette.cardSurface).opacity(0.55))
+        .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.chip, style: .continuous))
         .padding(.horizontal, 16)
-        .padding(.vertical, 4)
+        .padding(.vertical, 6)
         .onChange(of: selection) { _, newValue in
             onUpdate(newValue.gapDuration, newValue.isCrossfade)
         }

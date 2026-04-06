@@ -2,40 +2,51 @@
 // SonicMerge
 
 import SwiftUI
+import UIKit
 import AVFoundation
 
-/// A row in the Mixing Station List showing waveform thumbnail, file name, and duration.
-///
-/// Waveform thumbnail: Canvas-rendered bar chart, 50 bars, accent blue (#007AFF).
-/// The .waveform sidecar (50 Float32 peak values) is loaded on appear.
+/// A row in the Mixing Station List showing waveform thumbnail, file name, duration, and preview.
 struct ClipCardView: View {
     let clip: AudioClip
+    let isPreviewing: Bool
+    let onPreviewTap: () -> Void
 
     @State private var peaks: [Float] = Array(repeating: 0, count: 50)
 
     var body: some View {
         HStack(spacing: 12) {
-            // Waveform thumbnail
             WaveformThumbnailView(peaks: peaks)
                 .frame(width: 60, height: 44)
-                .clipShape(RoundedRectangle(cornerRadius: 6))
+                .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
 
-            // Metadata
             VStack(alignment: .leading, spacing: 2) {
                 Text(clip.displayName)
                     .font(.system(.body, design: .default, weight: .medium))
-                    .foregroundStyle(Color(red: 0.110, green: 0.110, blue: 0.118))
+                    .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
                     .lineLimit(1)
-                Text(formattedDuration(clip.duration))
-                    .font(.system(.caption, design: .default))
+                Text(ClipDurationFormatting.mmss(from: clip.duration))
+                    .font(.caption)
                     .foregroundStyle(.secondary)
             }
-            Spacer()
+
+            Spacer(minLength: 0)
+
+            Button(action: onPreviewTap) {
+                Image(systemName: isPreviewing ? "stop.fill" : "play.fill")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent))
+                    .padding(10)
+                    .background(Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent).opacity(0.12))
+                    .clipShape(Circle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel(isPreviewing ? "Stop preview" : "Preview clip")
         }
-        .padding(.vertical, 8)
+        .padding(.vertical, 10)
         .padding(.horizontal, 12)
-        .background(Color.white)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .background(Color(uiColor: SonicMergeTheme.ColorPalette.cardSurface))
+        .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous))
+        .shadow(color: Color.black.opacity(0.06), radius: 8, x: 0, y: 3)
         .task { loadPeaks() }
     }
 
@@ -44,12 +55,6 @@ struct ClipCardView: View {
               let data = try? Data(contentsOf: url),
               data.count == 50 * MemoryLayout<Float>.size else { return }
         peaks = data.withUnsafeBytes { Array($0.bindMemory(to: Float.self)) }
-    }
-
-    private func formattedDuration(_ seconds: TimeInterval) -> String {
-        let mins = Int(seconds) / 60
-        let secs = Int(seconds) % 60
-        return String(format: "%d:%02d", mins, secs)
     }
 }
 
@@ -61,7 +66,7 @@ private struct WaveformThumbnailView: View {
         Canvas { context, size in
             guard !peaks.isEmpty else { return }
             let barWidth = size.width / CGFloat(peaks.count)
-            let accentBlue = Color(red: 0, green: 0.478, blue: 1.0)
+            let accentBlue = Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent)
 
             for (i, peak) in peaks.enumerated() {
                 let barHeight = CGFloat(peak) * size.height
@@ -71,6 +76,6 @@ private struct WaveformThumbnailView: View {
                 context.fill(Path(rect), with: .color(accentBlue))
             }
         }
-        .background(Color(red: 0.973, green: 0.976, blue: 0.980))
+        .background(Color(uiColor: SonicMergeTheme.ColorPalette.canvasBackground))
     }
 }

@@ -7,6 +7,7 @@
 // Replaces ImportView as the app's entry point (SonicMergeApp.swift routes here).
 
 import SwiftUI
+import UIKit
 import UniformTypeIdentifiers
 
 /// Root view of SonicMerge. Displays the Mixing Station: a vertical list of
@@ -23,7 +24,7 @@ struct MixingStationView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(red: 0.973, green: 0.976, blue: 0.980)
+                Color(uiColor: SonicMergeTheme.ColorPalette.canvasBackground)
                     .ignoresSafeArea()
 
                 if viewModel.clips.isEmpty {
@@ -92,10 +93,10 @@ struct MixingStationView: View {
         VStack(spacing: 16) {
             Image(systemName: "waveform")
                 .font(.system(size: 48))
-                .foregroundStyle(Color(red: 0, green: 0.478, blue: 1.0))
+                .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent))
             Text("No clips yet")
                 .font(.system(.title3, design: .default, weight: .semibold))
-                .foregroundStyle(Color(red: 0.110, green: 0.110, blue: 0.118))
+                .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
             Text("Tap Import to add audio files")
                 .font(.system(.body))
                 .foregroundStyle(.secondary)
@@ -105,23 +106,59 @@ struct MixingStationView: View {
                     .foregroundStyle(.white)
                     .padding(.horizontal, 24)
                     .padding(.vertical, 12)
-                    .background(Color(red: 0, green: 0.478, blue: 1.0))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
         }
     }
 
     private var clipList: some View {
         List {
-            // Interleave clip cards and gap rows
+            Section {
+                LocalFirstTrustStrip()
+                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+            }
+
+            Section {
+                HStack {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("Sequence")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
+                        Text(summarySubtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                    Spacer(minLength: 0)
+                }
+                .padding(.vertical, 6)
+                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                .listRowBackground(Color.clear)
+                .listRowSeparator(.hidden)
+            }
+
             ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
                 Section {
-                    ClipCardView(clip: clip)
-                        .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                    ClipCardView(
+                        clip: clip,
+                        isPreviewing: viewModel.previewingClipID == clip.id,
+                        onPreviewTap: { viewModel.toggleClipPreview(clip) }
+                    )
+                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button(role: .destructive) {
+                            if let idx = MixingStationClipIndexResolver.index(for: clip.id, in: viewModel.clips) {
+                                viewModel.deleteClip(atOffsets: IndexSet(integer: idx))
+                            }
+                        } label: {
+                            Label("Delete", systemImage: "trash")
+                        }
+                    }
 
-                    // Gap row after every clip except the last
                     if index < viewModel.clips.count - 1,
                        let transition = clip.gapTransition {
                         GapRowView(transition: transition) { gapDuration, isCrossfade in
@@ -138,12 +175,18 @@ struct MixingStationView: View {
                 }
             }
             .onMove { from, to in viewModel.moveClip(fromOffsets: from, toOffset: to) }
-            .onDelete { offsets in viewModel.deleteClip(atOffsets: offsets) }
         }
         .listStyle(.plain)
         .scrollContentBackground(.hidden)
-        .background(Color(red: 0.973, green: 0.976, blue: 0.980))
-        .environment(\.editMode, .constant(.active))  // Always show drag handles (MRG-01)
+        .background(Color(uiColor: SonicMergeTheme.ColorPalette.canvasBackground))
+        .environment(\.editMode, .constant(.active))
+    }
+
+    private var summarySubtitle: String {
+        let n = viewModel.clips.count
+        let total = viewModel.clips.reduce(0.0) { $0 + $1.duration }
+        let dur = ClipDurationFormatting.mmss(from: total)
+        return "\(n) clip\(n == 1 ? "" : "s") · ~\(dur)"
     }
 
     @ToolbarContentBuilder
@@ -177,6 +220,7 @@ struct MixingStationView: View {
     /// Uses AudioMergerService to build a merged .wav file matching the current clip
     /// arrangement. The URL is passed into CleaningLabView as the source for denoising.
     private func navigateToCleaningLab() {
+        viewModel.stopClipPreview()
         let destURL = FileManager.default.temporaryDirectory
             .appending(path: "SonicMerge-CleaningLab-\(UUID().uuidString).wav")
 

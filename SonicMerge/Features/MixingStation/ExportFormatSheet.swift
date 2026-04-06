@@ -2,6 +2,7 @@
 // SonicMerge
 
 import SwiftUI
+import UIKit
 
 /// Carries export configuration from ExportFormatSheet to the export callback.
 /// Introduced in Phase 4 to add the LUFS normalization flag alongside format.
@@ -23,8 +24,14 @@ struct ExportFormatSheet: View {
         VStack(spacing: 24) {
             Text("Export Format")
                 .font(.system(.headline))
-                .foregroundStyle(Color(red: 0.110, green: 0.110, blue: 0.118))
+                .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
                 .padding(.top, 20)
+
+            Text("Files are rendered locally on your device.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 24)
 
             Picker("Format", selection: $selectedFormat) {
                 Text(".m4a (AAC)").tag(ExportFormat.m4a)
@@ -38,7 +45,7 @@ struct ExportFormatSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Normalize to -16 LUFS")
                         .font(.system(.body))
-                        .foregroundStyle(Color(red: 0.110, green: 0.110, blue: 0.118))
+                        .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
                     Text("Podcast standard (-16 LUFS)")
                         .font(.system(.caption))
                         .foregroundStyle(.secondary)
@@ -46,7 +53,7 @@ struct ExportFormatSheet: View {
                 Spacer()
                 Toggle("", isOn: $lufsEnabled)
                     .labelsHidden()
-                    .tint(Color(red: 0, green: 0.478, blue: 1.0))
+                    .tint(Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent))
             }
             .padding(.horizontal, 24)
 
@@ -59,12 +66,12 @@ struct ExportFormatSheet: View {
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 14)
-                    .background(Color(red: 0, green: 0.478, blue: 1.0))
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+                    .background(Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
-        .presentationDetents([.height(280)])
+        .presentationDetents([.height(320)])
     }
 }
