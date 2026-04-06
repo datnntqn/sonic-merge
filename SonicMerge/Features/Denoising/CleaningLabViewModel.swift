@@ -170,6 +170,7 @@ final class CleaningLabViewModel {
                 denoisedFrames = loadPCMFrames(from: tempURL)
 
                 // Step 7: Prepare both players
+                await MainActor.run { PlaybackAudioSession.activateIfNeeded() }
                 let origPlayer = try AVAudioPlayer(contentsOf: mergedFileURL)
                 let denPlayer  = try AVAudioPlayer(contentsOf: tempURL)
                 origPlayer.prepareToPlay()
@@ -245,6 +246,7 @@ final class CleaningLabViewModel {
                 let currentTime = denoisedPlayer?.currentTime ?? 0
                 let wasPlaying = denoisedPlayer?.isPlaying ?? false
 
+                await MainActor.run { PlaybackAudioSession.activateIfNeeded() }
                 let newPlayer = try AVAudioPlayer(contentsOf: blendedURL)
                 newPlayer.prepareToPlay()
                 newPlayer.currentTime = currentTime

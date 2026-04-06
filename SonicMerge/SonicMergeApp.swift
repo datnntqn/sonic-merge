@@ -7,7 +7,6 @@
 
 import SwiftUI
 import SwiftData
-import AVFAudio
 
 @main
 struct SonicMergeApp: App {
@@ -52,10 +51,6 @@ struct SonicMergeApp: App {
             fatalError("Failed to create ModelContainer: \(error)")
         }
     }()
-
-    init() {
-        configureAudioSession()
-    }
 
     /// Retained so the scenePhase handler and onOpenURL handler can call importFiles.
     @State private var viewModel: MixingStationViewModel?
@@ -105,26 +100,5 @@ struct SonicMergeApp: App {
             }
         }
         .modelContainer(modelContainer)
-    }
-
-    /// Activates AVAudioSession with `.playback` category at launch.
-    ///
-    /// - Category `.playback`: the app imports pre-recorded files and does not record live audio.
-    /// - Option `.mixWithOthers`: background music continues while the app is in use.
-    /// - Activation at launch avoids an audio "pop" when the session starts mid-import.
-    ///
-    /// Failure is non-fatal: normalization via AVAssetWriter writes to disk without an active
-    /// audio session. Phase 2 (playback) retries activation before the first playback attempt.
-    private func configureAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setCategory(
-                .playback,
-                mode: .default,
-                options: [.mixWithOthers]
-            )
-            try AVAudioSession.sharedInstance().setActive(true)
-        } catch {
-            print("[SonicMergeApp] AVAudioSession configuration failed: \(error)")
-        }
     }
 }

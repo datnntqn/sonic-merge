@@ -309,6 +309,7 @@ final class MixingStationViewModel {
         }
         stopClipPreview()
         guard let url = try? clip.fileURL else { return }
+        PlaybackAudioSession.activateIfNeeded()
         do {
             let player = try AVAudioPlayer(contentsOf: url)
             player.prepareToPlay()
