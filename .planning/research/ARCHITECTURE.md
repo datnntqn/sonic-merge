@@ -1,8 +1,8 @@
 # Architecture Research
 
-**Domain:** iOS Audio Processing App (Audio Merger + On-Device AI Denoiser)
-**Researched:** 2026-03-08
-**Confidence:** HIGH (Stack decisions confirmed by Apple docs and WWDC sessions; patterns confirmed by multiple sources)
+**Domain:** iOS SwiftUI UI Restyle — Modern Spatial Utility aesthetic over existing MVVM app (SonicMerge v1.1)
+**Researched:** 2026-04-08
+**Confidence:** HIGH (based on direct codebase inspection; all integration points verified against existing Swift files)
 
 ---
 
@@ -11,62 +11,60 @@
 ### System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        PRESENTATION LAYER                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────────┐   │
-│  │  MixingStation   │  │   CleaningLab    │  │   ExportProgress     │   │
-│  │  View            │  │   View           │  │   Sheet              │   │
-│  └────────┬─────────┘  └────────┬─────────┘  └──────────┬───────────┘   │
-│           │                     │                        │               │
-│  ┌────────▼─────────┐  ┌────────▼─────────┐  ┌──────────▼───────────┐   │
-│  │  MixingStation   │  │   CleaningLab    │  │   ExportProgress     │   │
-│  │  ViewModel       │  │   ViewModel      │  │   ViewModel          │   │
-│  └────────┬─────────┘  └────────┬─────────┘  └──────────┬───────────┘   │
-├───────────┼─────────────────────┼────────────────────────┼───────────────┤
-│                        SERVICE LAYER                                      │
-├───────────┼─────────────────────┼────────────────────────┼───────────────┤
-│  ┌────────▼──────────────────────▼────────┐  ┌───────────▼───────────┐   │
-│  │         AudioMergerService             │  │  NoiseReductionService│   │
-│  │  (AVMutableComposition +               │  │  (AVAudioEngine +     │   │
-│  │   AVAssetExportSession)                │  │   Voice Processing)   │   │
-│  └─────────────────────┬──────────────────┘  └───────────┬───────────┘   │
-│                        │                                  │               │
-│  ┌─────────────────────▼──────────────────────────────────▼───────────┐   │
-│  │                    AudioSessionManager                              │   │
-│  │              (AVAudioSession configuration)                         │   │
-│  └─────────────────────────────────────────────────────────────────────┘   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                        DATA / MODEL LAYER                                │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐                   │
-│  │ AudioSegment │  │ MergeConfig  │  │ TempFileStore│                   │
-│  │ (struct)     │  │ (struct)     │  │ (FileManager)│                   │
-│  └──────────────┘  └──────────────┘  └──────────────┘                   │
-├─────────────────────────────────────────────────────────────────────────┤
-│                        EXTENSION LAYER (separate target)                 │
-├─────────────────────────────────────────────────────────────────────────┤
-│  ┌──────────────────────────────────────────────────────────────────┐   │
-│  │  ShareExtension (ShareViewController)                            │   │
-│  │    NSItemProvider → copy to App Group container → open main app  │   │
-│  └──────────────────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                     DESIGN SYSTEM LAYER (EXTENDED + NEW)              │
+│  ┌──────────────────┐  ┌─────────────────────┐  ┌─────────────────┐  │
+│  │  SonicMergeTheme │  │  SonicMergeSemantic  │  │  SpacialTokens  │  │
+│  │  (EXTENDED)      │  │  (EXTENDED)          │  │  (NEW file)     │  │
+│  │  +squircleRadius │  │  +meshGradientStart  │  │  +glowRadius    │  │
+│  │  +glowIntensity  │  │  +meshGradientEnd    │  │  +timelineStroke│  │
+│  │                  │  │  +aiHighlight        │  │  +glassBlur     │  │
+│  │                  │  │  +glassOpacity       │  │                 │  │
+│  └──────────────────┘  └─────────────────────┘  └─────────────────┘  │
+├──────────────────────────────────────────────────────────────────────┤
+│                    SHARED COMPONENT LAYER (NEW)                        │
+│  ┌──────────────────┐  ┌──────────────────┐  ┌───────────────────┐   │
+│  │  SquircleCard    │  │  PillButton      │  │  MeshWaveformView │   │
+│  │  (ViewModifier)  │  │  (ViewModifier)  │  │  (Canvas View)    │   │
+│  └──────────────────┘  └──────────────────┘  └───────────────────┘   │
+│  ┌──────────────────┐  ┌──────────────────┐                           │
+│  │  GlassmorphHeader│  │  AIOrb           │                           │
+│  │  (View)          │  │  (View)          │                           │
+│  └──────────────────┘  └──────────────────┘                           │
+├──────────────────────────────────────────────────────────────────────┤
+│                      VIEW LAYER (MODIFIED FILES)                       │
+│  ┌─────────────────────┐  ┌──────────────────┐  ┌─────────────────┐  │
+│  │  MixingStationView  │  │  CleaningLabView  │  │  MergeSlotRow   │  │
+│  │  MergeTimelineView  │  │  (AIOrb injected) │  │  ClipCardView   │  │
+│  │  (timeline line)    │  │                   │  │  GapRowView     │  │
+│  └─────────────────────┘  └──────────────────┘  └─────────────────┘  │
+├──────────────────────────────────────────────────────────────────────┤
+│              VIEWMODEL + SERVICE LAYER (UNTOUCHED — constraint)        │
+│  MixingStationViewModel  CleaningLabViewModel  ImportViewModel         │
+│  AudioMergerService  NoiseReductionService  WaveformService            │
+│  LUFSNormalizationService  AudioNormalizationService                   │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Component Responsibilities
 
-| Component | Responsibility | Typical Implementation |
-|-----------|---------------|------------------------|
-| `MixingStationView` | Drag-reorder clip list, add gaps, swipe-delete, Before/After toggle | SwiftUI List with `.onMove`, gesture recognizers |
-| `CleaningLabView` | Noise intensity slider, A/B comparison playback, progress display | SwiftUI Slider, AVAudioPlayer for preview |
-| `MixingStationViewModel` | Clip list state, reorder logic, gap insertion, export trigger | `@Observable` class, `@MainActor` |
-| `CleaningLabViewModel` | Denoising state, intensity value, playback state | `@Observable` class, `@MainActor` |
-| `AudioMergerService` | Compose AVMutableComposition, apply crossfades, export to file | Pure Swift `actor` or `struct` with `async` methods |
-| `NoiseReductionService` | Build AVAudioEngine graph, enable voice processing, write PCM buffers to output file | Pure Swift `actor` with `async throws` |
-| `AudioSessionManager` | Configure AVAudioSession category/mode, handle interruptions | Singleton `@MainActor` class |
-| `AudioSegment` | Immutable value: URL, duration, CMTimeRange, display name | `struct` conforming to `Identifiable`, `Equatable` |
-| `TempFileStore` | Create/track/delete temp files in `NSTemporaryDirectory()` | Utility `class` or `actor` |
-| `ShareViewController` | Accept NSItemProvider audio attachments, copy to App Group container, dismiss | `UIViewController` subclass (can use SwiftUI host) |
+| Component | Responsibility | Status |
+|-----------|----------------|--------|
+| `SonicMergeTheme` | Static UIColor palette, corner radii | EXTENDED — add `spatialRadius=24`, `glowIntensity` |
+| `SonicMergeSemantic` | Light/dark resolved semantic colors via EnvironmentKey | EXTENDED — add `meshGradientStart/End`, `aiHighlight`, `glassOpacity`, `cardGlowColor` |
+| `SpacialTokens` | Spatial-specific rendering constants (blur, glow radius, timeline stroke, shadow specs) | NEW file in `DesignSystem/` |
+| `SquircleCard` | ViewModifier: 24pt squircle + glass fill + mesh gradient overlay + optional glow border | NEW in `Components/` |
+| `PillButton` | ViewModifier: pill shape + inner glow + haptic impact on press + scale animation | NEW in `Components/` |
+| `MeshWaveformView` | Canvas view: accepts `[Float]` peaks, renders symmetrical bars filled with `LinearGradient(meshGradientStart → meshGradientEnd)` | NEW in `Components/`; replaces three private waveform Canvas structs |
+| `GlassmorphHeader` | SwiftUI View: glass `.ultraThinMaterial` banner + "Private by Design" text + Deep Indigo glow border | NEW in `Components/` |
+| `AIOrb` | SwiftUI View: `TimelineView(.animation)` + `Canvas` pulsating nebula sphere; accepts `isActive: Bool` | NEW in `Components/` |
+| `MixingStationView` | Root screen; injects `sonicMergeSemantic` into environment | MODIFIED — toolbar pills, nav header supplement |
+| `MergeTimelineView` | Vertical timeline scroll content | MODIFIED — central connector line overlay, section header typography |
+| `MergeSlotRow` | Clip card row with waveform thumbnail, name, preview button, drag handle | MODIFIED — `SquircleCard` modifier, `MeshWaveformView` |
+| `ClipCardView` | Compact clip card (Share Extension HUD and legacy context) | MODIFIED — `SquircleCard` modifier, `MeshWaveformView` mini |
+| `GapRowView` | Segmented gap/crossfade control between clips | MODIFIED — glass background, pill segment style |
+| `CleaningLabView` | Denoise screen | MODIFIED — `AIOrb` replaces `onDeviceAIHero`, `MeshWaveformView` replaces `WaveformCanvasView` |
+| `TrustSignalViews` | `LocalFirstTrustStrip` trust banner | MODIFIED — `SquircleCard` modifier replaces manual background block |
 
 ---
 
@@ -74,214 +72,212 @@
 
 ```
 SonicMerge/
-├── App/
-│   └── SonicMergeApp.swift          # @main entry, AudioSessionManager.configure()
+├── DesignSystem/
+│   ├── SonicMergeTheme.swift              # EXTENDED: +spatialRadius (24), +glowIntensity
+│   ├── SonicMergeTheme+Appearance.swift   # EXTENDED: +meshGradientStart/End, +aiHighlight,
+│   │                                      #           +glassOpacity, +cardGlowColor
+│   ├── SpacialTokens.swift                # NEW: squircleRadius=24, cardShadowRadius=12,
+│   │                                      #      dragShadowRadius=20, glassBlurRadius=16,
+│   │                                      #      timelineStrokeWidth=2, glowBorderWidth=1
+│   └── TrustSignalViews.swift             # MODIFIED: SquircleCard + glassmorphism
 │
-├── Features/
-│   ├── Merging/
-│   │   ├── MixingStationView.swift   # UI: clip list, drag-reorder, gaps
-│   │   ├── MixingStationViewModel.swift
-│   │   ├── AudioCardView.swift       # Individual clip card component
-│   │   └── WaveformView.swift        # Waveform mini-preview component
-│   │
-│   └── Denoising/
-│       ├── CleaningLabView.swift     # UI: intensity slider, A/B compare
-│       └── CleaningLabViewModel.swift
+├── Components/                            # NEW top-level folder
+│   ├── SquircleCard.swift                 # ViewModifier
+│   ├── PillButton.swift                   # ViewModifier
+│   ├── MeshWaveformView.swift             # Shared Canvas waveform renderer
+│   ├── GlassmorphHeader.swift             # Glass banner View
+│   └── AIOrb.swift                        # Animated orb View
 │
-├── Services/
-│   ├── AudioMergerService.swift      # Composition + export
-│   ├── NoiseReductionService.swift   # AVAudioEngine voice processing
-│   └── AudioSessionManager.swift    # AVAudioSession setup
-│
-├── Models/
-│   ├── AudioSegment.swift            # Value type for a clip
-│   ├── MergeConfig.swift             # Gap durations, crossfade params
-│   └── ProcessingState.swift         # Enum: idle/processing/done/failed
-│
-├── Storage/
-│   └── TempFileStore.swift           # Temp file lifecycle management
-│
-├── Extensions/
-│   ├── CMTime+Extensions.swift
-│   ├── AVAsset+Extensions.swift
-│   └── Color+Theme.swift
-│
-├── Resources/
-│   └── Assets.xcassets
-│
-└── ShareExtension/                   # Separate Xcode target
-    ├── ShareViewController.swift
-    └── Info.plist
+└── Features/
+    ├── MixingStation/
+    │   ├── MixingStationView.swift        # MODIFIED: GlassmorphHeader, PillButton toolbar
+    │   ├── MergeTimelineView.swift        # MODIFIED: connector line, output card restyle
+    │   ├── MergeSlotRow.swift             # MODIFIED: SquircleCard, MeshWaveformView
+    │   ├── ClipCardView.swift             # MODIFIED: SquircleCard, MeshWaveformView mini
+    │   ├── GapRowView.swift               # MODIFIED: glass background, pill segments
+    │   ├── ExportFormatSheet.swift        # MODIFIED: PillButton on action buttons
+    │   └── ExportProgressSheet.swift      # MODIFIED: progress bar glow style
+    └── Denoising/
+        └── CleaningLabView.swift          # MODIFIED: AIOrb + MeshWaveformView
+    # Import/, Services/, Models/, SpeechEnhancement/ — UNTOUCHED
 ```
 
 ### Structure Rationale
 
-- **`Features/`:** Features are self-contained vertical slices (View + ViewModel). Each feature folder owns its UI without reaching into other features.
-- **`Services/`:** Pure business logic, no SwiftUI imports. Services are injectable and independently testable.
-- **`Models/`:** Shared value types; no business logic. Both Features and Services import these — they form the shared vocabulary.
-- **`Storage/`:** Isolated file-system concern. Swappable without touching Services.
-- **`ShareExtension/`:** Separate target with minimal code. Only handles ingestion; all processing stays in the main app.
+- **`DesignSystem/` extensions:** Token additions sit beside existing token files. Reviewers see existing and new properties together; no context switching between folders.
+- **`Components/` new folder:** Clear boundary between "shared styled primitives" (used by multiple features) and "feature views." `SquircleCard` and `MeshWaveformView` are both consumed by MixingStation and CleaningLab — they belong in neither feature folder.
+- **Feature folder structure unchanged:** ViewModels and Services are not modified per project constraint. Only `.swift` files in the View layer change; they stay in their existing feature subfolders.
 
 ---
 
 ## Architectural Patterns
 
-### Pattern 1: MVVM with @Observable (iOS 17+)
+### Pattern 1: Token Extension — Additive, Not Replacement
 
-**What:** Views own an `@Observable` ViewModel annotated with `@MainActor`. Services are plain `actor` types injected into ViewModels. Data flows from Service -> ViewModel (via `async/await`) -> View (via observed state).
+**What:** New color and spatial tokens are added to `SonicMergeSemantic` as additional properties alongside existing ones. Views currently not being restyled keep using their existing token names. No existing property is renamed or removed.
 
-**When to use:** The standard pattern for SwiftUI on iOS 17+. Required for SonicMerge since the minimum deployment is iOS 17.
+**When to use:** Every new design value needed for the v1.1 aesthetic — mesh gradient colors, AI highlight color, glass opacity, glow border color.
 
-**Trade-offs:** Simpler than Combine pipelines; all UI state lives on main actor; async processing escapes to background naturally via Swift Concurrency `Task {}` blocks inside ViewModels.
+**Trade-offs:**
+- Pro: Zero risk for views not yet touched in the current build step; the app compiles and runs correctly at every intermediate state.
+- Pro: Easy rollback — remove new properties to revert.
+- Con: `SonicMergeSemantic` struct grows temporarily; prune unused old tokens in a cleanup commit after the restyle is complete.
 
 **Example:**
-
 ```swift
-// Model
-struct AudioSegment: Identifiable, Equatable {
-    let id: UUID
-    let sourceURL: URL
-    let displayName: String
-    let duration: CMTime
-    var gapAfter: CMTime = .zero
-}
+// SonicMergeTheme+Appearance.swift — additive extension
+struct SonicMergeSemantic {
+    // Existing (unchanged)
+    var surfaceBase: UIColor
+    var surfaceSlot: UIColor
+    var surfaceElevated: UIColor
+    var accentAction: UIColor
+    var accentWaveform: UIColor
+    var textPrimary: UIColor
+    var textSecondary: UIColor
+    var trustIcon: UIColor
 
-// ViewModel — all UI state, all UI mutations on @MainActor
-@Observable
-@MainActor
-final class MixingStationViewModel {
-    var segments: [AudioSegment] = []
-    var processingState: ProcessingState = .idle
-    var exportProgress: Double = 0
-
-    private let mergerService: AudioMergerService
-    private let denoiseService: NoiseReductionService
-
-    func startExport(config: MergeConfig) {
-        Task {
-            processingState = .processing
-            do {
-                let merged = try await mergerService.merge(segments, config: config)
-                let denoised = try await denoiseService.process(merged, intensity: config.noiseIntensity)
-                processingState = .done(url: denoised)
-            } catch {
-                processingState = .failed(error)
-            }
-        }
-    }
+    // NEW for v1.1 Spatial
+    var meshGradientStart: UIColor   // Deep Indigo #5856D6
+    var meshGradientEnd: UIColor     // Purple #9B59B6 (dark) or transparent lavender (light)
+    var aiHighlight: UIColor         // Lime Green #A7C957 (dark) / Deep Indigo (light)
+    var glassOpacity: Double         // 0.72 light / 0.60 dark
+    var cardGlowColor: UIColor       // accentAction at reduced alpha, used for pill border glow
 }
 ```
 
-### Pattern 2: Service as Actor (Background Audio Processing)
+### Pattern 2: ViewModifier as Styled Shell
 
-**What:** Audio processing services are Swift `actor` types. Calling them from `@MainActor` ViewModels automatically hops to the actor's executor, keeping audio I/O off the main thread.
+**What:** `SquircleCard` and `PillButton` are `ViewModifier` types applied with `.squircleCard()` and `.pillButton()` extension methods. They wrap any view's existing content without requiring structural changes to view bodies.
 
-**When to use:** Any long-running audio operation: composition, export, noise reduction buffer writing. Prevents UI jank.
+**When to use:** Any time a shape + fill + border + shadow combination is reused across 2+ views. Currently: `MergeSlotRow`, `ClipCardView`, `LocalFirstTrustStrip`, output card in `MergeTimelineView`, intensity slider card in `CleaningLabView`.
 
-**Trade-offs:** Actors serialize access, so two simultaneous exports cannot run in parallel on the same service instance. For SonicMerge's sequential pipeline this is correct behavior. Progress reporting requires explicit `await MainActor.run {}` calls.
+**Trade-offs:**
+- Pro: Composable — can layer modifiers (`.squircleCard().dragShadow()`).
+- Pro: Existing view body structure (HStack, VStack) is unchanged; only the `.background/.clipShape/.shadow` lines are replaced.
+- Con: Cannot inject subviews (header/footer slots) into a modifier; for structured layouts with named regions, a wrapper View is needed instead.
 
 **Example:**
-
 ```swift
-actor AudioMergerService {
-    func merge(_ segments: [AudioSegment], config: MergeConfig) async throws -> URL {
-        let composition = AVMutableComposition()
-        let track = composition.addMutableTrack(
-            withMediaType: .audio,
-            preferredTrackID: kCMPersistentTrackID_Invalid
-        )
-        var cursor = CMTime.zero
-        for segment in segments {
-            let asset = AVURLAsset(url: segment.sourceURL)
-            let assetTrack = try await asset.loadTracks(withMediaType: .audio).first!
-            let timeRange = try await asset.load(.duration)
-            try track?.insertTimeRange(
-                CMTimeRangeMake(start: .zero, duration: timeRange),
-                of: assetTrack,
-                at: cursor
+// Components/SquircleCard.swift
+struct SquircleCardModifier: ViewModifier {
+    @Environment(\.sonicMergeSemantic) private var semantic
+    var applyGlow: Bool = false
+
+    func body(content: Content) -> some View {
+        content
+            .background(
+                RoundedRectangle(cornerRadius: SpacialTokens.squircleRadius, style: .continuous)
+                    .fill(Color(uiColor: semantic.surfaceSlot))
+                    .overlay(
+                        LinearGradient(
+                            colors: [
+                                Color(uiColor: semantic.meshGradientStart).opacity(0.18),
+                                Color(uiColor: semantic.meshGradientEnd).opacity(0.05)
+                            ],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                    )
             )
-            cursor = CMTimeAdd(cursor, timeRange)
-            cursor = CMTimeAdd(cursor, segment.gapAfter)
-        }
-        return try await export(composition: composition, config: config)
+            .clipShape(RoundedRectangle(cornerRadius: SpacialTokens.squircleRadius, style: .continuous))
+            .overlay(
+                RoundedRectangle(cornerRadius: SpacialTokens.squircleRadius, style: .continuous)
+                    .strokeBorder(
+                        applyGlow
+                            ? Color(uiColor: semantic.cardGlowColor).opacity(0.45)
+                            : Color(uiColor: semantic.accentAction).opacity(0.18),
+                        lineWidth: SpacialTokens.glowBorderWidth
+                    )
+            )
+            .shadow(color: Color.black.opacity(0.14), radius: SpacialTokens.cardShadowRadius, x: 0, y: 5)
+    }
+}
+
+extension View {
+    func squircleCard(glow: Bool = false) -> some View {
+        modifier(SquircleCardModifier(applyGlow: glow))
     }
 }
 ```
 
-### Pattern 3: Progress Reporting via AsyncStream
+### Pattern 3: MeshWaveformView — Data-Agnostic Shared Renderer
 
-**What:** Wrap `AVAssetExportSession.exportAsynchronously` with an `AsyncStream` that polls the `progress` property on a timer and yields values. The ViewModel subscribes via `for await progress in stream`.
+**What:** A standalone `MeshWaveformView` accepts `[Float]` peaks (50 values, same array already loaded by `MergeSlotRow`, `ClipCardView`, and `CleaningLabView`) and renders symmetrical center-origin bars filled with a `LinearGradient` using the new `meshGradientStart/End` semantic tokens. No WaveformService dependency; no new data loading logic.
 
-**When to use:** Export progress display. The native `AVAssetExportSession.progress` property is KVO-observable but not async-sequence native until iOS 18. For iOS 17 targets, polling is the pragmatic approach.
+**When to use:** Replace three private Canvas structs — `MergeSlotWaveformView` in `MergeSlotRow.swift`, `WaveformThumbnailView` in `ClipCardView.swift`, and `WaveformCanvasView` in `CleaningLabView.swift` — with a single shared renderer.
 
-**Trade-offs:** Polling interval (e.g., 100ms) adds minor overhead. The `export(to:as:isolation:)` async method is iOS 18+ only — do not use it if targeting iOS 17.
+**Trade-offs:**
+- Pro: One renderer to maintain; consistent gradient appearance across all three screens by construction.
+- Pro: Zero changes to `WaveformService` or `loadPeaks()` data loading. The `[Float]` array contract is unchanged.
+- Con: Three private structs in three different files must be deleted; each file gets an import of the new shared component.
 
-**Example:**
-
-```swift
-// Inside AudioMergerService
-private func exportWithProgress(
-    session: AVAssetExportSession,
-    outputURL: URL
-) async throws -> AsyncStream<Double> {
-    return AsyncStream { continuation in
-        session.exportAsynchronously {
-            continuation.finish()
-        }
-        Task {
-            while session.status == .exporting || session.status == .waiting {
-                continuation.yield(Double(session.progress))
-                try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-            }
-        }
+**Data flow:**
+```
+WaveformService (unchanged) → writes .waveform sidecar (50 x Float32)
+    ↓
+clip.waveformSidecarURL → Data → [Float]  (existing loadPeaks() in owning view, unchanged)
+    ↓
+MeshWaveformView(peaks: peaks)             <- new shared component
+    Canvas {
+        bars filled with LinearGradient(
+            colors: [semantic.meshGradientStart, semantic.meshGradientEnd],
+            startPoint: .top, endPoint: .bottom
+        )
     }
-}
 ```
 
-### Pattern 4: Share Extension → Main App via App Group Container
+### Pattern 4: AIOrb — Self-Contained Animation View
 
-**What:** Share Extension accepts NSItemProvider audio attachments, copies the file to a shared App Group file container, writes metadata (filename, UTI) to shared `UserDefaults(suiteName:)`, then dismisses. The main app reads the container on next launch or via openURL.
+**What:** `AIOrb` is a fully self-contained `View` driven by `TimelineView(.animation)` and an internal `@State var phase: Double`. It renders a pulsating nebula sphere using `Canvas` with layered radial gradients, `scaleEffect`, and `opacity` keyed to the phase. The only external input is `isActive: Bool`, which controls pulse speed (fast while processing, slow breathe when idle).
 
-**When to use:** This is the only viable pattern for iOS Share Extensions. Extensions cannot call `UIApplication.shared.open()` directly; they must use a responder-chain workaround to open the URL scheme.
+**When to use:** Injected into `CleaningLabView` to replace the existing `onDeviceAIHero` computed property (the static HStack with `cpu` system icon). `viewModel.isProcessing` — already a published `Bool` on `CleaningLabViewModel` — is passed directly as the `isActive` parameter.
 
-**Trade-offs:** The user must switch to the main app manually after sharing — there is no automatic app-switch in modern iOS without a URL scheme call. URL scheme dispatch from Share Extension requires the responder-chain hack (walking up `UIResponder` chain to find `UIApplication`).
+**Trade-offs:**
+- Pro: Zero coupling to business logic. `CleaningLabViewModel` is not modified at all.
+- Pro: `TimelineView(.animation)` is the correct iOS 17+ API for continuous Canvas animation without triggering full SwiftUI view tree re-renders on each frame.
+- Con: `TimelineView(.animation)` runs a persistent render loop while `CleaningLabView` is on screen. This is acceptable for a dedicated screen; wrap the `TimelineView` in an `.onAppear`/`.onDisappear` guard via a `@State var orbVisible` flag to pause the loop when the screen is covered by a sheet.
 
-**Example:**
-
+**Integration into CleaningLabView:**
 ```swift
-// ShareViewController.swift
-class ShareViewController: UIViewController {
-    private let appGroupID = "group.com.yourcompany.sonicmerge"
-
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        guard let item = extensionContext?.inputItems.first as? NSExtensionItem,
-              let provider = item.attachments?.first else { return }
-
-        let audioTypes: [UTType] = [.audio, .mpeg4Audio, .wav, .aiff]
-        for type in audioTypes {
-            if provider.hasItemConformingToTypeIdentifier(type.identifier) {
-                provider.loadFileRepresentation(forTypeIdentifier: type.identifier) { [weak self] url, error in
-                    guard let url, error == nil else { return }
-                    self?.copyToSharedContainer(url)
-                }
-                break
-            }
-        }
+// BEFORE (existing onDeviceAIHero — to be removed)
+private var onDeviceAIHero: some View {
+    HStack(alignment: .top, spacing: 10) {
+        Image(systemName: "cpu") ...
     }
+}
 
-    private func copyToSharedContainer(_ url: URL) {
-        guard let container = FileManager.default
-            .containerURL(forSecurityApplicationGroupIdentifier: appGroupID) else { return }
-        let dest = container.appendingPathComponent(url.lastPathComponent)
-        try? FileManager.default.copyItem(at: url, to: dest)
+// AFTER (restyle — replaces onDeviceAIHero in body VStack)
+AIOrb(isActive: viewModel.isProcessing)
+    .frame(width: 140, height: 140)
+    .padding(.vertical, 12)
 
-        // Write pending import metadata
-        let defaults = UserDefaults(suiteName: appGroupID)
-        defaults?.set(dest.lastPathComponent, forKey: "pendingImportFilename")
+// CleaningLabViewModel is untouched — isProcessing: Bool is already there
+```
 
-        extensionContext?.completeRequest(returningItems: nil)
-    }
+### Pattern 5: Central Timeline Connector Line
+
+**What:** A 2pt vertical line overlaid on `MergeTimelineView`'s content using a `ZStack` wrapper around the `List`. The line runs vertically along a fixed left-offset position matching the visual center of clip card leading edges. It is purely decorative rendering with no data or interaction.
+
+**When to use:** `MergeTimelineView.body` modification only — no ViewModel, no model changes.
+
+**Trade-offs:**
+- Pro: Pure rendering; zero logic risk.
+- Con: SwiftUI `List` does not expose inner coordinate space reliably. Use a fixed left offset of `36pt` (matching the 16pt `listRowInsets` leading + the clip card padding origin) measured visually. The line is a design element, not a precise data-bound position.
+
+**Implementation approach:**
+```swift
+// MergeTimelineView.body — wrap existing List in ZStack
+ZStack(alignment: .topLeading) {
+    // existing List(...)
+    
+    // Connector line overlay — behind list content, clipped to content area
+    Rectangle()
+        .fill(Color(uiColor: semantic.accentAction).opacity(0.25))
+        .frame(width: SpacialTokens.timelineStrokeWidth)
+        .padding(.leading, 36)
+        .padding(.vertical, 80)   // inset from first/last item
+        .allowsHitTesting(false)
 }
 ```
 
@@ -289,174 +285,246 @@ class ShareViewController: UIViewController {
 
 ## Data Flow
 
-### Primary Flow: Import → Merge → Denoise → Export
+### Design Token → Rendered Pixel
 
 ```
-[Share Extension]
-    ↓ NSItemProvider loadFileRepresentation
-[App Group Container] ← copyItem (audio file written here)
-    ↓ UserDefaults(suiteName:) "pendingImportFilename"
-[Main App Launch / onOpenURL]
-    ↓ reads pending import filename
-[MixingStationViewModel.importFromSharedContainer()]
-    ↓ creates AudioSegment (struct, value type)
-[MixingStationView] ← @Observable re-renders segment list
-    ↓ user reorders / sets gaps / triggers export
-[MixingStationViewModel.startExport()]
-    ↓ Task { } — escapes to background via actor hop
-[AudioMergerService.merge()] ← actor, background thread
-    ↓ AVMutableComposition built in memory
-    ↓ AVAssetExportSession → temp file (NSTemporaryDirectory)
-[NoiseReductionService.process()] ← actor, background thread
-    ↓ AVAudioEngine + VoiceProcessing reads temp file
-    ↓ AVAudioSinkNode captures processed PCM buffers
-    ↓ AVAudioFile writes processed output → new temp file
-    ↓ await MainActor.run { } — progress updates to ViewModel
-[MixingStationViewModel] ← processingState = .done(url:)
-    ↓ @Observable triggers View re-render
-[ExportProgressSheet] ← shows completion, share sheet
-    ↓ UIActivityViewController / ShareLink
-[User's Files / AirDrop / etc.]
+AppStorage("sonicMergeThemePreference")      [user preference, persisted]
+    ↓
+SonicMergeSemantic.resolved(colorScheme:preference:)    [MixingStationView, computed property]
+    ↓  .environment(\.sonicMergeSemantic, semantic)
+All descendant views read via @Environment(\.sonicMergeSemantic)
+    ↓
+semantic.meshGradientStart / semantic.aiHighlight / semantic.glassOpacity
+    ↓
+MeshWaveformView(peaks:)      →  Canvas LinearGradient bars
+AIOrb(isActive:)              →  Canvas radialGradient pulsation
+SquircleCardModifier          →  RoundedRectangle + LinearGradient overlay
+GlassmorphHeader              →  .ultraThinMaterial + indigo glow border
+PillButtonModifier            →  capsule shape + shadow + haptic
 ```
 
-### State Management
+### Waveform Mesh Gradient Data Flow
 
 ```
-ProcessingState enum (idle → processing → done/failed)
-    ↓ owned by ViewModel (@Observable, @MainActor)
-    ↓ read by View (SwiftUI binding)
-    ↓ mutated only by ViewModel (no direct Service → View writes)
+WaveformService.generate()        [actor, unchanged]
+    → writes .waveform sidecar binary (50 x Float32) to App Group container
 
-AudioSegment array (source of truth for clip list)
-    ↓ owned by MixingStationViewModel
-    ↓ passed by value to Services (no shared mutable state)
-    ↓ modified via .move(), .remove(), .insert() on ViewModel
+MergeSlotRow / ClipCardView / CleaningLabView
+    loadPeaks()                   [existing func, unchanged]
+    → @State var peaks: [Float]
+
+MeshWaveformView(peaks: peaks)    [new shared component]
+    Canvas { context, size in
+        for (i, peak) in peaks.enumerated() {
+            // bar rect centered on y-axis
+            context.fill(path, with: .linearGradient(
+                Gradient(colors: [meshGradientStart, meshGradientEnd]),
+                startPoint: topCenter, endPoint: bottomCenter
+            ))
+        }
+    }
 ```
 
-### Key Data Flows
+### AIOrb Animation Data Flow
 
-1. **Clip import from Share Extension:** App Group container file → `AudioSegment` struct (URL + metadata only, no data loading) → ViewModel array → View list.
-2. **Merge execution:** ViewModel passes `[AudioSegment]` + `MergeConfig` value types to `AudioMergerService`. Service owns all mutable AVFoundation objects internally. Result is a `URL` returned to ViewModel.
-3. **Noise reduction:** `NoiseReductionService` reads from the merger output URL. Writes processed PCM to a new temp file. Progress ticks are pushed to ViewModel via `await MainActor.run {}`.
-4. **Temp file lifecycle:** `TempFileStore` vends unique temp URLs, tracks them in a `Set<URL>`. Called at app termination / export completion to `FileManager.removeItem(at:)`.
+```
+CleaningLabViewModel.isProcessing: Bool   [unchanged @Observable property]
+    ↓ passed as value parameter (not observed inside AIOrb)
 
----
+AIOrb(isActive: viewModel.isProcessing)
+    TimelineView(.animation) { context in
+        let phase = context.date.timeIntervalSince1970.truncatingRemainder(dividingBy: period)
+        // period = isActive ? 0.8s : 2.5s
+    }
+    Canvas { context, size in
+        // radialGradient(aiHighlight, transparent) at scale driven by sin(phase)
+        context.drawLayer { inner in
+            inner.opacity = 0.6 + 0.4 * sin(phase * .pi * 2)
+            inner.scaleEffect = 0.85 + 0.15 * sin(phase * .pi * 2)
+        }
+    }
+```
 
-## Suggested Build Order
+### Haptic-Responsive PillButton Data Flow
 
-The component dependency graph drives this order. Build from the bottom up: Models first (no dependencies), then Services (depend on Models), then ViewModels (depend on Services), then Views (depend on ViewModels).
-
-| Phase | Components to Build | Why This Order |
-|-------|---------------------|----------------|
-| 1 | `AudioSegment`, `MergeConfig`, `ProcessingState`, `TempFileStore` | No dependencies; shared vocabulary for everything above |
-| 2 | `AudioSessionManager` | Required by both services; must configure AVAudioSession before any audio API call |
-| 3 | `AudioMergerService` | Core feature, no UI dependency; testable in isolation |
-| 4 | `MixingStationViewModel` + `MixingStationView` | First working UI; merge pipeline end-to-end |
-| 5 | `NoiseReductionService` | Depends on a merged file from Phase 3 to test |
-| 6 | `CleaningLabViewModel` + `CleaningLabView` | Depends on NoiseReductionService |
-| 7 | `ShareViewController` (Share Extension target) | Last because it depends on App Group container being set up in main target; integration test requires both targets |
-
----
-
-## Anti-Patterns
-
-### Anti-Pattern 1: Performing Audio I/O on the Main Actor
-
-**What people do:** Call `AVAssetExportSession.exportAsynchronously` or `AVAudioEngine` buffer writes directly inside a `@MainActor` function without an explicit `Task {}` escape.
-
-**Why it's wrong:** Blocks the main thread. UI freezes. Even if the callback is asynchronous, setting up and starting the engine does real work synchronously.
-
-**Do this instead:** Always call audio services from a `Task {}` inside the ViewModel. Services are `actor` types — the call automatically hops off the main thread.
-
-### Anti-Pattern 2: Using AVAudioEngine's Voice Processing in Stopped-State Incorrectly
-
-**What people do:** Call `setVoiceProcessingEnabled(true)` after the engine is already running, or fail to restart the engine after `AVAudioEngineConfigurationChange` notification.
-
-**Why it's wrong:** Voice processing cannot be toggled on a running engine. The engine silently fails or crashes. Additionally, after configuration changes (e.g., Bluetooth headset connected), the engine auto-stops and must be manually restarted.
-
-**Do this instead:** Always call `setVoiceProcessingEnabled(true)` on the input node before calling `engine.start()`. Subscribe to `AVAudioEngineConfigurationChange` via `NotificationCenter` and restart the engine in the handler.
-
-### Anti-Pattern 3: Storing Audio File Data in Memory
-
-**What people do:** Load the full `AVAudioPCMBuffer` for each clip into a ViewModel property array to "have it ready."
-
-**Why it's wrong:** A 10-minute stereo WAV at 44.1kHz is ~200MB. Three clips = 600MB. App is terminated by the OS.
-
-**Do this instead:** Store only `URL` references in `AudioSegment`. Let `AVURLAsset` and `AVAudioFile` manage I/O lazily. The framework handles buffering internally.
-
-### Anti-Pattern 4: Sharing AVMutableComposition Across Tasks
-
-**What people do:** Create one `AVMutableComposition` and mutate it from concurrent tasks (e.g., re-import while export is running).
-
-**Why it's wrong:** `AVMutableComposition` is not thread-safe. Concurrent mutations cause crashes.
-
-**Do this instead:** The `AudioMergerService` `actor` ensures serialized access. Never expose the composition object outside the service.
-
-### Anti-Pattern 5: Writing Processed Audio Directly to Documents Directory Without Cleanup
-
-**What people do:** Write every intermediate file (pre-denoise, post-denoise, final export) to `Documents/` and never delete them.
-
-**Why it's wrong:** Audio files are large. After a few sessions the user's storage fills up with invisible junk files.
-
-**Do this instead:** All intermediate files go to `NSTemporaryDirectory()`. Only the final user-exported file goes to the location the user chooses (via `UIDocumentPickerViewController` or `ShareLink`). `TempFileStore.cleanup()` is called at app termination and before each new session.
+```
+PillButton ViewModifier
+    .simultaneousGesture(DragGesture(minimumDistance: 0))
+    pressing: { isPressing in
+        withAnimation(.easeOut(duration: 0.12)) { isPressed = isPressing }
+        if isPressing {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
+    }
+    → scaleEffect(isPressed ? 0.96 : 1.0)
+    → inner glow opacity: isPressed ? 0.0 : 0.35
+    [No ViewModel involvement — pure rendering state within the modifier]
+```
 
 ---
 
 ## Integration Points
 
-### Internal Boundaries
+### Existing Token Usage → New Replacement Mapping
 
-| Boundary | Communication | Notes |
-|----------|---------------|-------|
-| View ↔ ViewModel | SwiftUI `@Observable` observation (pull-based) | No Combine needed; `@Observable` + `@MainActor` is sufficient for iOS 17+ |
-| ViewModel ↔ Service | `async throws` method calls | ViewModel calls service inside `Task {}`; service `actor` handles thread hopping |
-| Service ↔ Service | Direct `async` call (ViewModel orchestrates) | ViewModel calls merge, then denoise sequentially; services do not call each other |
-| Main App ↔ Share Extension | App Group: `FileManager.containerURL` + `UserDefaults(suiteName:)` | Both targets must have same App Group entitlement in provisioning profile |
-| AudioSessionManager ↔ Services | Singleton call at app launch, then interruption handling | Services assume session is configured; `AVAudioSessionInterruptionNotification` observed in Manager |
+| Existing Pattern in Views | Current Token | Restyle Change |
+|--------------------------|---------------|----------------|
+| `SonicMergeTheme.Radius.card` (12pt) on clip cards | 12pt | Replace with `SpacialTokens.squircleRadius` (24pt) for card shapes; keep 12pt for inner elements like slider card, chips |
+| `accentWaveform` UIColor flat fill in Canvas bars | Solid `accentWaveform` color | Replace with `LinearGradient(meshGradientStart, meshGradientEnd)` in `MeshWaveformView` |
+| `.shadow(color: .black.opacity(0.06), radius: 8)` ad-hoc | Hardcoded | Centralize to `SpacialTokens.cardShadowRadius = 12`; elevated drag state → `SpacialTokens.dragShadowRadius = 20` |
+| `Color(uiColor: semantic.accentAction).opacity(0.12)` as glass-like background | Ad-hoc opacity | Replace with `semantic.glassOpacity` for consistent glass depth; use `.ultraThinMaterial` where blur is appropriate |
+| `semantic.trustIcon` on `onDeviceAIHero` cpu icon | trustIcon | Replaced entirely by `AIOrb` component; trustIcon remains for `LocalFirstTrustStrip` |
 
-### External Framework Integration
+### New Component → Injection Point Map
 
-| Framework | Integration Pattern | Notes |
-|-----------|---------------------|-------|
-| `AVFoundation` (`AVMutableComposition`, `AVAssetExportSession`) | Used exclusively inside `AudioMergerService` | Never leak AVFoundation composition objects to ViewModels |
-| `AVFAudio` (`AVAudioEngine`, `AVAudioSinkNode`) | Used exclusively inside `NoiseReductionService` | Engine must be stopped before `setVoiceProcessingEnabled` |
-| `UniformTypeIdentifiers` | Used in `ShareViewController` for type checking (`UTType.audio`, `.mpeg4Audio`, `.wav`) | Prefer `UTType` over string-based UTIs; iOS 14+ |
-| `CoreML` (optional) | Would live in a `CoreMLDenoiseService` conforming to same protocol as `NoiseReductionService` | Swap via DI if Voice Processing proves insufficient; keep behind a protocol |
+| New Component | File Modified | Injection Point |
+|---------------|---------------|-----------------|
+| `SquircleCard` modifier | `MergeSlotRow.swift` | Replace `.background(RoundedRectangle...)/.clipShape/.shadow` block |
+| `SquircleCard` modifier | `ClipCardView.swift` | Replace `.background(Color(uiColor: semantic.cardSurface))/.clipShape/.shadow` block |
+| `SquircleCard` modifier | `TrustSignalViews.swift` — `LocalFirstTrustStrip` | Replace `.background/.clipShape/.overlay/.shadow` block |
+| `SquircleCard` modifier | `MergeTimelineView.swift` — `mergeOutputCard` | Replace `RoundedRectangle.fill(surfaceSlot)` + `.overlay` block |
+| `SquircleCard` modifier | `CleaningLabView.swift` — `intensitySlider` | Replace `.background/.clipShape/.shadow` |
+| `MeshWaveformView` | `MergeSlotRow.swift` | Delete private `MergeSlotWaveformView` struct; pass `peaks` to `MeshWaveformView` |
+| `MeshWaveformView` | `ClipCardView.swift` | Delete private `WaveformThumbnailView` struct; pass `peaks` to `MeshWaveformView` |
+| `MeshWaveformView` | `CleaningLabView.swift` | Delete private `WaveformCanvasView` struct; pass `viewModel.waveformPeaks` to `MeshWaveformView` |
+| `AIOrb` | `CleaningLabView.swift` | Delete `onDeviceAIHero` computed var; insert `AIOrb(isActive: viewModel.isProcessing)` at top of body VStack |
+| `PillButton` modifier | `MixingStationView.swift` — empty state button | Replace `.background(RoundedRectangle)` on "Import Audio" button |
+| `PillButton` modifier | `MergeTimelineView.swift` — export button | Replace `.background(RoundedRectangle.fill(accentAction))` |
+| `PillButton` modifier | `CleaningLabView.swift` — `denoiseActionButton`, `abComparisonButton` | Replace existing shaped backgrounds |
+| `GlassmorphHeader` | `MixingStationView.swift` | Add as `.safeAreaInset(edge: .top)` or toolbar accessory inside `NavigationStack` |
+| Timeline connector line | `MergeTimelineView.swift` | Wrap existing `List` body in `ZStack`; add overlay `Rectangle` |
+| `GapRowView` glass style | `GapRowView.swift` | Replace `.background(surfaceElevated.opacity(0.65))` with `.ultraThinMaterial` + tinted overlay |
+
+### Internal Boundaries (Restyle-Specific)
+
+| Boundary | Communication | Constraint |
+|----------|---------------|------------|
+| DesignSystem ↔ Components | `@Environment(\.sonicMergeSemantic)` | Components only read tokens from the environment; they never import ViewModels or Services |
+| Components ↔ Feature Views | SwiftUI composition (`.modifier()`, direct init) | No callbacks or state flow upward from Components to Feature Views |
+| `AIOrb` ↔ `CleaningLabView` | Single `isActive: Bool` value parameter | `CleaningLabViewModel` is not injected into `AIOrb`; animation logic is isolated |
+| `MeshWaveformView` ↔ Feature Views | `peaks: [Float]` value array only | `MeshWaveformView` has no reference to `WaveformService` or `AudioClip`; data flows one way |
+| `SonicMergeSemantic` tokens ↔ new components | Same `EnvironmentKey` path already established | No new injection mechanism; `MixingStationView` already injects `.environment(\.sonicMergeSemantic, semantic)` which propagates to all descendants including new components |
 
 ---
 
-## Scaling Considerations
+## Suggested Build Order
 
-This is a single-user, fully on-device iOS utility app. Traditional server scaling does not apply. The relevant "scaling" axes are device performance and file size.
+Build from stable foundation to complex consumers. Each step leaves the app in a compilable, runnable state.
 
-| Concern | iPhone 15 (A16) | Older iPhone (A13/A14) |
-|---------|-----------------|------------------------|
-| Merge of 5x 5min clips | < 10 seconds | 15–30 seconds |
-| Noise reduction on 10min audio | 30–60 seconds | 1–3 minutes |
-| Memory during processing | ~50–100MB peak | Same (file-based, not in-memory) |
+```
+STEP 1 — Token Foundation  [no visual change; pure Swift additions]
+  - Extend SonicMergeTheme: add spatialRadius=24, glowIntensity constant
+  - Extend SonicMergeSemantic: add meshGradientStart/End, aiHighlight, glassOpacity, cardGlowColor
+      populate both lightClassic() and darkConveyor() branches
+  - New SpacialTokens.swift: squircleRadius=24, cardShadowRadius=12, dragShadowRadius=20,
+      glassBlurRadius=16, timelineStrokeWidth=2, glowBorderWidth=1
 
-### Scaling Priorities
+STEP 2 — Shared Components  [no feature files touched; fully testable in Previews]
+  - SquircleCard.swift (ViewModifier)       depends on: SpacialTokens, SonicMergeSemantic
+  - PillButton.swift (ViewModifier)         depends on: SpacialTokens, SonicMergeSemantic
+  - MeshWaveformView.swift (Canvas View)   depends on: SonicMergeSemantic (meshGradient tokens)
+  At this point: all three can be previewed with mock data. Zero feature file changes.
 
-1. **First bottleneck: Noise reduction speed.** AVAudioEngine voice processing runs in real-time (1x) by default — a 5-minute clip takes ~5 minutes to process. Mitigation: show accurate progress, consider running at accelerated playback rate if API allows, or use Core ML model for offline batch inference.
-2. **Second bottleneck: Large file temp storage.** Users with many long clips generate GB of temp data. Mitigation: `TempFileStore` auto-cleanup; only keep the active session's intermediate files.
+STEP 3 — Clip Card Layer  [highest-frequency component; validates SquircleCard + MeshWaveformView]
+  - MergeSlotRow.swift: delete MergeSlotWaveformView, inject MeshWaveformView, apply SquircleCard
+  - ClipCardView.swift: delete WaveformThumbnailView, inject MeshWaveformView mini, apply SquircleCard
+  Risk: These components appear in the timeline on every app launch. Verify dark + light mode.
+
+STEP 4 — Gap Row + Timeline Structure  [after clip cards are stable]
+  - GapRowView.swift: glass background (.ultraThinMaterial overlay), pill segment visuals
+  - MergeTimelineView.swift: central connector line ZStack, output card SquircleCard, section headers
+
+STEP 5 — MixingStation Header + Navigation  [after timeline content is stable]
+  - GlassmorphHeader.swift: glass material banner component, indigo glow border, "Private by Design"
+  - MixingStationView.swift: inject GlassmorphHeader, PillButton on "Import Audio" empty state button
+  - TrustSignalViews.swift: apply SquircleCard to LocalFirstTrustStrip
+
+STEP 6 — CleaningLab + AIOrb  [after token + waveform components are proven stable]
+  - AIOrb.swift: TimelineView-driven pulsating nebula sphere, isActive:Bool parameter
+  - CleaningLabView.swift:
+      delete onDeviceAIHero, insert AIOrb(isActive: viewModel.isProcessing)
+      delete WaveformCanvasView, inject MeshWaveformView(peaks: viewModel.waveformPeaks)
+      apply PillButton to denoiseActionButton and abComparisonButton
+      apply SquircleCard to intensitySlider card
+
+STEP 7 — Dark Mode Validation Pass  [verification, not a build step]
+  - Verify all new SonicMergeSemantic tokens produce correct contrast in darkConveyor():
+      aiHighlight: Lime Green #A7C957
+      meshGradientStart: Deep Indigo #5856D6
+      surfaceBase: pure black #000000
+  - Manual device check: AIOrb visibility, MeshWaveformView bar contrast, PillButton glow readability
+```
+
+**Rationale for this order:**
+
+- Steps 1–2 produce zero visible change and establish a stable, shared API. All later steps reference named tokens and modifiers that will not change names.
+- Step 3 is the highest-risk visual change because clip cards appear immediately on the main screen. Done early while `CleaningLabView` is untouched — a regression in clip cards is isolated and easy to bisect.
+- Step 6 (AIOrb + CleaningLab) comes after `MeshWaveformView` is proven. `CleaningLabView` receives both AIOrb and MeshWaveformView in the same step; doing `MeshWaveformView` first (Step 2) reduces compound risk.
+- Step 7 is validation, not development. Dark mode tokens are populated in Step 1 but visually verified end-to-end only after all screens are complete.
+
+---
+
+## Anti-Patterns
+
+### Anti-Pattern 1: Hardcoding Colors Directly in View Bodies
+
+**What people do:** Write `Color(red: 88/255, green: 86/255, blue: 214/255)` or `Color(#colorLiteral(...))` directly in `MergeSlotRow.body` or `CleaningLabView.body` for new mesh gradient colors.
+
+**Why it's wrong:** Creates a parallel second design system diverging from `SonicMergeSemantic` immediately. The next theme change (or dark mode correction) requires hunting down every hardcoded literal. The existing codebase has one instance of this pattern already — the amber hardcoded values in the `staleBanner` computed var in `CleaningLabView` — which is exactly the kind of tech debt this restyle should not add more of.
+
+**Do this instead:** Every new color lives as a token in `SonicMergeSemantic` (for adaptive values) or `SpacialTokens` (for structural constants). Views reference token names only.
+
+### Anti-Pattern 2: Animating ViewModel Properties for Visual State
+
+**What people do:** Add `@Published var orbPulsePhase: Double` or `@Published var waveformGradientOffset: Double` to `CleaningLabViewModel`, drive it with a `Timer`, and bind animated views to it.
+
+**Why it's wrong:** Animation state is rendering state, not business state. Leaking it into the ViewModel violates MVVM boundaries, creates spurious test surface for UI concerns, and makes the ViewModel heavier without functional benefit. The project constraint explicitly states ViewModels are untouched.
+
+**Do this instead:** Use `TimelineView(.animation)` + internal `@State` inside `AIOrb`. The ViewModel exposes only `isProcessing: Bool` — a semantic fact, not a visual instruction.
+
+### Anti-Pattern 3: Replacing Existing Token Names
+
+**What people do:** Rename `accentAction` to `indigoAccent`, or change `surfaceSlot`'s value to match the new dark aesthetic.
+
+**Why it's wrong:** Every existing view (`MixingStationView`, `MergeTimelineView`, `GapRowView`, `CleaningLabView`, `MergeSlotRow`, `ClipCardView`, `TrustSignalViews`) uses `semantic.accentAction` and `semantic.surfaceSlot`. Renaming causes a compile-error cascade across all files simultaneously, forcing a big-bang migration that cannot be incremental or safely bisected.
+
+**Do this instead:** Add new properties (`meshGradientStart`, `aiHighlight`). Existing properties keep their exact names and values. After all views are fully restyled, consolidate in a follow-up cleanup commit.
+
+### Anti-Pattern 4: Building a Separate ThemeManager / EnvironmentObject
+
+**What people do:** Create a new `@Observable ThemeManager` class, inject it as `.environmentObject`, and have new components read from it instead of `SonicMergeSemantic`.
+
+**Why it's wrong:** `SonicMergeSemantic` already exists as a SwiftUI `EnvironmentKey` with correct light/dark resolution and user-preference override via `@AppStorage`. Adding a parallel mechanism creates two sources of truth. The existing `SonicMergeSemantic.resolved(colorScheme:preference:)` pattern in `MixingStationView` already handles everything needed.
+
+**Do this instead:** Extend the existing `SonicMergeSemantic` struct with new properties. No new injection mechanism is needed; new components read via the same `@Environment(\.sonicMergeSemantic)` key already present in the codebase.
+
+### Anti-Pattern 5: Modifying WaveformService for Visual Output
+
+**What people do:** Change `WaveformService` to also return gradient color stops, or add a `renderingStyle: WaveformRenderingStyle` parameter.
+
+**Why it's wrong:** `WaveformService` is a Service layer actor (data extraction). It returns `[Float]` amplitude values — format-agnostic, format-correct, and shared between the main app and future consumers. Rendering decisions belong in the View layer.
+
+**Do this instead:** `MeshWaveformView` owns the rendering decision in full. It accepts `[Float]` from the existing `loadPeaks()` result and applies gradient coloring inside its `Canvas`. `WaveformService` is untouched per project constraint.
+
+### Anti-Pattern 6: Importing Components Into Service or ViewModel Files
+
+**What people do:** Import `MeshWaveformView` into `CleaningLabViewModel` to perform some "pre-render" or peak transformation logic.
+
+**Why it's wrong:** Services and ViewModels must not import SwiftUI View types. This breaks the layering contract and makes ViewModels untestable without a UI host.
+
+**Do this instead:** Any peak transformation needed for visualization (e.g., normalization clamping) belongs in `MeshWaveformView`'s own body or a private helper on the View. The ViewModel publishes raw `[Float]` peaks as-is.
 
 ---
 
 ## Sources
 
-- Apple Developer Documentation — AVAudioEngine Voice Processing: https://developer.apple.com/documentation/avfaudio/audio_engine/audio_units/using_voice_processing
-- WWDC23 "What's new in voice processing": https://developer.apple.com/videos/play/wwdc2023/10235/
-- WWDC19 "What's New in AVAudioEngine": https://developer.apple.com/videos/play/wwdc2019/510/
-- Kodeco AVAudioEngine Tutorial: https://www.kodeco.com/21672160-avaudioengine-tutorial-for-ios-getting-started (MEDIUM confidence — tutorial site, verified against Apple docs)
-- snakamura.github.io AVAudioEngine tips (2024): https://snakamura.github.io/log/2024/11/audio_engine.html — voice processing, format mismatch, engine restart pattern
-- NSHipster Temporary Files: https://nshipster.com/temporary-files/ — temp file lifecycle patterns
-- Apple Developer Docs — Configuring App Groups: https://developer.apple.com/documentation/Xcode/configuring-app-groups
-- iOS App Extensions Data Sharing (dmtopolog): https://dmtopolog.com/ios-app-extensions-data-sharing/ — seven sharing mechanisms, shared container pattern
-- HackingWithSwift — Don't use actor for SwiftUI data models: https://www.hackingwithswift.com/quick-start/concurrency/important-do-not-use-an-actor-for-your-swiftui-data-models (HIGH confidence — directly relevant to @Observable + @MainActor pattern)
-- AVAssetExportSession async/await gist (Swift 6 safety): https://gist.github.com/samsonjs/2f006c5f62f53c9aef820bc050e37809
-- Apple Developer Forums — AVAssetExportSession exportAsynchronously: https://developer.apple.com/forums/thread/649671
+- Direct codebase inspection (HIGH confidence): `SonicMergeTheme.swift`, `SonicMergeTheme+Appearance.swift`, `MergeSlotRow.swift`, `ClipCardView.swift`, `CleaningLabView.swift`, `MergeTimelineView.swift`, `GapRowView.swift`, `WaveformService.swift`, `TrustSignalViews.swift`, `MixingStationView.swift`
+- `TimelineView(.animation)` + `Canvas` for continuous animation without full view tree re-render: iOS 15+ SwiftUI API, used for exactly this purpose in the existing `Canvas`-based waveform renderers in the project (HIGH confidence)
+- `ViewModifier` protocol for composable styling: iOS 13+ SwiftUI standard pattern (HIGH confidence)
+- `EnvironmentKey` for design token propagation: existing pattern already operational in `SonicMergeTheme+Appearance.swift` (HIGH confidence, directly verified)
+- `UIImpactFeedbackGenerator` for haptic response in SwiftUI gestures: standard iOS pattern, iOS 10+ (HIGH confidence)
 
 ---
 
-*Architecture research for: iOS Audio Merger + On-Device AI Denoiser (SonicMerge)*
-*Researched: 2026-03-08*
+*Architecture research for: SonicMerge v1.1 Modern Spatial Utility Restyle*
+*Researched: 2026-04-08*

@@ -405,3 +405,355 @@ Swift 6 was designed for high-level concurrency. Audio render callbacks are a lo
 ---
 *Pitfalls research for: iOS audio processing — SonicMerge (AVFoundation, AVAudioEngine, Share Extensions)*
 *Researched: 2026-03-08*
+
+---
+---
+
+# Pitfalls Research — v1.1 Milestone Addendum
+
+**Domain:** SwiftUI Visual Restyle — Modern Spatial Utility (glassmorphism, mesh gradients, custom animations, color system)
+**Researched:** 2026-04-08
+**Confidence:** MEDIUM-HIGH (verified against Apple Developer Documentation, community performance reports, SwiftUI WWDC sessions, and accessibility guidelines)
+
+---
+
+## Critical Pitfalls
+
+### Pitfall R-1: Animated MeshGradient Runs at Full 120Hz on ProMotion — No Throttling by Default
+
+**What goes wrong:**
+`MeshGradient` (iOS 18+) with animated point positions using `withAnimation(.easeInOut.repeatForever())` or `TimelineView` will render at the device's maximum refresh rate — 120Hz on ProMotion iPhones (15 Pro and newer). A mesh gradient used as a waveform background on every audio card in a `List` or `LazyVStack` means the GPU is compositing multiple independently-animated Metal layers at full frame rate at all times, even when the user is idle. This becomes a sustained thermal and battery load identical to running a real-time game.
+
+**Why it happens:**
+`MeshGradient` is GPU-accelerated via Metal. Unlike `LinearGradient`, it cannot be rendered as a static cached layer when its control points are changing every frame. Each animated gradient instance creates its own render pass. Placing five animated cards on screen = five concurrent Metal render passes at 120Hz.
+
+**How to avoid:**
+- Use `TimelineView` with `.animation` schedule and explicitly cap update frequency: request 30fps updates, not the default "as fast as possible"
+- Better: use `MeshGradient` with **static** control points but animated colors only — color interpolation is cheaper than geometry recalculation
+- Best: treat mesh gradients as **decorative static backgrounds** rendered once; animate a separate `Color` or `LinearGradient` overlay on top at low frequency
+- Profile with Instruments → Core Animation FPS gauge on a physical device before shipping
+- On non-ProMotion devices (iPhone 14 and older), this caps at 60Hz, masking the issue in development if you test on an older device
+
+**Warning signs:**
+- Device becomes warm during normal browsing of the audio card list
+- Instruments shows GPU utilization above 40% when the app is idle (user not interacting)
+- Battery drains noticeably faster compared to v1.0 in the same workflow
+- `CADisplayLink` frame rate in Instruments shows consistent 120fps even when nothing is moving
+
+**Phase to address:** Design System phase — establish the animation budget rule before any card component is built. Enforce: no mesh gradient animates its geometry at runtime unless triggered by explicit user interaction.
+
+---
+
+### Pitfall R-2: `.background(.ultraThinMaterial)` Fails Contrast Requirements on Pure Black Background
+
+**What goes wrong:**
+The v1.1 dark mode uses pure black (`#000000`) as the base background. `UIVisualEffectView` / SwiftUI `.ultraThinMaterial` reads the background behind it and applies a vibrancy blur. On pure black, `.ultraThinMaterial` renders as near-transparent dark glass — content on top (text, icons) is effectively dark-on-dark. WCAG 2.2 requires 4.5:1 contrast for normal text and 3:1 for large text. Text on `.ultraThinMaterial` over pure black frequently falls below 2:1, making it unreadable for users with low vision.
+
+The problem is dynamic: when the glassmorphism header sits over the animated mesh gradient waveform (which shifts between Deep Indigo and purple), the effective contrast ratio of overlaid text changes every frame. There is no single contrast ratio to audit — it varies continuously.
+
+**Why it happens:**
+Developers test glassmorphism in light mode where `.ultraThinMaterial` produces a light frosted panel with adequate contrast. Dark mode is tested with the default dark gray system background (`#1C1C1E`), not pure black. Pure black is a distinct failure mode that only appears when `#000000` is used.
+
+**How to avoid:**
+- Use `.regularMaterial` or `.thickMaterial` instead of `.ultraThinMaterial` in dark mode — these maintain higher opacity and produce more reliable contrast
+- Add a semi-opaque dark overlay (`Color.black.opacity(0.4)`) beneath text content inside the glass panel, regardless of what the blur renders
+- Never place small body text directly on a material without a guaranteed minimum-opacity backing
+- Use the Accessibility Inspector's contrast checker (Xcode → Open Developer Tool → Accessibility Inspector) against the worst-case dark background combination, not just the default gray
+- Define separate glassmorphism implementations for light and dark: `.ultraThinMaterial` for light, `.regularMaterial` for dark
+
+**Warning signs:**
+- Text in the glassmorphism header is readable in light mode but barely visible in dark mode
+- Accessibility Inspector reports contrast ratio below 4.5:1 in dark mode
+- Users on OLED devices (where black is true black, not dark gray) report header text is invisible
+
+**Phase to address:** Design System phase — color token definitions must include the glass panel opacity values and specify which `Material` thickness maps to each mode. Don't leave this to per-view implementation.
+
+---
+
+### Pitfall R-3: Continuous "Pulsating Orb" Animation Ignores `accessibilityReduceMotion` — App Store Rejection Risk
+
+**What goes wrong:**
+The AI Orb visualizer in the Cleaning Lab is a continuously pulsating nebula sphere using `withAnimation(.easeInOut(duration: 2.0).repeatForever(autoreverses: true))`. If `@Environment(\.accessibilityReduceMotion)` is not checked, this animation runs permanently for users who have enabled "Reduce Motion" in iOS Settings. Apple's App Store review guidelines (Guideline 5.1.1) call out accessibility compliance. Continuous looping animations that ignore the Reduce Motion preference have triggered App Store rejections, particularly since iOS 17 tightened enforcement.
+
+Beyond rejection risk: oscillating animations at ~0.5 Hz (one full pulse every 2 seconds) fall within the frequency range Apple's own HIG identifies as potentially causing vestibular discomfort for susceptible users.
+
+**Why it happens:**
+`withAnimation(.repeatForever())` does not consult the Reduce Motion setting. It runs regardless. Developers assume "Reduce Motion" only affects transition animations, but Apple documents it as covering all repetitive animations.
+
+**How to avoid:**
+
+```swift
+@Environment(\.accessibilityReduceMotion) var reduceMotion
+
+// In view body:
+Circle()
+    .scaleEffect(reduceMotion ? 1.0 : animationScale)
+    .animation(
+        reduceMotion ? nil : .easeInOut(duration: 2.0).repeatForever(autoreverses: true),
+        value: animationScale
+    )
+    .onAppear {
+        if !reduceMotion { animationScale = 1.15 }
+    }
+```
+
+- When Reduce Motion is active: show the orb as a static glowing circle (no pulsation), or use a very slow, subtle opacity shift (not scale/position changes) that stays below the vestibular threshold
+- `withAnimation()` does **not** respect Reduce Motion automatically — you must check the environment value explicitly; using `.animation(nil, value:)` is the correct suppression
+
+**Warning signs:**
+- App runs on a device with "Reduce Motion" enabled and the orb still pulses
+- No `accessibilityReduceMotion` environment usage anywhere in the Cleaning Lab view
+
+**Phase to address:** AI Orb implementation phase — bake in the Reduce Motion check from the first line of animation code. Do not retrofit accessibility after the feature is "done."
+
+---
+
+### Pitfall R-4: Color Tokens Defined as Hex `Color` Extensions Break Dark Mode in Sheets and Popovers
+
+**What goes wrong:**
+SonicMerge's existing `Color+Theme.swift` extension likely defines colors as static `Color` instances with hardcoded hex values (e.g., `static let accent = Color(hex: "#5856D6")`). When a sheet or popover is presented, SwiftUI creates a new presentation host with its own color scheme context. The sheet's color scheme does not automatically inherit the parent view's overridden `colorScheme`. If the sheet uses hardcoded hex colors instead of adaptive Asset Catalog colors, the sheet will show the same colors in both light and dark mode — the dark mode adaptation is missing entirely.
+
+This affects the Export sheet, any alert-style presentation, and the drag-reorder overlay if it uses a custom sheet layer.
+
+**Why it happens:**
+Hardcoded hex `Color` values have no light/dark mode awareness. They are always the same RGB value. Asset Catalog color sets (`Color("AccentIndigo")`) have built-in appearance variants. The `.colorScheme()` modifier on a parent view does not propagate into sheets — sheets use the system color scheme directly, bypassing any override.
+
+**How to avoid:**
+- Define all v1.1 color tokens in `Assets.xcassets` as Color Sets with separate "Any Appearance" and "Dark" variants — not as hex `Color` extensions
+- From Xcode 15+, Asset Catalog colors are accessible as `Color.accentIndigo` via auto-generated code (no string literals needed)
+- If extending `Color` for convenience, make the extension read from the Asset Catalog: `static let accentIndigo = Color("AccentIndigo")` — not `Color(hex: "#5856D6")`
+- Use `preferredColorScheme(_:)` on sheets explicitly if the app implements a custom color scheme toggle
+
+**Warning signs:**
+- Sheets appear with light-mode colors even when the app is in dark mode
+- Export or modal views look visually inconsistent with the main screen in dark mode
+- `Color(hex:)` initializer appears in any file under the `/Features` directory
+
+**Phase to address:** Design System phase — establish the Asset Catalog token structure as the first deliverable. Every subsequent view component must use only tokens from the catalog; no hex string colors in view code.
+
+---
+
+### Pitfall R-5: Custom `Shape` for Squircle Breaks Drag-and-Drop Hit Testing
+
+**What goes wrong:**
+The v1.1 audio card uses a squircle shape (24pt continuous corner radius via `RoundedRectangle(cornerRadius: 24, style: .continuous)` or a custom superellipse `Shape`). When a card is long-pressed for drag-and-drop reordering (the existing v1.0 gesture), the hit-test region for the drag recognizer is the card's bounding rectangle, not the shape's filled area. For a squircle with significant corner smoothing, the hot corners of the bounding box lie outside the visible card. Users tapping near the visual corners may hit the card below rather than the intended card. Additionally, applying `.clipShape(squircle)` removes the default `contentShape`, meaning SwiftUI gesture hit-testing defaults to the bounding box — the exact opposite of what's visually implied.
+
+**Why it happens:**
+SwiftUI's hit-testing uses the view's frame by default, not the shape's path. `.clipShape()` clips rendering but does not change the interaction area. The `contentShape()` modifier must be applied explicitly to match visual shape to interaction shape.
+
+**How to avoid:**
+```swift
+AudioCardView()
+    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    .contentShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    // contentShape must match clipShape exactly
+```
+
+- Always pair `.clipShape()` with `.contentShape()` using the same shape definition — extract to a shared constant to prevent divergence
+- After restyling each card, run the existing drag-and-drop reorder interaction and verify taps near all four corners of every card register on the correct card
+- Test on the smallest supported device (iPhone SE) where cards are narrow and corner regions represent a larger proportion of the tap area
+
+**Warning signs:**
+- Tapping the upper-right or lower-left corner of a card triggers the card above or below instead
+- Long-press for reorder works in the card center but not near corners
+- Drag gesture activates even when tapping clearly in the gap between cards (bounding box overlap)
+
+**Phase to address:** Audio card restyle phase — add `.contentShape()` immediately when `.clipShape()` is applied. Do not merge any card restyle PR without running the full drag-and-drop regression test.
+
+---
+
+### Pitfall R-6: Elevated Shadow on Dragged Card Causes Render Layer Explosion During Reorder
+
+**What goes wrong:**
+The v1.1 spec adds "elevated drag shadows on card interaction (micro-interactions)." Implementing this as `.shadow(radius: 20, y: 10)` applied conditionally during drag — combined with an existing `List` or `LazyVStack` with multiple cards, each with their own `.background(.regularMaterial)` — creates a compounding problem. Each shadowed card with a material background requires its own offscreen compositing layer. During drag, if the dragged card's shadow animates (radius 4 → radius 20 while lifting), and other cards scale/offset to make room, the number of simultaneous render layers can reach 10-15. On older A14/A15 devices this causes frame drops to 30-40fps during the reorder gesture, making the interaction feel broken.
+
+**Why it happens:**
+SwiftUI promotes views to their own `CALayer` when they have: blur materials, shadows, opacity changes, or 3D transforms. Each promotion costs compositing time. Combining all three (material + animated shadow + scale transform during drag) on multiple cards simultaneously exceeds the GPU's compositing budget on lower-end devices.
+
+**How to avoid:**
+- Use `drawingGroup()` on the card component to flatten it into a single Metal layer before the shadow is applied — this makes the card render as a flat texture with a shadow, not a multi-layer composition
+- Limit the elevated shadow to the **dragged card only** (it's already hoisted above others); sibling cards only need the default low-elevation shadow
+- Use `compositingGroup()` as an alternative to `drawingGroup()` when the card contains text or controls (drawingGroup breaks text rendering)
+- Keep shadow radius small (max 16) — shadow spread is expensive at large radii because it blurs a larger area
+- Profile the drag interaction with Instruments → Core Animation on an iPhone 12 (A14 baseline) before shipping
+
+**Warning signs:**
+- Drag reorder is smooth on iPhone 15 Pro but choppy on iPhone 12 or 13
+- Instruments shows "Offscreen Rendered" warnings during drag interactions
+- Frame rate drops from 60fps to 30-40fps precisely when drag begins
+
+**Phase to address:** Audio card restyle and drag interaction phase — establish the shadow/layer budget rule before implementing any card effects. Test drag performance on a non-Pro device.
+
+---
+
+### Pitfall R-7: Restyling Breaks Existing View Identity — Drag Reorder State Resets Mid-Gesture
+
+**What goes wrong:**
+When wrapping existing views in new container views during restyle (e.g., wrapping `AudioCardView` in a `ZStack` for the mesh gradient background layer, then wrapping that in a `VStack` for the squircle border), SwiftUI's structural identity for the original view changes. If the drag-and-drop reorder gesture stores intermediate position state in `@State` variables inside `AudioCardView`, the state is silently reset whenever SwiftUI determines the view has a new structural identity. This can manifest as the dragged card snapping back to its original position mid-gesture when a parent re-render occurs (e.g., the audio waveform `TimelineView` updates its gradient, triggering a parent body re-evaluation).
+
+**Why it happens:**
+SwiftUI assigns view identity based on structural position in the view tree. Adding wrapper views (ZStack, Group, custom container) changes the structural path to `AudioCardView`. If the drag state is in `@State` at the card level and the card's structural identity changes, SwiftUI treats it as a new view and resets `@State` to initial values.
+
+**How to avoid:**
+- Use `.id(audioSegment.id)` explicit identity on every card component — this ensures identity is tied to the data model, not the view tree structure, making it invariant to wrapper additions
+- Store drag state in the parent `ViewModel`, not in `@State` inside the card — `@State` is ephemeral and tied to view identity; ViewModel state survives view tree restructuring
+- During restyle, run the full drag-and-drop reorder workflow after **every** structural wrapper addition before continuing. Catch identity breaks early, not after multiple layers of nesting have been added
+- Use `Self._printChanges()` during development to detect unexpected re-renders of the card view during drag
+
+**Warning signs:**
+- Dragged card suddenly jumps back to original position during slow drags
+- The issue appears only after a gradient animation tick occurs during the drag
+- Explicit `.id()` is missing from the `ForEach` that renders audio cards
+
+**Phase to address:** Restyle implementation phases — add `.id(segment.id)` to all `ForEach` items as the first step before any other restyle changes. Commit this as a standalone safety commit.
+
+---
+
+### Pitfall R-8: Haptic Feedback on Every Button State Change Degrades Experience and Drains Battery
+
+**What goes wrong:**
+The v1.1 spec calls for "haptic-responsive button states throughout." If implemented as `UIImpactFeedbackGenerator.impactOccurred()` on every `onPressed` state change for pill buttons, and if pill buttons respond to both `.pressed` (on touch down) and `.released` (on touch up), each button interaction produces two haptic events. With multiple interactive elements on screen (audio cards with play/pause, the AI toggle, slider controls, drag handles), a user performing a sequence of interactions within a few seconds triggers rapid-fire taptic engine activations. iOS rate-limits haptics when triggered too frequently — the taptic engine silently drops events after ~5 per second, making the feature feel inconsistent.
+
+Battery impact: the taptic engine is a physical solenoid actuator. Calling it frequently on background tasks or in response to non-user events (e.g., animation state changes triggering view updates that inadvertently call the generator) creates measurable battery drain.
+
+**Why it happens:**
+Haptic generators are easy to add (`UIImpactFeedbackGenerator(style: .medium).impactOccurred()`) and feel great in isolation. The problem emerges when multiple components add haptics independently without a central policy. SwiftUI's `.sensoryFeedback` modifier (iOS 17+) is the correct approach but developers unfamiliar with it fall back to UIKit generators.
+
+**How to avoid:**
+- Use SwiftUI's `.sensoryFeedback(.impact(weight: .medium), trigger: isPressed)` modifier — it automatically respects the system's haptic budget and Reduce Motion settings
+- Apply haptics only to **confirmed actions**, not speculative state changes: one haptic on confirmed tap (touch up), zero on touch down for standard buttons
+- Create a `HapticService` singleton that rate-limits calls internally — no direct `UIImpactFeedbackGenerator` usage in views
+- Haptics for drag reorder: one impact on pickup, one on drop — not continuous feedback during movement
+- Never trigger haptics in response to data updates, animation state changes, or timers — only in direct response to user gesture events
+
+**Warning signs:**
+- `.impactOccurred()` call sites appear directly inside `Button` bodies or `onTapGesture` modifiers
+- Multiple haptic generators are instantiated (each generator has its own idle timeout — creating many wastes resources)
+- Users report the haptics feel "choppy" or "some taps don't vibrate" (rate-limiting in effect)
+
+**Phase to address:** Design System phase — define the haptic policy in the shared component library. Pill button component encapsulates its own haptic call; no downstream view adds additional haptics on top.
+
+---
+
+## Technical Debt Patterns (v1.1 Restyle Addendum)
+
+| Shortcut | Immediate Benefit | Long-term Cost | When Acceptable |
+|----------|-------------------|----------------|-----------------|
+| Define all color tokens as hex `Color` extensions | Quick to write, autocomplete works | Dark mode breaks in sheets; no centralized light/dark variant management | Never — use Asset Catalog Color Sets |
+| Animate MeshGradient control points at 60/120Hz continuously | Visually impressive waveform effect | Sustained GPU load, thermal throttling, battery drain on all devices | Never for ambient background animations; only on explicit user interaction |
+| Use `.ultraThinMaterial` for all glass surfaces regardless of mode | Single code path | Fails contrast requirements on pure black dark mode backgrounds | Light mode only; use `.regularMaterial` in dark mode |
+| Add haptic generators directly in each view | Fast to implement | Rate-limiting inconsistencies; no central policy; battery waste | Never — route through `HapticService` |
+| Skip `.contentShape()` when adding `.clipShape()` | Fewer lines of code | Drag hit-testing breaks at card corners; swipe-to-delete misregisters | Never — always pair them |
+| Wrap existing views in multiple `ZStack`/`VStack` containers without explicit `.id()` | Easiest structural approach | View identity breaks; drag state resets mid-gesture | Never during restyle of interactive views |
+| Implement Reduce Motion check as a later "polish" task | Ship animation faster | App Store rejection risk; vestibular accessibility failure | Never — must be day-one requirement |
+
+---
+
+## Integration Gotchas (v1.1 Restyle Addendum)
+
+| Integration | Common Mistake | Correct Approach |
+|-------------|----------------|------------------|
+| `MeshGradient` + `List` | Placing animated `MeshGradient` as `listRowBackground` — animates every visible row simultaneously | Use static `MeshGradient` as background; animate a thin `LinearGradient` overlay at 2fps |
+| `.background(.material)` + custom `colorScheme` override | Material ignores parent `.colorScheme()` — renders in system color scheme, not overridden one | Do not override `colorScheme` at the app level; use Asset Catalog adaptive colors instead |
+| SwiftUI `sensoryFeedback` + iOS 16 deployment target | `.sensoryFeedback` is iOS 17+ only; using it crashes on iOS 16 | Gate behind `if #available(iOS 17, *)` or raise minimum deployment to iOS 17 (already set in this project) |
+| `TimelineView` + `MeshGradient` animation | `TimelineView(.animation)` driving a `MeshGradient` update runs at screen refresh rate with no opt-out | Use `TimelineView(.periodic(from:, by:))` with a 0.5-second interval for ambient animations |
+| `.shadow()` + `.background(.material)` on same view | Material requires its own compositing layer; shadow on the same view doubles layer promotion cost | Apply shadow to an outer container; apply material to an inner view — separate the layers |
+| Glassmorphism header + `ScrollView` offset | Blurred header positioned as `overlay` over `ScrollView` — scroll content visible through blur but also tappable behind it | Add `.allowsHitTesting(false)` to the blur overlay; add content inset to `ScrollView` equal to header height |
+
+---
+
+## Performance Traps (v1.1 Restyle Addendum)
+
+| Trap | Symptoms | Prevention | When It Breaks |
+|------|----------|------------|----------------|
+| Multiple animated MeshGradients in a LazyVStack | Device warms up; GPU utilization 60%+ at idle | Use static MeshGradient; animate overlay only | More than 3 cards visible simultaneously |
+| `.blur(radius:)` on foreground elements for "frosted" effect | Blur is applied to the view's own pixels, not background — creates a smeared look, not glass | Use `.background(.material)` for background blur; `.blur()` is for blurring content, not achieving glassmorphism | Immediately — wrong technique entirely |
+| Nested `withAnimation(.repeatForever)` inside ForEach | N×M animations active simultaneously (N cards × M animated properties) | Hoist animation state out of ForEach; use a single timer driving all card animations in sync | 3+ cards visible |
+| `drawingGroup()` on views containing text or interactive controls | Text renders incorrectly (antialiasing breaks); buttons lose tap areas | Use `compositingGroup()` instead; only use `drawingGroup()` for pure graphic views | Immediately on any card with a label |
+| Elevated shadow with `.animation(.spring)` on drag lift | Spring physics runs on every frame during drag; combined with material compositing = frame drops | Pre-compute shadow targets; use `.animation(.easeOut(duration: 0.15))` for shadow changes | A14 and A15 devices under load |
+
+---
+
+## UX Pitfalls (v1.1 Restyle Addendum)
+
+| Pitfall | User Impact | Better Approach |
+|---------|-------------|-----------------|
+| Lime green AI highlights (`#A7C957`) on dark background have poor contrast against purple mesh | Text unreadable over animated gradient sections | Test lime on Deep Indigo (`#5856D6`) specifically: this combination passes 3:1 but borderline; use white for labels, lime for decorative glows only |
+| Pill button inner glow effect uses `.shadow(color: .white.opacity(0.3))` — invisible in dark mode | Button appearance looks flat in dark mode | Use `foregroundStyle` vibrancy or explicit light/dark glow colors via Asset Catalog |
+| Squircle card clips content — overflow text gets clipped without warning | File names truncate at the rounded corners, appearing shorter than container | Ensure text has explicit horizontal padding ≥ corner radius value (24pt minimum inset) |
+| AI orb scales in size based on "denoise intensity" — useful feedback but triggers "Reduce Motion" concerns | Users with vestibular disorders see scale changes associated with slider drag | Tie orb scale to a static display value, not live-animated; update only on slider release |
+| Color system uses pure black `#000000` — true black on OLED | Most screens look great; but pure black with white text at full brightness causes "halation" (halo effect) perceived by some users | Add a minimum brightness level suggestion or slightly tinted black (`#0A0A0F`) as the base |
+
+---
+
+## "Looks Done But Isn't" Checklist (v1.1 Restyle Addendum)
+
+- [ ] **Mesh gradient waveforms:** Look beautiful in Simulator — test GPU temperature and battery draw on a physical iPhone 14 or earlier (non-ProMotion baseline) with 5+ cards visible
+- [ ] **Glassmorphism header dark mode:** Readable in Xcode Preview with default dark background — test on a real device with pure black OLED showing deep black behind the header; run Accessibility Inspector contrast check
+- [ ] **AI orb animation:** Smooth and impressive — turn on "Reduce Motion" in iOS Settings and confirm the orb is static (no pulsation, no scale change)
+- [ ] **Pill button haptics:** Fires on tap in isolation — tap 10 buttons in 3 seconds; verify each produces exactly one haptic (no doubling, no silent drops)
+- [ ] **Drag reorder after restyle:** Works on new card design — long-press and drag slowly while a mesh gradient animation ticks; confirm card does not snap back to origin
+- [ ] **Squircle cards:** Appear correctly shaped — tap near each corner of every card type; confirm tap registers on that card, not adjacent cards
+- [ ] **Color tokens in sheets:** Correct colors in main view — present the Export sheet and any modal; verify dark mode colors match the main screen
+- [ ] **Shadow during drag:** Elevates cleanly on iPhone 15 Pro — test the same drag on an iPhone 12 or SE; verify no visible frame rate drop
+
+---
+
+## Recovery Strategies (v1.1 Restyle Addendum)
+
+| Pitfall | Recovery Cost | Recovery Steps |
+|---------|---------------|----------------|
+| Animated MeshGradient causes thermal throttling | MEDIUM | Replace animated geometry with static MeshGradient + animated LinearGradient overlay; 1-2 day fix per affected view |
+| Color tokens in hex extensions break dark mode in sheets | LOW-MEDIUM | Migrate Color extensions to Asset Catalog Color Sets; find-replace usage sites |
+| Reduce Motion not respected on orb | LOW | Add `@Environment(\.accessibilityReduceMotion)` check; wrap animation in conditional; 30-minute fix |
+| Drag state resets during restyle | MEDIUM | Add explicit `.id()` to ForEach; migrate drag state to ViewModel; regression test all card interactions |
+| Hit-test mismatch on squircle cards | LOW | Add matching `.contentShape()` wherever `.clipShape()` is used; 15-minute fix per component |
+| Layer explosion during drag causing frame drops | MEDIUM-HIGH | Audit every view modifier on AudioCardView; remove or flatten unnecessary layer-promoting effects; measure frame rate on A14 device |
+
+---
+
+## Pitfall-to-Phase Mapping (v1.1 Restyle Addendum)
+
+| Pitfall | Prevention Phase | Verification |
+|---------|------------------|--------------|
+| Animated MeshGradient thermal load (R-1) | Phase 1: Design System — establish animation budget rule | GPU utilization < 20% on idle list view (iPhone 14, Instruments) |
+| Glassmorphism contrast on pure black (R-2) | Phase 1: Design System — specify Material thickness per mode | Accessibility Inspector: all text ≥ 4.5:1 against worst-case background |
+| Pulsating orb ignores Reduce Motion (R-3) | Phase 3: AI Orb implementation | Reduce Motion enabled → orb static; no animation in any property |
+| Color tokens break in sheets (R-4) | Phase 1: Design System — Asset Catalog first | Export sheet and all modals show correct dark mode colors |
+| Squircle breaks hit-test (R-5) | Phase 2: Audio card restyle | Tap all four corners of every card; drag from corners; verify correct card responds |
+| Shadow layer explosion during drag (R-6) | Phase 2: Audio card restyle | Frame rate ≥ 55fps during drag reorder on iPhone 12 (Instruments) |
+| View identity breaks with wrapper views (R-7) | Phase 2: Audio card restyle — add `.id()` first | Slow drag while gradient animates; card never snaps back mid-gesture |
+| Haptic policy not enforced (R-8) | Phase 1: Design System — create HapticService | No direct `UIImpactFeedbackGenerator` in view files; 10 rapid taps all produce exactly one haptic each |
+
+---
+
+## Sources (v1.1 Restyle Addendum)
+
+- [MeshGradient — Apple Developer Documentation](https://developer.apple.com/documentation/SwiftUI/MeshGradient)
+- [Animated Mesh Gradient in SwiftUI — Medium / Rishabh Sharma](https://medium.com/@rishixcode/animated-mesh-gradient-in-swiftui-e1c2e11ed6bf)
+- [Understanding and Improving SwiftUI Performance — Apple Developer Documentation](https://developer.apple.com/documentation/Xcode/understanding-and-improving-swiftui-performance)
+- [Demystify SwiftUI Performance — WWDC23 Session 10160](https://developer.apple.com/videos/play/wwdc2023/10160/)
+- [Glassmorphism Meets Accessibility: Can Glass Be Inclusive? — Axess Lab](https://axesslab.com/glassmorphism-meets-accessibility-can-glass-be-inclusive/)
+- [Glassmorphism: Definition and Best Practices — Nielsen Norman Group](https://www.nngroup.com/articles/glassmorphism/)
+- [Supporting Increase Contrast in your app — Create with Swift](https://www.createwithswift.com/supporting-increase-contrast-in-your-app-to-enhance-accessibility/)
+- [iOS Color Contrast Best Practice: Increase Contrast — Deque](https://www.deque.com/blog/ios-color-contrast-best-practice-increase-contrast/)
+- [Blur effect and materials in SwiftUI — Swift with Majid](https://swiftwithmajid.com/2021/10/28/blur-effect-and-materials-in-swiftui/)
+- [Definitive SwiftUI Background Blur: Material vs. .blur() vs. UIKit Bridge — CodeArchPedia](https://openillumi.com/en/en-swiftui-background-blur-material-comparison/)
+- [SwiftUI View Identity and Lifecycle: Why Views Recreate and State Resets — DEV Community](https://dev.to/sebastienlato/swiftui-view-identity-lifecycle-why-views-recreate-state-resets-3afm)
+- [Common Pitfalls Caused by Delayed State Updates in SwiftUI — fatbobman.com](https://fatbobman.com/en/posts/serious-issues-caused-by-delayed-state-updates-in-swiftui/)
+- [How to detect the Reduce Motion accessibility setting — Hacking with Swift](https://www.hackingwithswift.com/quick-start/swiftui/how-to-detect-the-reduce-motion-accessibility-setting)
+- [Reduce Motion: How To Make Your iOS App Animations Accessible — Medium / Amos Gyamfi](https://medium.com/@amosgyamfi/reduce-motion-how-to-make-your-ios-app-animations-accessible-and-inclusive-92b9de1304fb)
+- [Supporting Reduced Motion accessibility setting in SwiftUI — tanaschita.com](https://tanaschita.com/ios-accessibility-reduced-motion/)
+- [Mastering TimelineView in SwiftUI — Swift with Majid](https://swiftwithmajid.com/2022/05/18/mastering-timelineview-in-swiftui/)
+- [Enabling high-performance Metal rendering with drawingGroup() — Hacking with Swift](https://www.hackingwithswift.com/books/ios-swiftui/enabling-high-performance-metal-rendering-with-drawinggroup)
+- [SwiftUI + Core Animation: Demystify all sorts of Groups — Juniper Photon](https://juniperphoton.substack.com/p/swiftui-core-animation-demystify)
+- [Access colors and images from asset catalog via static properties in Xcode 15 — nil coalescing](https://nilcoalescing.com/blog/Xcode15Assets/)
+- [Reading and Setting Color Scheme in SwiftUI — nil coalescing](https://nilcoalescing.com/blog/ReadingAndSettingColorSchemeInSwiftUI/)
+- [How to Change the Background Color of a View in SwiftUI — Bleeping Swift](https://bleepingswift.com/blog/change-background-color-swiftui)
+- [Sensory Feedback and Haptics in SwiftUI — Bleeping Swift](https://bleepingswift.com/blog/sensory-feedback-haptics-swiftui)
+- [SwiftUI Views and @MainActor — fatbobman.com](https://fatbobman.com/en/posts/swiftui-views-and-mainactor/)
+- [Parametric Corner Smoothing in SwiftUI — Medium / Kumar Sachin](https://medium.com/@zvyom/parametric-corner-smoothing-in-swiftui-108acea52874)
+
+---
+*Pitfalls research for: SwiftUI visual restyle — SonicMerge v1.1 Modern Spatial Utility*
+*Researched: 2026-04-08*
