@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3F4C12CD2F869AC4001E4968 /* SonicMergeShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		3FA1001A2F5E000000000001 /* mono_44100.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000001 /* mono_44100.wav */; };
 		3FA1001A2F5E000000000002 /* stereo_48000.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000002 /* stereo_48000.m4a */; };
 		3FA1001A2F5E000000000003 /* aac_22050.aac in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000003 /* aac_22050.aac */; };
@@ -14,6 +15,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		3F4C12CB2F869AC4001E4968 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 3FCEB00B2F5DAED600901F90 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3F4C12C22F869AC4001E4968;
+			remoteInfo = SonicMergeShareExtension;
+		};
 		3FA1001A2F5E000000000020 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = 3FCEB00B2F5DAED600901F90 /* Project object */;
@@ -23,7 +31,22 @@
 		};
 /* End PBXContainerItemProxy section */
 
+/* Begin PBXCopyFilesBuildPhase section */
+		3F4C12CE2F869AC4001E4968 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				3F4C12CD2F869AC4001E4968 /* SonicMergeShareExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
 /* Begin PBXFileReference section */
+		3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SonicMergeShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		3FA1001B2F5E000000000001 /* mono_44100.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = mono_44100.wav; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000002 /* stereo_48000.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = stereo_48000.m4a; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000003 /* aac_22050.aac */ = {isa = PBXFileReference; lastKnownFileType = file; path = aac_22050.aac; sourceTree = "<group>"; };
@@ -35,10 +58,8 @@
 		3FA1001C2F5E000000000002 /* Exceptions for "SonicMergeTests" folder in "SonicMergeTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
-				Fixtures/aac_22050.aac,
 				Fixtures/GenerateFixtures.swift,
 				Fixtures/mono_44100.wav,
-				Fixtures/stereo_48000.m4a,
 			);
 			target = 3FA1001D2F5E000000000001 /* SonicMergeTests */;
 		};
@@ -56,9 +77,24 @@
 			);
 			target = 3FCEB0122F5DAED600901F90 /* SonicMerge */;
 		};
+		3F4C12D42F869AC4001E4968 /* Exceptions for "SonicMergeShareExtension" folder in "SonicMergeShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3F4C12C22F869AC4001E4968 /* SonicMergeShareExtension */;
+		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		3F4C12C42F869AC4001E4968 /* SonicMergeShareExtension */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				3F4C12D42F869AC4001E4968 /* Exceptions for "SonicMergeShareExtension" folder in "SonicMergeShareExtension" target */,
+			);
+			path = SonicMergeShareExtension;
+			sourceTree = "<group>";
+		};
 		3FA1001C2F5E000000000001 /* SonicMergeTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
@@ -70,8 +106,8 @@
 		3FCEB0152F5DAED600901F90 /* SonicMerge */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				3FCEB1BB2F6851D700901F90 /* Exceptions for "SonicMerge" folder in "SonicMergeTests" target */,
 				3FCEB1CC2F7800001234AB01 /* Exceptions for "SonicMerge" folder in "SonicMerge" target */,
+				3FCEB1BB2F6851D700901F90 /* Exceptions for "SonicMerge" folder in "SonicMergeTests" target */,
 			);
 			path = SonicMerge;
 			sourceTree = "<group>";
@@ -79,6 +115,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		3F4C12C02F869AC4001E4968 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3FA1001E2F5E000000000001 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -114,6 +157,7 @@
 				3FCEB0152F5DAED600901F90 /* SonicMerge */,
 				3FA1001C2F5E000000000001 /* SonicMergeTests */,
 				3FA1001F2F5E000000000001 /* Fixtures */,
+				3F4C12C42F869AC4001E4968 /* SonicMergeShareExtension */,
 				3FCEB0142F5DAED600901F90 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -123,6 +167,7 @@
 			children = (
 				3FCEB0132F5DAED600901F90 /* SonicMerge.app */,
 				3FA1001B2F5E000000000004 /* SonicMergeTests.xctest */,
+				3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -130,6 +175,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		3F4C12C22F869AC4001E4968 /* SonicMergeShareExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 3F4C12D12F869AC4001E4968 /* Build configuration list for PBXNativeTarget "SonicMergeShareExtension" */;
+			buildPhases = (
+				3F4C12BF2F869AC4001E4968 /* Sources */,
+				3F4C12C02F869AC4001E4968 /* Frameworks */,
+				3F4C12C12F869AC4001E4968 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				3F4C12C42F869AC4001E4968 /* SonicMergeShareExtension */,
+			);
+			name = SonicMergeShareExtension;
+			packageProductDependencies = (
+			);
+			productName = SonicMergeShareExtension;
+			productReference = 3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 		3FA1001D2F5E000000000001 /* SonicMergeTests */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = 3FA1002A2F5E000000000001 /* Build configuration list for PBXNativeTarget "SonicMergeTests" */;
@@ -160,10 +227,12 @@
 				3FCEB00F2F5DAED600901F90 /* Sources */,
 				3FCEB0102F5DAED600901F90 /* Frameworks */,
 				3FCEB0112F5DAED600901F90 /* Resources */,
+				3F4C12CE2F869AC4001E4968 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
 			);
 			dependencies = (
+				3F4C12CC2F869AC4001E4968 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				3FCEB0152F5DAED600901F90 /* SonicMerge */,
@@ -185,6 +254,9 @@
 				LastSwiftUpdateCheck = 2630;
 				LastUpgradeCheck = 2630;
 				TargetAttributes = {
+					3F4C12C22F869AC4001E4968 = {
+						CreatedOnToolsVersion = 26.3;
+					};
 					3FA1001D2F5E000000000001 = {
 						CreatedOnToolsVersion = 26.3;
 						TestTargetID = 3FCEB0122F5DAED600901F90;
@@ -210,11 +282,19 @@
 			targets = (
 				3FCEB0122F5DAED600901F90 /* SonicMerge */,
 				3FA1001D2F5E000000000001 /* SonicMergeTests */,
+				3F4C12C22F869AC4001E4968 /* SonicMergeShareExtension */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		3F4C12C12F869AC4001E4968 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3FA1001E2F5E000000000003 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -235,6 +315,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		3F4C12BF2F869AC4001E4968 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		3FA1001E2F5E000000000002 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -252,6 +339,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		3F4C12CC2F869AC4001E4968 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3F4C12C22F869AC4001E4968 /* SonicMergeShareExtension */;
+			targetProxy = 3F4C12CB2F869AC4001E4968 /* PBXContainerItemProxy */;
+		};
 		3FA1001A2F5E000000000030 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = 3FCEB0122F5DAED600901F90 /* SonicMerge */;
@@ -260,6 +352,69 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		3F4C12CF2F869AC4001E4968 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SonicMergeShareExtension/SonicMergeShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XX2XG7FF3F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SonicMergeShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SonicMergeShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dtech.SonicMerge.SonicMergeShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		3F4C12D02F869AC4001E4968 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_ENTITLEMENTS = SonicMergeShareExtension/SonicMergeShareExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = XX2XG7FF3F;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SonicMergeShareExtension/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = SonicMergeShareExtension;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dtech.SonicMerge.SonicMergeShareExtension;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 		3FA1002B2F5E000000000001 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -533,6 +688,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		3F4C12D12F869AC4001E4968 /* Build configuration list for PBXNativeTarget "SonicMergeShareExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3F4C12CF2F869AC4001E4968 /* Debug */,
+				3F4C12D02F869AC4001E4968 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		3FA1002A2F5E000000000001 /* Build configuration list for PBXNativeTarget "SonicMergeTests" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
