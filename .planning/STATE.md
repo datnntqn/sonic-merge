@@ -1,16 +1,16 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: milestone
-status: executing
-stopped_at: "Completed 05-02-PLAN.md Task 1; Task 2 is checkpoint:human-action (Xcode target wiring)"
-last_updated: "2026-04-08T14:11:12.716Z"
+milestone: v1.1
+milestone_name: Modern Spatial Utility Restyle
+status: planning
+stopped_at: ""
+last_updated: "2026-04-08"
 last_activity: 2026-04-08
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 20
-  completed_plans: 19
+  total_phases: 0
+  completed_phases: 0
+  total_plans: 0
+  completed_plans: 0
   percent: 0
 ---
 
@@ -18,17 +18,17 @@ progress:
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-03-08)
+See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Users can merge audio clips and remove background noise in seconds — all on-device, with no quality loss and no privacy concerns.
-**Current focus:** Phase 05 — share-extension
+**Current focus:** Defining requirements for v1.1
 
 ## Current Position
 
-Phase: 05 (share-extension) — EXECUTING
-Plan: 2 of 2
-Status: Ready to execute
-Last activity: 2026-04-08
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-08 — Milestone v1.1 started
 
 Progress: [░░░░░░░░░░] 0%
 

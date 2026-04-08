@@ -8,32 +8,54 @@ SonicMerge is a clean, professional iOS utility for merging multiple audio files
 
 Users can merge audio clips and remove background noise in seconds — all on-device, with no quality loss and no privacy concerns.
 
+## Current Milestone: v1.1 Modern Spatial Utility Restyle
+
+**Goal:** Restyle SonicMerge's entire UI to a "Modern Spatial Utility" aesthetic — same screens, same flows, new visual identity.
+
+**Target features:**
+- Design system: color tokens (light/dark), squircle cards, pill buttons with inner glow, glassmorphism header
+- Vertical Timeline Hybrid layout for Mixing Station
+- Mesh Gradient waveforms on audio cards (Deep Indigo → Purple), elevated drag shadows
+- AI Orb visualizer (pulsating nebula sphere) in Cleaning Lab
+- Dark mode: pure black + Deep Indigo accent + Lime Green AI highlights
+- Light mode: off-white #FBFBFC + Deep Indigo #5856D6 accent
+- Haptic-responsive button states throughout
+
 ## Requirements
 
 ### Validated
 
-(None yet — ship to validate)
+- ✓ User can import audio files via iOS Share Sheet (.m4a, .wav, .aac) — v1.0/Phase 1,5
+- ✓ User can reorder clips via drag-and-drop vertical timeline — v1.0/Phase 2
+- ✓ User can insert silent gaps between clips (0.5s, 1.0s, 2.0s) — v1.0/Phase 2
+- ✓ User can apply crossfade transitions between segments — v1.0/Phase 2
+- ✓ User can apply on-device AI noise reduction to merged audio — v1.0/Phase 3
+- ✓ User can adjust noise suppression intensity via slider (0–100%) — v1.0/Phase 3
+- ✓ User can A/B compare original vs denoised audio ("Hold to Listen Original") — v1.0/Phase 3
+- ✓ User can export merged audio as high-quality .m4a or lossless .wav — v1.0/Phase 2
+- ✓ User can normalize loudness via LUFS normalization before export — v1.0/Phase 4
+- ✓ User can delete and reorder clips via swipe/long-press gestures — v1.0/Phase 2
+- ✓ User can toggle Before/After comparison with haptic feedback — v1.0/Phase 3
 
 ### Active
 
-- [ ] User can import audio files via iOS Share Sheet (.m4a, .wav, .aac)
-- [ ] User can reorder clips via drag-and-drop vertical timeline
-- [ ] User can insert silent gaps between clips (0.5s, 1.0s, 2.0s)
-- [ ] User can apply crossfade transitions between segments
-- [ ] User can apply on-device AI noise reduction to merged audio
-- [ ] User can adjust noise suppression intensity via slider (0–100%)
-- [ ] User can A/B compare original vs denoised audio ("Hold to Listen Original")
-- [ ] User can export merged audio as high-quality .m4a or lossless .wav
-- [ ] User can normalize loudness via LUFS normalization before export
-- [ ] User can delete and reorder clips via swipe/long-press gestures
-- [ ] User can toggle Before/After comparison with haptic feedback
+- [ ] Design system with color tokens for light/dark mode and reusable components
+- [ ] Glassmorphism header with "Private by Design" banner and Indigo glow
+- [ ] Vertical Timeline Hybrid layout with central connecting line for audio cards
+- [ ] Squircle audio cards (24pt radius) with semi-transparent mesh gradient waveforms
+- [ ] Elevated drag shadows on card interaction (micro-interactions)
+- [ ] Pill-shaped buttons with inner glow and haptic-responsive states
+- [ ] AI Orb visualizer (pulsating nebula sphere) for denoise section
+- [ ] Dark mode: pure black #000000, Deep Indigo #5856D6 accent, Lime Green #A7C957 AI highlights
+- [ ] Light mode: off-white #FBFBFC background, Deep Indigo #5856D6 accent
 
 ### Out of Scope
 
 - Cloud processing — on-device only, privacy-first
-- Real-time recording — import-only workflow for v1
+- Real-time recording — import-only workflow
 - Video files — audio-only scope
 - Android / cross-platform — iOS-only
+- Functional changes to ViewModels or services — restyle only
 
 ## Context
 
@@ -150,5 +172,22 @@ Key APIs: `inputNode.setVoiceProcessingEnabled(true)`, `AVAudioSinkNode`, `AVAud
 | iOS 17.0+ minimum | Latest AVAudioEngine APIs and SwiftUI features | — Pending |
 | On-device only processing | Privacy-first, no server costs, offline capable | — Pending |
 
+## Evolution
+
+This document evolves at phase transitions and milestone boundaries.
+
+**After each phase transition** (via `/gsd:transition`):
+1. Requirements invalidated? → Move to Out of Scope with reason
+2. Requirements validated? → Move to Validated with phase reference
+3. New requirements emerged? → Add to Active
+4. Decisions to log? → Add to Key Decisions
+5. "What This Is" still accurate? → Update if drifted
+
+**After each milestone** (via `/gsd:complete-milestone`):
+1. Full review of all sections
+2. Core Value check — still the right priority?
+3. Audit Out of Scope — reasons still valid?
+4. Update Context with current state
+
 ---
-*Last updated: 2026-03-08 after initialization*
+*Last updated: 2026-04-08 after milestone v1.1 started*
