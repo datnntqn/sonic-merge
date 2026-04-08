@@ -16,7 +16,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 - [ ] **Phase 2: Merge Pipeline + Mixing Station UI** - Full clip editing workflow and export to .m4a/.wav
 - [x] **Phase 3: AI Denoising Pipeline** - Core ML on-device denoising with A/B comparison (completed 2026-03-12)
 - [x] **Phase 4: LUFS Normalization + Export Polish** - Podcast-standard loudness and polished export completion UX (completed 2026-03-28)
-- [ ] **Phase 5: Share Extension** - Receive audio from any app via iOS Share Sheet
+- [x] **Phase 5: Share Extension** - Receive audio from any app via iOS Share Sheet (completed 2026-04-08)
 
 ## Phase Details
 
@@ -100,8 +100,8 @@ Plans:
 **Plans**: 2 plans
 
 Plans:
-- [ ] 05-01-PLAN.md — Main app wiring: duplicate detection in importFiles, scenePhase pending import handler, URL scheme registration, tests (Wave 1)
-- [ ] 05-02-PLAN.md — Share Extension target: ShareExtensionViewController, HUD UI, Info.plist, entitlements, Xcode project wiring + human verification (Wave 2)
+- [x] 05-01-PLAN.md — Main app wiring: duplicate detection in importFiles, scenePhase pending import handler, URL scheme registration, tests (Wave 1)
+- [x] 05-02-PLAN.md — Share Extension target: ShareExtensionViewController, HUD UI, Info.plist, entitlements, Xcode project wiring + human verification (Wave 2)
 
 ## Progress
 
@@ -114,4 +114,4 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 2. Merge Pipeline + Mixing Station UI | 1/5 | In Progress|  |
 | 3. AI Denoising Pipeline | 4/4 | Complete   | 2026-03-12 |
 | 4. LUFS Normalization + Export Polish | 5/5 | Complete   | 2026-03-28 |
-| 5. Share Extension | 1/2 | In Progress | - |
+| 5. Share Extension | 2/2 | Complete   | 2026-04-08 |
