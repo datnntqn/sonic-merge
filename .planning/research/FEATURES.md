@@ -1,14 +1,16 @@
-# Feature Research
+# Feature Research — v1.1 Modern Spatial Utility Restyle
 
-**Domain:** Modern Spatial Utility UI Restyle — iOS audio app (SwiftUI, iOS 17+)
-**Researched:** 2026-04-08
-**Confidence:** HIGH (SwiftUI APIs verified against Apple developer docs, WWDC sessions, and current community sources)
+**Domain:** iOS audio utility app — visual identity restyle (no functional changes to ViewModels or services)
+**Researched:** 2026-04-11
+**Confidence:** MEDIUM-HIGH — design patterns verified via competitor app inspection, SwiftUI API docs, and codebase review; complexity estimates grounded in actual source files
 
 ---
 
-## Scope Note
+## Scope
 
-This file covers **visual restyle features only** (milestone v1.1). Functional features (import, mixing, denoising, export) were researched in the prior milestone and remain unchanged in scope. The project constraint is explicit: no ViewModel or service changes — restyle only.
+Visual restyle features only (milestone v1.1). Functional features (import, mixing, denoising, export, MVVM) are already built and must not change. The project constraint is explicit: no ViewModel or service changes — restyle only.
+
+Reference apps studied: Ferrite Recording Studio (v3, 2024–2025), Dark Noise (OLED dark mode benchmark), Capo (chord detection, dark mode follow-through), Logic Remote (professional audio dark interface), Apple Music, Halide, Darkroom.
 
 ---
 
@@ -16,32 +18,34 @@ This file covers **visual restyle features only** (milestone v1.1). Functional f
 
 ### Table Stakes (Users Expect These)
 
-These are non-negotiable for the restyle to feel complete. Missing any one of them makes "Modern Spatial Utility" feel inconsistent or half-assembled. A partial restyle is worse than no restyle — uncovered views reveal the seam.
+Features users assume exist in a polished 2025 iOS app. Missing or broken means the product feels incomplete regardless of any new feature — a partial restyle with broken dark mode or inconsistent corners is worse than no restyle.
 
-| Feature | Why Expected | Complexity | Notes |
-|---------|--------------|------------|-------|
-| Design system token layer (Color + Spacing + Radius + Shadow) | Every polished 2025 iOS app uses semantic tokens. Raw hex values in views signal unfinished work and make future theme changes require a grep-and-replace across every file. | LOW | Single `DesignSystem` enum with nested `Color`, `Spacing`, `Radius`, `Shadow` namespaces. Colors stored in `Assets.xcassets` as color sets with Any Appearance and Dark Appearance slots — SwiftUI auto-resolves at runtime. **Must ship first. All other features reference these tokens.** |
-| Full light/dark mode adaptive colors | iOS has system-enforced dark mode since iOS 13. Users switch system appearance and expect zero broken or unreadable colors. | LOW | Every token resolves through `Assets.xcassets` color sets. No hardcoded hex in views. Verify in both appearances before shipping any single screen. |
-| Squircle card shape with continuous corner radius | iOS system UI uses `style: .continuous` (superellipse) corner rounding everywhere from app icons to alerts. Non-continuous rounded corners look visually "off" to trained iOS eyes — it is immediately detectable. | LOW | `RoundedRectangle(cornerRadius: 24, style: .continuous)` — built-in SwiftUI primitive, no custom `Shape` implementation needed. Zero performance overhead vs standard rounded rectangle. Consistent 24pt radius across all audio cards. |
-| Shadow elevation system (resting + lifted states) | Cards and interactive elements need coherent depth layering. Ad-hoc `shadow(radius:)` values produce visual noise and make the UI look unintentional. | LOW | Two named shadow tokens: `cardResting` (radius 8, y-offset 2, opacity 0.12) and `cardLifted` (radius 20, y-offset 8, opacity 0.22). Applied via a `.shadowElevation(_ token:)` ViewModifier so every card uses the same shadow language. |
-| Dark mode: pure black background | Premium iOS apps (Halide, Apollo, Ivory) use `#000000` on OLED screens. Users on OLED iPhones expect true black pixels for battery savings and visual premium feel. Mid-grey dark backgrounds signal a hasty implementation. | LOW | `Color(.systemBackground)` resolves to a near-black in dark mode, not `#000000`. Must use an explicit token: `backgroundPrimary` = `#000000` (dark) / `#FBFBFC` (light). |
-| Haptic feedback on all primary button taps | iOS 17 introduced `.sensoryFeedback` as a one-line SwiftUI modifier. In 2025, apps without haptics feel unresponsive. The bar is set by every first-party Apple app. | LOW | `.sensoryFeedback(.impact, trigger: isPressed)` on export, add clip, toggle denoise, and any destructive action. No UIKit bridge needed on iOS 17+. |
-| Consistent type hierarchy using SF Pro system font | Design restyls that swap in a third-party font introduce Dynamic Type breakage, accessibility failures, and App Store review friction. The "spatial utility" look is achieved with color, shape, and depth — not typography replacement. | LOW | Use `SF Pro Rounded` (`Font.system(.body, design: .rounded)`) for display headings only. All body, metadata, and UI label text stays at `.system` default. |
+| Feature | Why Expected | Complexity | Existing Code Touch Points |
+|---------|--------------|------------|---------------------------|
+| **Design system token layer** | Every polished 2025 iOS app (Ferrite, Dark Noise, Halide) uses semantic tokens. Raw hex values in views force grep-and-replace for every future theme change. Inconsistent tokens make a restyle look like a patchwork job. | LOW | `SonicMergeTheme.swift` + `SonicMergeTheme+Appearance.swift` — `SonicMergeSemantic` struct already exists and is injected via environment. Restyle extends the existing token set: add `accentAI`, `glassOverlay`, `timelineLine` tokens. Do not rewrite the architecture — extend it. |
+| **Full light/dark mode correctness across all screens** | iOS has enforced dark mode since iOS 13. Users switch appearances and expect zero broken colors. An uncovered view (e.g., a hardcoded white background in `CleaningLabView.staleBanner`) destroys credibility. | LOW | `SonicMergeSemantic` resolves via `ColorScheme` environment. `staleBanner` in `CleaningLabView.swift` currently hardcodes `Color(red: 1.0, green: 0.88, blue: 0.6)` — this breaks in dark mode. Every hardcoded color must be tokenized. |
+| **Consistent squircle corner radius (24pt continuous)** | iOS system UI uses `style: .continuous` (superellipse) everywhere from app icons to sheets. Non-continuous corners are detectable to trained iOS eyes. Dark Noise sound tiles and Ferrite v3 clip cards both use large-radius continuous corners. | LOW | `SonicMergeTheme.Radius.card = 12` (current). Change to `24`. Single constant — propagates to `ClipCardView`, `MergeTimelineView.mergeOutputCard`, `CleaningLabView` waveform section, `GapRowView`, `TrustSignalViews.LocalFirstTrustStrip`, `ExportProgressSheet`. |
+| **Shadow elevation system (resting + lifted)** | Ad-hoc `shadow(radius:)` values create visual noise. Every view currently uses different shadow parameters: `ClipCardView` uses `radius: 8, y: 3`; `onDeviceAIHero` uses `radius: 6, y: 2`; `LocalFirstTrustStrip` uses `radius: 10, y: 4`. Coherent depth requires two named tokens. | LOW | Create `SonicMergeTheme.Shadow.cardResting` and `.cardLifted` in `SonicMergeTheme.swift`. Add a `.shadowElevation(_ token:)` `ViewModifier` so all cards reference the same tokens. All five card-like components need updating. |
+| **Dark mode: pure black #000000 background** | Premium OLED apps (Halide, Capo, Apollo before shutdown, Ivory) use true `#000000` dark backgrounds. Current `darkConveyor()` uses charcoal `#11141A`. The target spec is `#000000`. Per-pixel OLED savings are a real user benefit on iPhone X and later. | LOW | `SonicMergeTheme+Appearance.swift` `darkConveyor()` — change `surfaceBase` from charcoal to `UIColor.black`. Ripples to all views via `semantic.surfaceBase` — no individual view changes needed. |
+| **Haptic feedback on all primary buttons** | iOS 17 `.sensoryFeedback` is a one-line SwiftUI modifier. Apps without haptics on CTAs feel unresponsive in 2025. Logic Remote, Ferrite, and Capo all use haptics on transport controls and mode changes. | LOW | `CleaningLabViewModel` already fires haptics on A/B toggle. Remaining surfaces without haptics: Export button in `MixingStationView`, Import button, denoiseActionButton in `CleaningLabView`, drag-lift in `MergeSlotRow`. Add `.sensoryFeedback(.impact, trigger: ...)` at each call site. |
+| **Reduced Motion compliance** | App Store accessibility review has flagged continuous animations that ignore `accessibilityReduceMotion` since 2023. The AI Orb is the highest-risk element. This is non-negotiable for review. | LOW | Add `@Environment(\.accessibilityReduceMotion) private var reduceMotion` to any view with `withAnimation(.repeatForever(...))`. Guard the AI Orb pulse, drag shadow spring, and any future `TimelineView`-driven animation behind `if !reduceMotion`. No existing code to modify — must be built into new animated components from day one. |
+| **Typography: no third-party fonts** | SF Pro is tuned for Dynamic Type, VoiceOver, and all accessibility sizes. Third-party fonts introduce App Store review friction, font loading overhead, and license compliance risk. The aesthetic is achieved through color, depth, and shape — not font replacement. | LOW | Use `Font.system(.body, design: .rounded)` for display labels and section headers only (already in use in `MergeTimelineView` and `MixingStationView` empty state). All body, metadata text stays at `.system` default. Zero new font assets. |
 
 ---
 
 ### Differentiators (Competitive Advantage)
 
-These features make SonicMerge v1.1 visually distinct from generic iOS utility apps. Each adds meaningful depth without adding architectural complexity. They are what transforms "restyled" into "premium."
+Features that make SonicMerge v1.1 visually distinct from generic audio utility apps. Each adds meaningful depth without touching the audio pipeline or ViewModels. Ranked by user impact / implementation complexity ratio.
 
-| Feature | Value Proposition | Complexity | Notes |
-|---------|-------------------|------------|-------|
-| Glassmorphism header with Deep Indigo glow | Creates visual "float" — the header appears to hover above scrolling content. Signals spatial depth and premium build quality. Apple's Liquid Glass design language (introduced WWDC 2025) validates this direction as the forward-looking iOS aesthetic. | MEDIUM | `ZStack`: (1) `.background(.ultraThinMaterial)` for the blur layer, (2) `Color(hex: "#5856D6").opacity(0.12)` as a glow wash, (3) bottom-edge `Divider` colored `Color.white.opacity(0.08)`. Do NOT use `UIBlurEffect` directly — `.ultraThinMaterial` is the correct SwiftUI primitive and auto-adapts to light/dark. Applies to sticky navigation header in both Mixing Station and Cleaning Lab. |
-| Vertical Timeline Hybrid layout with connecting line | Audio editors (GarageBand, Ferrite) use vertical timeline metaphors. A central connecting line communicates sequence and ordering in a way a plain `List` cannot. Makes the Mixing Station feel like a purpose-built audio tool, not a to-do list. | MEDIUM | `ZStack` with a 2pt wide `Rectangle` connecting line running vertically through card connection points inside a `VStack`. Line color: `accentIndigo.opacity(0.4)`. Filled 6pt circle node at each card's midpoint connection. Complexity is in precise vertical alignment math to match circle nodes with card centers — not in API difficulty. The underlying `List` with `.onMove` drag-reorder remains unchanged. |
-| Mesh gradient waveform on audio cards | Static linear gradient waveforms exist in every competitor. A `MeshGradient`-backed waveform fill (Deep Indigo → Purple → transparent) makes each card feel unique and visually rich. | HIGH | `MeshGradient` requires **iOS 18** minimum (confirmed: Apple Developer Documentation, WWDC24). Project minimum is iOS 17.0. **Mandatory `#available(iOS 18, *)` gate** with `LinearGradient(colors: [Color("accentIndigo").opacity(0.6), Color("purple").opacity(0.3), .clear])` fallback for iOS 17. Waveform bar shapes drawn with `Path` or `HStack` of `Rectangle`, gradient applied as `.fill`. Do not use this as a full-screen background — performance cost is acceptable only at card scale. |
-| Pill buttons with inner glow | Adds physical depth to flat capsule shapes. The glow communicates "pressable surface" without requiring a border or drop shadow. Feels more tactile than a flat fill. Industry pattern in premium iOS apps (Darkroom, Bear, Notion). | LOW | Two-layer button overlay: (1) base `Capsule` fill at `accentIndigo`, (2) inner glow `Capsule` stroke `Color.white.opacity(0.25)` at 1pt width inset 1pt from edge, (3) outer ambient shadow `accentIndigo.opacity(0.35)` radius 12. On press: `scaleEffect(0.96)` + `.sensoryFeedback(.impact)`. Implemented as a single `ButtonStyle` struct — applied once, used everywhere. |
-| AI Orb visualizer (pulsating nebula sphere) | Signals "AI is actively working" with a distinctive, iconic visual. Transforms a progress state into a branded moment. Differentiates noise reduction from a plain progress spinner or percentage label. Sets the emotional context: sophisticated on-device intelligence. | HIGH | **Tier 1 (this milestone):** Three concentric `Circle` views, each animated with `withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true))` at staggered delays. Outer circle: `scale(1.0→1.12)` + `opacity(0.3→0.0)`. Middle circle: `scale(1.0→1.06)` + `opacity(0.6→0.3)`. Core circle: static, radial gradient fill `accentIndigo` → `purple`. No Metal dependency. Animate **only while denoise is actively processing** — stop animation when idle to avoid unnecessary GPU work during audio export. **Tier 2 (future):** Metal `layerEffect` shader using MSL for organic noise/turbulence distortion. Defer until Tier 1 is stable. |
-| Elevated drag shadow on card reorder | When a user lifts a card, shadow depth increases and card scales up slightly. On release, spring animation snaps it back. Micro-interaction that signals "this card is in my hand." Distinguishes premium list implementations from standard `List` drag behavior. | LOW | `DragGesture.onChanged`: `withAnimation(.easeOut(duration: 0.15)) { shadowToken = .cardLifted; scale = 1.03 }`. `DragGesture.onEnded`: `withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { shadowToken = .cardResting; scale = 1.0 }`. Note: iOS 17 `DragGesture.Value` does not expose gesture velocity (this was added in iOS 26 / Xcode 26). Use fixed spring parameters — do not attempt velocity-based spring damping on iOS 17. |
+| Feature | Value Proposition | Complexity | Existing Code Touch Points |
+|---------|-------------------|------------|---------------------------|
+| **Deep Indigo + Lime Green color palette (dark mode)** | No competitor in the iOS audio utility space (Ferrite, Voice Record Pro, TapeRecorder) uses Deep Indigo as primary accent. Combined with Lime Green for AI-specific elements, this creates a unique, immediately recognizable brand color. Dark Noise uses custom colors as brand identity — this follows the same playbook. | LOW | `darkConveyor()` in `SonicMergeTheme+Appearance.swift`. Change `accentAction` from neon-mint `#2FEBA0` to Deep Indigo `#5856D6`. Add new `accentAI: UIColor` token set to Lime Green `#A7C957` for AI Orb, Cleaning Lab intensity slider thumb, and denoise progress. `accentWaveform` in dark mode should be set to `#5856D6` (indigo) to match the mesh gradient direction. |
+| **Glassmorphism trust strip + navigation header** | Apple's Liquid Glass material (WWDC 2025) validates frosted-glass as the forward-looking iOS design vocabulary. The `LocalFirstTrustStrip` ("Private by Design" banner) is the first content element users see in the Mixing Station — making it a glass card with an indigo glow reinforces the privacy brand at first glance. Logic Remote uses blurred header bars; this extends the pattern to content cards. | MEDIUM | `TrustSignalViews.LocalFirstTrustStrip` — replace `.background(Color(uiColor: semantic.surfaceElevated))` with `.background(.ultraThinMaterial)` + `Color(uiColor: semantic.accentAction).opacity(0.08)` color wash overlay. Add `shadow(color: Color(uiColor: semantic.accentAction).opacity(0.3), radius: 12)` indigo ambient glow. Navigation bar glassmorphism is free via `.toolbarBackground(.ultraThinMaterial, for: .navigationBar)` in `MixingStationView` and `CleaningLabView`. |
+| **Pill buttons with inner glow** | Apple Intelligence UI (iOS 18.1+) established glowing pill buttons as a premium pattern. Current buttons in `CleaningLabView.denoiseActionButton` and `MixingStationView.emptyState` use `RoundedRectangle(cornerRadius: 12)` — upgrading to `Capsule` with inner glow overlay transforms every primary CTA from utilitarian to premium. Darkroom and Bear use this same pattern. | LOW | Three call sites: `CleaningLabView.denoiseActionButton`, `MixingStationView.emptyState` import button, `MergeTimelineView.mergeOutputCard` export button. Pattern: replace `.clipShape(RoundedRectangle(cornerRadius: 12))` with `.clipShape(Capsule())`. Add `.overlay(Capsule().strokeBorder(Color.white.opacity(0.25), lineWidth: 1))` for inner glow. Add `shadow(color: accentAction.opacity(0.4), radius: 10)` outer ambient. On press: `scaleEffect(0.96)` + `.sensoryFeedback(.impact)`. Encapsulate in a single `PillButtonStyle` `ButtonStyle` struct. |
+| **Mesh gradient waveform bars (Deep Indigo → Purple)** | Every competitor (Ferrite, TapeRecorder, Voice Memos) uses a single flat color for waveform bars. A `LinearGradient` fill (Deep Indigo → Purple → transparent) — upgrading to `MeshGradient` on iOS 18 — makes each audio card feel visually distinctive and premium. The waveform is the identity of each clip; making it gradient reinforces that identity. | MEDIUM | `WaveformThumbnailView` in `ClipCardView.swift` (Canvas draw loop) and `WaveformCanvasView` in `CleaningLabView.swift`. Currently: `context.fill(path, with: .color(accentBlue))`. Change to: `context.fill(path, with: .linearGradient(Gradient(colors: [Color(hex: "#5856D6").opacity(0.9), Color(hex: "#A042D4").opacity(0.5)]), startPoint: .init(x: 0, y: 0), endPoint: .init(x: 0, y: 1)))`. For iOS 18: wrap in `#available(iOS 18, *)` and upgrade to `MeshGradient` with 3×3 grid and animated color stops (indigo → purple → transparent). Fallback (`LinearGradient`) must be visually acceptable as the primary path for iOS 17 devices. |
+| **AI Orb visualizer (pulsating nebula sphere)** | No iOS audio utility competitor has an animated AI identity element. Moises.ai and similar tools use animated gradient blobs for their AI brand — SonicMerge's AI Orb is the equivalent native iOS pattern. Transforms the flat `Image(systemName: "cpu")` in `CleaningLabView.onDeviceAIHero` into a living visual that communicates "AI is actively processing." Significant brand differentiation in this market. | HIGH | `CleaningLabView.onDeviceAIHero` is the replacement target — currently a plain `HStack` with a system icon. New `AIOrb` view: `ZStack` of three concentric `Circle` views. Outer: `scale(1.0→1.18)` + `opacity(0.3→0.0)`. Middle: `scale(1.0→1.09)` + `opacity(0.5→0.2)`. Core: static `RadialGradient` fill `#5856D6` → `#A042D4`. Animate with `withAnimation(.easeInOut(duration: 1.8).repeatForever(autoreverses: true))` at staggered `.delay(0.3)` offsets. Animate ONLY when `viewModel.isProcessing == true`. Stop animation in idle state — always-on animation causes GPU contention with `AVAudioEngine`. Must guard with `accessibilityReduceMotion`. |
+| **Vertical timeline connecting line** | GarageBand, Ferrite, and Reaper all use a visual track lane or timeline spine to communicate audio sequencing. The Mixing Station's List of clips currently reads as a generic to-do list. A 2pt Deep Indigo vertical line connecting card midpoints communicates "these clips play in order" without adding UI chrome. Functional-aesthetic pattern unique to purpose-built audio tools. | MEDIUM-HIGH | `MergeTimelineView.swift` currently uses `List` with `.onMove`. A connecting line requires knowing each row's vertical position. Two approaches: (A) Keep `List`, overlay a `ZStack` connector using `GeometryReader` + `PreferenceKey` to track row Y-offsets — complex but preserves `List` drag handle. (B) Migrate to `ScrollView + LazyVStack` with custom drag gesture — higher drag complexity but simpler connector geometry. **Approach A is recommended to avoid rewriting drag-reorder.** Risk: `List` section insets may make vertical alignment math imprecise. |
+| **Elevated drag shadow with spring animation** | Things 3, Craft, and Ferrite all visually elevate the "held" card during drag reorder — scale increases slightly, shadow deepens. This micro-interaction communicates physical weight and distinguishes premium list implementations from default `List` drag handles. Current drag uses default `editMode` handle with no card-level feedback. | MEDIUM | `MergeSlotRow.swift` (called from `MergeTimelineView`). Add `@State private var isDragging = false`. On drag start: `withAnimation(.easeOut(duration: 0.15)) { scale = 1.03; shadowToken = .cardLifted }`. On drop: `withAnimation(.spring(response: 0.35, dampingFraction: 0.75)) { scale = 1.0; shadowToken = .cardResting }`. Note: iOS 17 `DragGesture.Value` does not expose velocity (added in iOS 26). Use fixed spring parameters — do not attempt velocity-based damping. |
 
 ---
 
@@ -49,92 +53,101 @@ These features make SonicMerge v1.1 visually distinct from generic iOS utility a
 
 | Feature | Why Requested | Why Problematic | Alternative |
 |---------|---------------|-----------------|-------------|
-| Full-screen animated mesh gradient background | Looks impressive in mockups. Makes the entire screen feel "alive." | `MeshGradient` animation is GPU-intensive per frame. On A15 and older devices, full-screen mesh animation at 60fps causes thermal throttling — directly degrading AVAudioEngine's audio processing performance. Also requires iOS 18, excluding iOS 17 users entirely. | Use mesh gradient as a static fill scoped to individual audio card backgrounds only, gated with `#available(iOS 18, *)`. Full-screen background stays pure `#000000` (dark) / `#FBFBFC` (light). Zero GPU cost. |
-| Always-on AI Orb animation | A constantly pulsating orb looks premium in screenshots and demo videos. | An always-running `repeatForever` animation that fires concurrent GPU tasks alongside AVAudioEngine processing has been shown to cause audio buffer dropouts on constrained devices. The animation has no semantic meaning when not processing. | Animate the orb only while `isDenoising == true`. Show a static, non-animated orb or the "Hold to Listen Original" button in idle state. Animation carries more impact when reserved for active states. |
-| AI Orb Tier 2 Metal shader (this milestone) | Metal shaders produce genuinely organic, non-repeating visual noise — more premium than CSS-style concentric circle animations. | Metal shader + AVAudioEngine simultaneously can cause resource contention on A-series devices with shared GPU/CPU/Neural Engine budgets. Shipping Metal effects before validating Tier 1 stability creates two unknowns at once. Metal MSL also adds build complexity and a new test surface. | Ship Tier 1 (SwiftUI concentric circles) for v1.1. Upgrade to Metal shader in a focused v1.2 pass after stability is confirmed. |
-| Custom third-party display font | Creates typographic personality and brand differentiation. | SF Pro is Apple's system font, tuned for all weights, optical sizes, Dynamic Type, and accessibility across every device. Custom fonts introduce: font loading overhead at launch, potential Dynamic Type size breakage, VoiceOver label mismatches, and App Store review friction if the font license is not correctly embedded. The "spatial utility" aesthetic is expressed through color, depth, and shape — not typography. | Use `Font.system(.largeTitle, design: .rounded)` for display headings (SF Pro Rounded is free, built-in, passes all accessibility checks). All other text stays at `.system` default. |
-| Per-clip unique color coding | Makes the timeline feel dynamic and personalized. Users can identify clips at a glance without reading filenames. | Requires persistent color state keyed to clip identity, color clash detection, and the visual problem of what happens when clips are reordered (do colors follow the clip or stay positional?). This is a ViewModel concern — and the restyle explicitly prohibits ViewModel changes. | All cards use the same gradient fill (mesh or linear fallback). Visual variation comes from waveform shape (driven by actual audio data) and clip duration, not arbitrary color assignment. |
-| Particle system / star field background | Creates "space" aesthetic. Seen in some visionOS concept demos. Popular on Dribbble. | Requires SpriteKit or `CAEmitterLayer` UIKit bridge. Adds a non-native framework dependency. Has no semantic relationship to audio work. CPU load is non-trivial. Competes with actual audio visualization for GPU budget. | Deep Indigo accent + pure black background achieves spatial aesthetic at zero performance cost. Particle effects belong in visionOS, not on a utilitarian iPhone audio tool. |
-| Blurred translucent cards (glass cards, not just glass header) | Extends the glassmorphism language from header to every card. Looks cohesive in design tools. | Glass cards require live-blur compositing behind every card in the scroll view. This is significantly more expensive than a header blur (which is static). On a long Mixing Station list, N cards blurring simultaneously causes visible jank on older devices. Apple's own HIG warns against overusing materials. | Reserve `.ultraThinMaterial` for the sticky header only. Audio cards use semi-opaque solid fills with the mesh gradient / linear gradient waveform. The contrast between solid cards and the glass header reinforces the depth hierarchy. |
+| **Full-screen animated mesh gradient background** | Looks impressive in mockups. Makes the "spatial" aesthetic feel immersive. | `MeshGradient` animation is GPU-intensive per frame. Full-screen animation on A15 and older devices causes thermal throttling — degrading `AVAudioEngine` audio processing performance simultaneously. Also iOS 18 only, excluding all iOS 17 users. | Mesh gradient scoped to waveform bars inside cards only, gated with `#available(iOS 18, *)`. Full-screen background stays pure `#000000` / `#FBFBFC`. Zero GPU cost, maximum contrast. |
+| **Always-on AI Orb animation** | A constantly pulsating orb looks premium in screenshots. | An always-running `repeatForever` animation fires continuous GPU tasks alongside `AVAudioEngine` processing. This has been reported to cause audio buffer dropouts on constrained A-series devices where GPU/CPU/Neural Engine share a power budget. Animation also loses semantic meaning when it runs all the time. | Animate the orb only when `viewModel.isProcessing == true`. Show a static, non-animated orb in idle state. The animation carries more impact when reserved for the active AI state. |
+| **Glassmorphism on every card (glass cards)** | Extends the glass language from header to all cards. Looks cohesive in Figma. | Glass cards require live blur compositing behind every card in the scroll view. On a Mixing Station list with 10+ clips, N simultaneous `blur()` layers cause visible jank on iPhone 12 and earlier. Apple's own HIG explicitly warns against overusing materials. NN/G research confirms glassmorphism at this density reduces readability. | Reserve `.ultraThinMaterial` for the sticky header and trust strip only. Audio cards use semi-opaque solid fills. Contrast between glass header and solid cards reinforces depth hierarchy. |
+| **Particle system / floating blobs in background** | "Spatial" aesthetic seen in visionOS concept demos. Popular on Dribbble. | Requires SpriteKit or `CAEmitterLayer` UIKit bridge (non-native). Constant CPU load. No semantic relationship to audio workflow. Competes with audio visualization for GPU budget. | Deep Indigo on pure black achieves spatial aesthetic at zero performance cost. |
+| **Custom third-party display font** | Creates typographic brand differentiation. | SF Pro is tuned for Dynamic Type, VoiceOver, and accessibility across all sizes. Third-party fonts introduce: load overhead at launch, Dynamic Type breakage at larger accessibility sizes, VoiceOver label mismatches, and App Store review friction if license is not correctly embedded. The restyle aesthetic is expressed through color, depth, and shape. | `Font.system(.body, design: .rounded)` for display headings (SF Pro Rounded — built-in, zero overhead, passes all checks). Everything else stays at `.system` default. |
+| **Per-clip unique color coding** | Makes timeline feel dynamic. Users can identify clips without reading names. | Requires persistent color state keyed to clip identity, clash detection, and the visual problem of color reassignment on reorder. This is a ViewModel concern — the restyle prohibits ViewModel changes. | Visual variation comes from waveform shape (driven by actual audio amplitude data already stored in sidecar files) and clip duration. No arbitrary color assignment needed. |
+| **Metal shader AI Orb (this milestone)** | Metal shaders produce genuinely organic, non-repeating visual noise — more premium than CSS-style concentric circles. | Metal shader + `AVAudioEngine` simultaneously can cause resource contention. Shipping Metal effects before validating Tier 1 stability creates two unknowns. Metal MSL also adds a new test surface and build complexity. | Ship Tier 1 (SwiftUI concentric circles) in v1.1. Evaluate Metal upgrade in a focused v1.2 pass after audio regression testing confirms no GPU contention. |
+| **Neumorphism (embossed shadows)** | Tactile aesthetic popular 2020–2022. | Systematically fails WCAG contrast requirements. Apple HIG explicitly discourages it. Considered dated by 2024. | Elevated directional shadows (`y: 4`) on solid card fills communicate depth without contrast failures. |
 
 ---
 
 ## Feature Dependencies
 
 ```
-[Design System Tokens]  ← must ship first
-    └──required-by──> [Light/Dark Mode Colors]
-    └──required-by──> [Squircle Cards (24pt continuous radius)]
-    └──required-by──> [Shadow Elevation System]
-    └──required-by──> [Pill Buttons with Inner Glow]
-    └──required-by──> [Glassmorphism Header]
-    └──required-by──> [Vertical Timeline Layout]
-    └──required-by──> [Mesh Gradient Waveforms]
-    └──required-by──> [AI Orb Visualizer]
+[SonicMergeSemantic token system (v2 extended)]  ← Phase 1 — must ship first
+    └──required-by──> [Pure Black + Deep Indigo dark mode]
+    └──required-by──> [Lime Green accentAI token]
+    └──required-by──> [Glassmorphism trust strip + nav header]
+    └──required-by──> [Pill buttons inner glow]
+    └──required-by──> [Mesh gradient waveforms]
+    └──required-by──> [AI Orb visualizer]
+    └──required-by──> [Elevated drag shadow tokens]
 
-[Squircle Cards]
-    └──required-by──> [Mesh Gradient Waveforms]   (gradient fills the card background layer)
-    └──required-by──> [Elevated Drag Shadow]      (shadow applied to the card container view)
+[Squircle 24pt cards]  ← Phase 1
+    └──required-by──> [Mesh gradient waveforms]   (gradient fills inside the card clip shape)
+    └──required-by──> [Elevated drag shadow]       (shadow attached to card container)
 
-[Shadow Elevation System]
-    └──required-by──> [Elevated Drag Shadow]      (animation swaps between named shadow tokens)
+[Shadow elevation tokens (cardResting / cardLifted)]
+    └──required-by──> [Elevated drag shadow spring animation]
 
-[Haptic Feedback (.sensoryFeedback)]
-    └──enhances──> [Pill Buttons with Inner Glow] (visual scale + haptic must be implemented together)
-    └──enhances──> [Elevated Drag Shadow]          (drag-start triggers haptic alongside shadow change)
+[Pill buttons inner glow]
+    └──must-ship-with──> [.sensoryFeedback haptics]   (visual scale + haptic desync is perceptible if split)
 
-[Mesh Gradient Waveforms]
+[Mesh gradient waveforms]
     └──conflicts-with──> [iOS 17 deployment target]
-        └──resolution──> [#available(iOS 18, *) guard + LinearGradient fallback]
+        └──resolution──> [#available(iOS 18, *) guard + LinearGradient fallback — mandatory]
 
-[AI Orb Tier 2 Metal Shader]
-    └──requires──> [AI Orb Tier 1 stability confirmed]
+[AI Orb visualizer (Tier 1)]
+    └──requires──> [accessibilityReduceMotion guard — built-in from start, not retrofit]
+    └──requires──> [animation active only when viewModel.isProcessing == true]
+    └──replaces──> [CleaningLabView.onDeviceAIHero HStack]
+    └──enhanced-by──> [Lime Green accentAI token]
+
+[AI Orb Tier 2 Metal shader]
+    └──requires──> [Tier 1 confirmed stable with no audio processing regressions]
     └──deferred-to──> [v1.2 or later]
 
-[Vertical Timeline Connecting Line]
-    └──enhances──> [Squircle Cards]  (line connects card midpoints; cards must exist first)
+[Vertical timeline connecting line]
+    └──may-require──> [List → ScrollView + LazyVStack migration]
+    └──conflicts-with──> [List.onMove drag reorder if migrated to LazyVStack]  — evaluate Approach A first
 
-[Glassmorphism Header]
-    └──independent-of──> [Card-level features]  (header is a separate view layer)
+[Reduced Motion compliance]
+    └──gates──> [AI Orb pulse animation]
+    └──gates──> [Elevated drag shadow spring animation]
+    └──gates──> [any future TimelineView-driven animation]
 ```
 
 ### Dependency Notes
 
-- **Design system tokens must ship first.** Every other visual feature references color, radius, and shadow tokens. Without this foundation, components use ad-hoc values that require a second cleanup pass. This is the mandatory Phase 1 of the restyle.
-- **Squircle cards before mesh gradients.** The mesh gradient (or linear fallback) is applied as a background layer inside the card shape clip. The card shape definition must exist before styling its fill.
-- **Shadow elevation tokens before elevated drag.** The drag interaction animates between two named shadow tokens (`cardResting` / `cardLifted`). The token struct must exist before the animation references it.
-- **Mesh gradient requires `#available(iOS 18, *)` guard — this is non-negotiable.** `MeshGradient` is iOS 18+ only per Apple Developer Documentation. Shipping without the guard causes a runtime crash on iOS 17 devices. The fallback `LinearGradient` must be visually acceptable — design for the fallback first, treat mesh as progressive enhancement.
-- **Haptic + visual press state must be implemented together.** Splitting the `scaleEffect(0.96)` press animation from `.sensoryFeedback` into separate code paths creates perceptible desynchronization. Both live in the same `ButtonStyle` `body(configuration:)` closure.
-- **AI Orb animation must stop when idle.** A `repeatForever` SwiftUI animation that is never stopped keeps GPU work alive indefinitely. Gate the animation with an `isDenoising` state flag. When `false`, show a static orb state.
+- **Token system extends first, replaces never.** `SonicMergeSemantic` already exists and is environment-injected. The restyle adds new tokens (`accentAI`, `glassOverlay`, `timelineLine`) and updates existing color values. Never replace the struct — only extend it. This keeps all existing views functional during incremental restyle phases.
+- **Squircle cards before mesh gradients.** The gradient is applied as a fill inside the card's clip shape. Card shape definition must exist before styling its fill.
+- **Mesh gradient requires `#available(iOS 18, *)` guard — non-negotiable.** `MeshGradient` is iOS 18+ per Apple Developer Documentation (confirmed, HIGH confidence). Shipping without the guard causes a runtime crash on iOS 17. Design the `LinearGradient` fallback as the primary path; treat `MeshGradient` as progressive enhancement.
+- **AI Orb animation must be state-gated from day one.** A `repeatForever` animation that is never stopped keeps the GPU active indefinitely. Gate with `viewModel.isProcessing`. Do not build the Orb as always-on and then try to conditionally stop it — SwiftUI `repeatForever` animations are difficult to stop cleanly mid-cycle.
+- **Haptic + visual press state must ship together.** The `scaleEffect(0.96)` press animation and `.sensoryFeedback` must live in the same `ButtonStyle.body(configuration:)` closure. Splitting them creates a perceptible desync.
+- **Vertical timeline line decision is gated on approach.** If Approach A (`List` + `PreferenceKey` Y-offset tracking) proves geometrically imprecise after a prototype pass, migrating to `ScrollView + LazyVStack` must include a complete drag-reorder replacement — significant scope increase. This feature should be prototyped first and descoped to v1.2 if the `List` approach proves unmaintainable.
 
 ---
 
-## MVP Definition
+## MVP Definition for v1.1 Restyle
 
-This is a visual restyle milestone. "MVP" means the minimum set of visual changes that achieves a coherent "Modern Spatial Utility" look across all existing screens without leaving any view in the old style.
+A partial restyle that leaves views in the old style is worse than no restyle — visual seams destroy credibility. MVP is the minimum that achieves a coherent new identity across all existing screens.
 
-### Launch With (v1.1 restyle complete)
+### Launch With (v1.1)
 
-- [ ] Design system tokens (Color + Radius + Spacing + Shadow) — foundation, everything else references this
-- [ ] Light/dark mode color pairs for all tokens — no appearance-switching breaks
-- [ ] Squircle cards with `style: .continuous`, 24pt radius — visual identity anchor
-- [ ] Shadow elevation system (resting + lifted tokens) — coherent depth language
-- [ ] Pill buttons with inner glow + `.sensoryFeedback` haptics — primary actions feel premium
-- [ ] Glassmorphism header (`.ultraThinMaterial` + Deep Indigo glow wash) — spatial depth on entry
-- [ ] Vertical Timeline layout with connecting line — Mixing Station signature layout
-- [ ] Elevated drag shadow + spring animation on card reorder — micro-interaction completeness
-- [ ] AI Orb visualizer, Tier 1 SwiftUI concentric circles — Cleaning Lab hero element (animated during processing only)
-- [ ] Mesh gradient waveforms with `#available(iOS 18, *)` guard + `LinearGradient` fallback — visual richness where supported, no crash on iOS 17
+- [ ] **Token system v2** (new colors + tokens) — foundation; everything else references this
+- [ ] **Pure black + Deep Indigo dark mode** — 4 color value changes in `darkConveyor()`; zero risk
+- [ ] **Squircle 24pt cards** — single constant change in `SonicMergeTheme.Radius`; ripples everywhere
+- [ ] **Shadow elevation tokens + ViewModifier** — replaces 5 ad-hoc `shadow()` calls across views
+- [ ] **Pill buttons + inner glow + `.sensoryFeedback`** — `PillButtonStyle` applied to 3 call sites
+- [ ] **Fix hardcoded colors** — `staleBanner` in `CleaningLabView` must be tokenized; other hardcoded values
+- [ ] **Glassmorphism trust strip + nav header** — `.ultraThinMaterial` on `LocalFirstTrustStrip` + `.toolbarBackground` on navigation bars
+- [ ] **Mesh gradient waveforms with `#available(iOS 18, *)` fallback** — `WaveformThumbnailView` and `WaveformCanvasView`
+- [ ] **Haptic feedback on all primary CTAs** — `.sensoryFeedback` at Export, Import, Denoise, drag events
+- [ ] **Reduced Motion compliance on all animated components** — `accessibilityReduceMotion` guard in every `repeatForever` animation
 
 ### Add After Validation (v1.x)
 
-- [ ] AI Orb Tier 2 Metal shader — only after Tier 1 ships stable with no audio processing regressions. Separate focused phase.
-- [ ] Per-card animated mesh gradient (subtle idle loop) — only if iOS 18 adoption metrics show the iOS 17 fallback path is rarely hit and GPU budget is confirmed safe.
+- [ ] **AI Orb visualizer (Tier 1 SwiftUI)** — High visual impact but high complexity. Warrants its own phase after token foundation is stable. Trigger: v1.1 ships without App Store review issues.
+- [ ] **Vertical timeline connecting line** — Prototype Approach A (List + PreferenceKey). If clean, ship in v1.x. If messy, defer.
 
 ### Future Consideration (v2+)
 
-- [ ] SF Pro Rounded body text — only if a full brand refresh justifies touching typography system-wide
-- [ ] visionOS adaptation — real depth via RealityKit, Liquid Glass materials natively supported; different platform, different phase
+- [ ] **AI Orb Tier 2 Metal shader** — Only after Tier 1 stable with confirmed no audio regression
+- [ ] **Animated mesh gradient background** — Only if iOS 18 adoption makes the iOS 17 fallback path negligible and GPU budget is confirmed safe
+- [ ] **Elevated drag shadow** — Nice-to-have micro-interaction; can ship independently once P1 features are stable
 
 ---
 
@@ -142,62 +155,84 @@ This is a visual restyle milestone. "MVP" means the minimum set of visual change
 
 | Feature | User Value | Implementation Cost | Priority |
 |---------|------------|---------------------|----------|
-| Design system tokens | HIGH | LOW | P1 |
-| Light/dark mode colors | HIGH | LOW | P1 |
-| Squircle cards | HIGH | LOW | P1 |
+| Token system v2 | HIGH | LOW | P1 |
+| Pure black + Deep Indigo dark mode | HIGH | LOW | P1 |
+| Squircle 24pt cards | HIGH | LOW | P1 |
+| Fix hardcoded colors (e.g., staleBanner) | HIGH | LOW | P1 |
 | Shadow elevation system | MEDIUM | LOW | P1 |
-| Pill buttons + inner glow + haptics | HIGH | LOW | P1 |
-| Glassmorphism header | HIGH | MEDIUM | P1 |
-| Vertical Timeline layout + connecting line | HIGH | MEDIUM | P1 |
-| Elevated drag shadow + spring animation | MEDIUM | LOW | P1 |
-| AI Orb Tier 1 (SwiftUI concentric circles) | HIGH | MEDIUM | P1 |
-| Mesh gradient waveforms + iOS 17 fallback | MEDIUM | MEDIUM | P1 |
-| AI Orb Tier 2 (Metal shader) | LOW | HIGH | P3 |
+| Pill buttons + glow + haptics | HIGH | LOW | P1 |
+| Nav header glassmorphism | MEDIUM | LOW | P1 |
+| Trust strip glassmorphism | HIGH | MEDIUM | P1 |
+| Mesh gradient waveforms + iOS 17 fallback | HIGH | MEDIUM | P1 |
+| Reduced Motion compliance | HIGH | LOW | P1 |
+| AI Orb Tier 1 (SwiftUI circles) | HIGH | HIGH | P2 |
+| Vertical timeline connecting line | MEDIUM | HIGH | P2 |
+| Elevated drag shadow | MEDIUM | MEDIUM | P2 |
+| AI Orb Tier 2 (Metal shader) | MEDIUM | HIGH | P3 |
 | Animated mesh gradient background | LOW | HIGH | P3 |
-| Custom font system | LOW | MEDIUM | P3 |
 
 **Priority key:**
-- P1: Must have for restyle launch — omitting creates an incomplete or inconsistent aesthetic
-- P2: Should have, add when possible
-- P3: Nice to have, future consideration
+- P1: Must ship in v1.1 — omitting creates a visually incomplete or inconsistent restyle
+- P2: High value; phase separately after P1 is proven stable
+- P3: Defer — unknown user value, high risk, or iOS 17 compat constraints
 
 ---
 
 ## Competitor Feature Analysis
 
-Visual pattern survey of premium iOS utility and audio apps.
+Direct visual pattern comparison across premium iOS audio and utility apps.
 
-| Visual Pattern | Halide (camera) | Darkroom (photo) | Ferrite Recording Studio | Our Approach |
-|---------------|-----------------|-----------------|--------------------------|--------------|
-| Dark mode background | True `#000000` OLED | Near-black, not pure | Dark grey (#1C1C1E) | Pure `#000000` token in dark mode |
-| Card shape | Continuous corner, ~12pt | Continuous corner, ~16pt | Standard rounded rect | Continuous corner, 24pt (more spacious for audio metadata) |
-| Header treatment | Blurred sticky header, tinted | Blurred, minimal | Plain navigation bar | `.ultraThinMaterial` + Deep Indigo glow; sticky |
-| Primary button | Capsule, vibrant fill | Capsule, muted | Rounded rectangle | Capsule with inner glow + `.sensoryFeedback` |
-| AI / processing indicator | N/A | Radial progress ring | Progress bar | Pulsating nebula orb (Tier 1 SwiftUI) |
-| Color palette | Amber accent on black | Muted neutrals + orange | Teal/green | Deep Indigo #5856D6 + Lime Green #A7C957 (AI accent) |
-| Timeline / list layout | N/A | Grid | Linear scrolling list | Vertical timeline with connecting line |
-| Waveform fill | N/A | Linear gradient | Blue linear gradient | Mesh gradient (iOS 18+) / Linear gradient fallback (iOS 17) |
-| Haptics | Every interaction | Primary interactions | Minimal | All primary actions + drag lift/drop |
+| Visual Pattern | Ferrite Recording Studio | Dark Noise | Capo | Logic Remote | SonicMerge v1.1 Target |
+|----------------|--------------------------|------------|------|--------------|------------------------|
+| Dark mode background | Dark grey (#1C1C1E) | **Pure black #000000 OLED** — benchmark | System dark (near-black) | **Pure black, dark slate accents** | Pure `#000000` — matches Logic Remote / Dark Noise standard |
+| Card corners | ~12pt rounded rect | ~20pt continuous | System list style | Flat panels, minimal radius | **24pt `.continuous` squircle** — most expressive in the set |
+| Header treatment | Plain navigation bar | System nav bar + blur | System nav bar | Plain dark bar | **`.ultraThinMaterial` + Deep Indigo glow** — unique in this set |
+| Primary button | Standard rounded rect | Capsule fills (sound tiles) | Standard system buttons | Capsule transport controls | **Capsule + inner glow + haptic** — matches Logic Remote register |
+| AI / processing indicator | None | None | Auto-chord spinner | None | **Pulsating nebula orb** — unique differentiator in this market |
+| Accent color | Teal/green | No specific accent (neutral) | System blue | Standard grey/white | **Deep Indigo #5856D6 primary, Lime Green #A7C957 AI** — unique palette |
+| Timeline / list layout | Horizontal track lanes | Sound tile grid | Horizontal scrolling timeline | Horizontal mixer | **Vertical timeline with connecting line** — matches DAW conceptual model |
+| Waveform fill | **Green linear gradient** on dark | No waveforms | Waveform with chord markers (no gradient) | No waveform display | **Mesh gradient (iOS 18) / Deep Indigo linear (iOS 17)** — most premium in set |
+| Haptics | Transport controls only | Sound tile selection | Minimal | Heavy — transport + controls | **All CTAs + drag lift/drop** — matches Logic Remote standard |
+
+---
+
+## What Makes Premium vs Gimmicky — Synthesis
+
+From reference app analysis and 2025 iOS design patterns:
+
+**Premium signals (use these):**
+- Restraint: glassmorphism on 1–2 surface layers only (header, trust strip). Cards use solid fills.
+- Motion with purpose: AI Orb pulses because AI is "thinking." The animation communicates state, not decoration. Stop it when idle.
+- Material depth: use system materials (`.ultraThinMaterial`) — they automatically adapt to dark/light and are accessibility-tested by Apple.
+- Haptics matched to visual weight: `heavy` for destructive delete, `light` for toggle, `selection` for picker segments.
+- Consistent rhythm: one card radius (24pt), two shadow tokens, one button shape (Capsule) — coherence is what reads "designed."
+
+**Gimmick signals (avoid these):**
+- Continuous background animation with no state meaning — particles, shifting gradients on idle screens.
+- Glassmorphism on every surface — readability collapses and GPU load spikes during scroll.
+- Orb/blob animations that do not pause on Reduce Motion — accessibility review flag and App Store rejection risk.
+- Pure decorative shadow layers that hit compositing budget without adding depth information.
+- Custom nav transitions fighting UIKit — breaks accessibility and VoiceOver.
 
 ---
 
 ## Sources
 
-- Apple Developer Documentation — MeshGradient availability (iOS 18+): https://developer.apple.com/documentation/swiftui/meshgradient
-- Apple WWDC24 — Create custom visual effects with SwiftUI (Metal shaders / layerEffect): https://developer.apple.com/videos/play/wwdc2024/10151/
+- Ferrite Recording Studio (App Store, v3, 2024–2025 design): https://apps.apple.com/us/app/ferrite-recording-studio/id1018780185
+- Dark Noise (OLED dark mode reference): https://darknoise.app/releases.html
+- Capo (dark mode follow-through, iOS 13+): https://apps.apple.com/us/app/capo-learn-music-by-ear/id887497388
+- Apple HIG — Dark Mode: https://developer.apple.com/design/human-interface-guidelines/dark-mode
+- Apple HIG — Reduced Motion (App Store accessibility): https://developer.apple.com/help/app-store-connect/manage-app-accessibility/reduced-motion-evaluation-criteria/
+- Apple Developer Documentation — MeshGradient (iOS 18+): https://developer.apple.com/documentation/swiftui/meshgradient
 - Donny Wals — Mesh Gradients in SwiftUI (iOS 18 availability confirmed): https://www.donnywals.com/getting-started-with-mesh-gradients-on-ios-18/
-- NilCoalescing — Mesh Gradients in SwiftUI (grid definition, iOS 18 only): https://nilcoalescing.com/blog/MeshGradientsInSwiftUI/
-- Hacking with Swift — Inferno Metal shader library (orb/glass effects): https://github.com/twostraws/Inferno
-- Hacking with Swift — Metal shaders as SwiftUI layer effects (iOS 17 API): https://www.hackingwithswift.com/quick-start/swiftui/how-to-add-metal-shaders-to-swiftui-views-using-layer-effects
-- Design+Code — SwiftUI Material background blur (.ultraThinMaterial): https://designcode.io/swiftui-handbook-background-blur/
-- Design+Code — Clip Shape and Smooth Corners (continuous corner radius): https://designcode.io/swiftui-handbook-clip-shape-and-smooth-corners/
-- DEV Community — Micro-Interactions in SwiftUI (elevated card shadow, spring animation): https://dev.to/sebastienlato/micro-interactions-in-swiftui-subtle-animations-that-make-apps-feel-premium-2ldn
-- DEV Community — SwiftUI Design Tokens & Theming System: https://dev.to/sebastienlato/swiftui-design-tokens-theming-system-production-scale-b16
-- Hacking with Swift — .sensoryFeedback haptic modifier (iOS 17): https://www.hackingwithswift.com/quick-start/swiftui/how-to-add-haptic-effects-using-sensory-feedback
-- Medium — Dark Glassmorphism as dominant iOS aesthetic 2026: https://medium.com/@developer_89726/dark-glassmorphism-the-aesthetic-that-will-define-ui-in-2026-93aa4153088f
-- EveryDayUX — Apple Liquid Glass design language (WWDC 2025): https://www.everydayux.net/glassmorphism-apple-liquid-glass-interface-design/
+- SwiftUI sensoryFeedback modifier (iOS 17): https://useyourloaf.com/blog/swiftui-sensory-feedback/
+- Apple Intelligence glow effect pattern: https://livsycode.com/swiftui/an-apple-intelligence-style-glow-effect-in-swiftui/
+- iOS 2025 design trends — spatial / micro-interaction: https://medium.com/@bhumibhuva18/the-ios-ui-trends-actually-winning-in-2025-9d6372757f7a
+- Glassmorphism best practices (NN/G): https://www.nngroup.com/articles/glassmorphism/
+- Apple Liquid Glass (WWDC 2025 design language): https://www.everydayux.net/glassmorphism-apple-liquid-glass-interface-design/
+- SwiftUI squircle continuous corner style: https://medium.com/@zvyom/parametric-corner-smoothing-in-swiftui-108acea52874
 
 ---
 
 *Feature research for: SonicMerge v1.1 Modern Spatial Utility UI Restyle*
-*Researched: 2026-04-08*
+*Researched: 2026-04-11*

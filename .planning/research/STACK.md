@@ -1,31 +1,32 @@
 # Stack Research
 
 **Domain:** iOS audio processing utility (merge + on-device AI denoising) + Modern Spatial Utility UI restyle
-**Researched:** 2026-04-08 (UI restyle section added); original audio stack 2026-03-08
-**Confidence:** HIGH (all UI-restyle APIs verified against Apple Developer Documentation and multiple authoritative sources; audio stack unchanged from v1.0)
+**Researched:** 2026-04-11 (v1.1 UI restyle re-verified); original audio stack 2026-03-08
+**Confidence:** HIGH (all UI-restyle APIs verified against Apple Developer Documentation, WWDC session notes, and multiple authoritative developer sources; audio stack unchanged from v1.0)
 
 ---
 
 ## iOS Version Impact — UI Restyle
 
-The entire restyle can be implemented within the existing iOS 17.0+ minimum. Only `MeshGradient` requires iOS 18, and a `#available` guard with a `LinearGradient` fallback makes it non-blocking. **No minimum version bump is required.**
+The entire restyle can be implemented within the existing iOS 17.0+ minimum. Only `MeshGradient` requires iOS 18, and a `#available(iOS 18, *)` guard with a `LinearGradient` fallback makes it non-blocking. **No minimum version bump is required.**
 
 | Visual Effect | Required iOS | API | Notes |
 |--------------|-------------|-----|-------|
 | Glassmorphism / frosted glass header | iOS 15.0 | `Material` (.ultraThinMaterial) | Well within iOS 17 floor |
-| Squircle corners 24pt | iOS 13.0 | `RoundedRectangle(cornerRadius:style:.continuous)` | `.continuous` is now iOS 17+ default; explicit style is safer |
-| Per-corner radius (UnevenRoundedRectangle) | iOS 17.0 | `UnevenRoundedRectangle` | Available at project floor |
-| AI Orb pulsating animation | iOS 15.0 | `Canvas` + `TimelineView(.animation)` | No extra dependency |
-| Multi-phase orb / button animation | iOS 17.0 | `PhaseAnimator` / `KeyframeAnimator` | Cleaner declarative alternative to raw TimelineView |
+| Squircle corners 24pt | iOS 13.0 | `RoundedRectangle(cornerRadius:style:.continuous)` | `.continuous` produces Apple superellipse; `.cornerRadius()` modifier deprecated iOS 17+ |
+| Per-corner radius | iOS 17.0 | `UnevenRoundedRectangle` | At project floor; use if pill-top/square-bottom variants emerge |
+| AI Orb pulsating animation | iOS 15.0 | `Canvas` + `TimelineView(.animation)` | No extra dependency; sine-wave modulation over concentric ellipses |
+| Multi-phase orb / button animation | iOS 17.0 | `PhaseAnimator` / `KeyframeAnimator` | Cleaner declarative alternative to raw TimelineView for discrete named states |
 | Pill-shaped buttons | iOS 13.0 | `Capsule` shape | |
 | Inner glow on buttons | iOS 16.0 | `ShadowStyle.inner(color:radius:x:y:)` | Well within iOS 17 floor |
-| Outer colored glow / shadow | iOS 13.0 | `shadow(color:radius:x:y:)` | Compose outside `visualEffect` block |
-| Elevated drag shadow micro-interaction | iOS 13.0 | `DragGesture` + `scaleEffect` + `shadow` | No new API; pattern is well established |
-| Haptic-responsive button states | iOS 17.0 | `sensoryFeedback(_:trigger:)` | Native SwiftUI haptics, no UIKit needed |
-| Scroll-driven card entrance | iOS 17.0 | `scrollTransition(_:axis:transition:)` | Available at project floor |
-| Non-layout visual transforms | iOS 17.0 | `visualEffect(_:)` | Safe for geometry-dependent effects |
-| Mesh gradient waveforms | **iOS 18.0** | `MeshGradient` | Requires `#available(iOS 18, *)` guard + LinearGradient fallback |
+| Outer colored glow / shadow | iOS 13.0 | `shadow(color:radius:x:y:)` | Apply as standalone modifier, not inside `visualEffect` block |
+| Elevated drag shadow micro-interaction | iOS 13.0 | `DragGesture` + `scaleEffect` + `shadow` | No new API; standard pattern |
+| Haptic-responsive button states | iOS 17.0 | `sensoryFeedback(_:trigger:)` | Native SwiftUI haptics; no UIKit bridge needed |
+| Scroll-driven card entrance | iOS 17.0 | `scrollTransition(_:axis:transition:)` | At project floor |
+| Non-layout visual transforms | iOS 17.0 | `visualEffect(_:)` | Safe for geometry-dependent effects without layout cost |
+| Mesh gradient waveforms | **iOS 18.0** | `MeshGradient` | Requires `#available(iOS 18, *)` guard + LinearGradient fallback; iOS 18 confirmed by WWDC24 |
 | Vertical timeline layout | iOS 15.0 | `LazyVStack` + `ZStack` + `Rectangle` (1pt line) | Pure SwiftUI composition |
+| Design token color system | iOS 13.0 | `Color` static extension | Semantic naming via `static let deepIndigo`, `limeGreen`, etc. |
 
 ---
 
@@ -35,53 +36,74 @@ The entire restyle can be implemented within the existing iOS 17.0+ minimum. Onl
 
 | Technology | Version | Purpose | Why Recommended |
 |------------|---------|---------|-----------------|
-| SwiftUI | iOS 17+ (project floor) | All UI layer | Native; all restyle effects available without third-party libraries |
+| SwiftUI | iOS 17+ (project floor) | All UI layer | Native; all restyle effects achievable without third-party libraries |
 | `Canvas` | iOS 15+ | AI Orb nebula drawing | Imperative 2D drawing within SwiftUI; renders outside layout engine; GPU-accelerated via Metal; supports time-driven mutation via TimelineView |
-| `TimelineView(.animation)` | iOS 15+ | Drive orb pulse loop at display refresh rate | Updates every frame (60/120fps); pairs with Canvas to produce continuous sine-wave pulsation without @State mutation |
-| `PhaseAnimator` / `KeyframeAnimator` | iOS 17+ | Multi-phase orb and button animations | Declarative phase cycles replace manual state machines; iOS 17 project floor means no availability guard needed |
-| `Material` (SwiftUI) | iOS 15+ | Glassmorphism frosted-glass header | Real-time Gaussian blur backed by `UIVisualEffectView`; `.ultraThinMaterial` is the thinnest, most translucent option — correct for a tinted glass header |
-| `MeshGradient` | iOS 18+ | Animated mesh waveform overlay on audio cards | 2D grid-of-colors gradient, GPU-fast; wrap with `if #available(iOS 18, *)` and fall back to animated `LinearGradient` |
+| `TimelineView(.animation)` | iOS 15+ | Drive orb pulse loop at display refresh rate | Updates at display cadence (60/120fps); pairs with Canvas for continuous sine-wave pulsation without @State churn |
+| `PhaseAnimator` / `KeyframeAnimator` | iOS 17+ | Multi-phase orb and button state animations | Declarative named phases replace manual state machines; no availability guard needed at iOS 17 floor |
+| `Material` (SwiftUI) | iOS 15+ | Glassmorphism frosted-glass header | Real-time Gaussian blur backed by `UIVisualEffectView`; `.ultraThinMaterial` is thinnest/most translucent — correct for tinted glass header |
+| `MeshGradient` | **iOS 18+** | Animated mesh waveform overlay on audio cards | 2D grid-of-colors gradient rendered fast on GPU; wrap with `if #available(iOS 18, *)` and fall back to animated `LinearGradient` |
 
 ### Supporting APIs
 
 | API | iOS Min | Purpose | Notes |
 |-----|---------|---------|-------|
-| `RoundedRectangle(cornerRadius: 24, style: .continuous)` | iOS 13 | Squircle audio cards | Use `.clipShape()` not deprecated `.cornerRadius()` modifier; `.continuous` style is the squircle ("superellipse") shape Apple uses for app icons |
-| `UnevenRoundedRectangle` | iOS 17 | Per-corner radius control | Not needed for uniform 24pt cards; available if pill-top / square-bottom card variants emerge |
-| `Capsule` shape | iOS 13 | Pill-shaped button container | Produces perfect semicircle ends at any width; combine with `.overlay(Capsule().inset(by:1).stroke(...))` for inner glow ring |
-| `ShadowStyle.inner(color:radius:x:y:)` | iOS 16 | Inner glow on buttons | Renders shadow inside shape boundary, simulating light emitted from the button face |
-| `shadow(color:radius:x:y:)` | iOS 13 | Outer colored glow / elevated drag shadow | Compose as a separate modifier; placing it inside `visualEffect` is a SwiftUI constraint violation |
-| `DragGesture` + `@GestureState` | iOS 13 | Elevated card shadow on drag | Use `isDragging` GestureState to drive `scaleEffect(1.04)` + `shadow(radius: 20)` during drag |
-| `scrollTransition(_:axis:transition:)` | iOS 17 | Card entrance/exit scroll animation | Three phases: `.identity` (fully visible), `.topLeading`, `.bottomTrailing`; apply scale + opacity for spatial depth |
-| `visualEffect(_:)` | iOS 17 | Non-layout scroll-driven geometry transforms | Safe for geometry-dependent effects; does not trigger expensive layout recalculation |
-| `sensoryFeedback(_:trigger:)` | iOS 17 | Haptic-responsive button and drag states | Native SwiftUI API; `.impact(.medium)` on tap, `.selection` on reorder |
+| `RoundedRectangle(cornerRadius: 24, style: .continuous)` | iOS 13 | Squircle audio cards | Use `.clipShape()`, never deprecated `.cornerRadius()` modifier; `.continuous` produces the Apple superellipse ("squircle") |
+| `UnevenRoundedRectangle` | iOS 17 | Per-corner radius | Not needed for uniform 24pt cards; available if variants emerge |
+| `Capsule` shape | iOS 13 | Pill-shaped button container | Produces perfect semicircle ends; combine with `.overlay(Capsule().inset(by:1).stroke(...))` for inner highlight ring |
+| `ShadowStyle.inner(color:radius:x:y:)` | iOS 16 | Inner glow simulation on button face | Renders shadow inside shape boundary; available since iOS 16.0 |
+| `shadow(color:radius:x:y:)` | iOS 13 | Outer colored glow / elevated drag shadow | Compose as separate modifier outside `visualEffect` |
+| `DragGesture` + `@GestureState` | iOS 13 | Elevated card shadow on drag | `isDragging` GestureState drives `scaleEffect(1.04)` + `shadow(radius: 20)` |
+| `scrollTransition(_:axis:transition:)` | iOS 17 | Card entrance/exit scroll animation | Phases: `.identity` (visible), `.topLeading`, `.bottomTrailing`; apply scale + opacity for spatial depth |
+| `visualEffect(_:)` | iOS 17 | Geometry-dependent transforms without layout cost | Does not trigger expensive layout recalculation; ideal for scroll-linked parallax |
+| `sensoryFeedback(_:trigger:)` | iOS 17 | Haptic feedback on button tap and drag events | `.impact(.medium)` for tap; `.selection` for reorder; no UIKit bridge |
 | `withAnimation(.spring(response:dampingFraction:))` | iOS 13 | Spring micro-interactions | Tuned spring for elastic card lift and settle |
-| `Color` static extension (token system) | iOS 13 | Design token color system | Extend `Color` with `static let deepIndigo = Color(hex: "#5856D6")`, `limeGreen`, `pureBlack`, etc. |
+| `Color` static extension (design tokens) | iOS 13 | Semantic color token system | `static let deepIndigo = Color(hex: "#5856D6")`, `limeGreen = Color(hex: "#A7C957")`, etc. |
 
 ### Development Tools
 
 | Tool | Purpose | Notes |
 |------|---------|-------|
-| Xcode 16+ | Required to compile `MeshGradient` branch | Even with iOS 17 floor, Xcode 16 is needed to compile `#available(iOS 18, *)` code paths |
-| SwiftUI Previews (`#Preview` macro) | Live iteration on isolated visual components | Use `PreviewLayout` with `.colorScheme(.dark)` and `.colorScheme(.light)` variants in same preview |
-| Instruments > Metal System Trace | Validate Canvas/TimelineView orb GPU load | Confirms stable 60fps on A14+ devices; orb runs on Metal |
+| Xcode 16+ | Required to compile `MeshGradient` code paths | Even with iOS 17 floor, Xcode 16 is needed to resolve the `#available(iOS 18, *)` branch |
+| SwiftUI Previews (`#Preview` macro) | Live iteration on isolated visual components | Use `.colorScheme(.dark)` and `.colorScheme(.light)` variants in the same preview macro |
+| Instruments > Metal System Trace | Validate Canvas / TimelineView orb GPU load | Confirms stable 60fps on A14+ devices; Canvas draws on Metal |
 
 ---
 
 ### Implementation Patterns
+
+#### Design Token Color System
+
+```swift
+// Extensions/Color+Theme.swift
+extension Color {
+    // Brand
+    static let deepIndigo   = Color(hex: "#5856D6")
+    static let limeGreen    = Color(hex: "#A7C957")
+    static let pureBlack    = Color(hex: "#000000")
+    static let offWhite     = Color(hex: "#FBFBFC")
+
+    // Semantic tokens
+    static var appBackground: Color { Color(uiColor: .systemBackground) }
+    static var cardBackground:  Color { Color(uiColor: .secondarySystemBackground) }
+    static var primaryLabel:    Color { Color(uiColor: .label) }
+}
+```
+
+Use `Color(uiColor:)` with semantic `UIColor` system values for any token that needs automatic light/dark adaptation. Use explicit hex only for brand-fixed values (Deep Indigo, Lime Green) that do not change between modes.
 
 #### Glassmorphism Header
 
 ```swift
 .background {
     ZStack {
-        Color(hex: "#5856D6").opacity(0.12)   // Indigo tint
-        Rectangle().fill(.ultraThinMaterial)   // Frosted blur
+        Color.deepIndigo.opacity(0.12)         // Indigo tint layer
+        Rectangle().fill(.ultraThinMaterial)   // Frosted blur layer
     }
     .ignoresSafeArea()
 }
 ```
-`Material` requires a visually distinct background behind it to produce visible blur — ensure content scrolls beneath the header.
+
+`Material` requires visually distinct background content scrolling behind it to produce visible blur. Ensure audio cards scroll beneath the header, not beside it.
 
 #### Squircle Cards (24pt radius)
 
@@ -93,7 +115,8 @@ The entire restyle can be implemented within the existing iOS 17.0+ minimum. Onl
         .shadow(color: .black.opacity(0.08), radius: 6, y: 2)
 )
 ```
-Never use `.cornerRadius(24)` — deprecated in iOS 17 and produces the older `.circular` style.
+
+Never use `.cornerRadius(24)` — deprecated in iOS 17 and silently uses the older `.circular` arc style.
 
 #### MeshGradient Waveform with iOS 17 Fallback
 
@@ -102,11 +125,11 @@ Group {
     if #available(iOS 18, *) {
         MeshGradient(
             width: 3, height: 3,
-            points: animatedPoints,    // @State var mutated in withAnimation
+            points: animatedPoints,    // @State var toggled in withAnimation
             colors: [
-                .init(hex: "#3D3593"), .init(hex: "#5856D6"), .init(hex: "#9B8FFF"),
-                .init(hex: "#5856D6"), .init(hex: "#7B6FE8"), .init(hex: "#5856D6"),
-                .init(hex: "#3D3593"), .init(hex: "#5856D6"), .init(hex: "#9B8FFF")
+                Color(hex: "#3D3593"), Color(hex: "#5856D6"), Color(hex: "#9B8FFF"),
+                Color(hex: "#5856D6"), Color(hex: "#7B6FE8"), Color(hex: "#5856D6"),
+                Color(hex: "#3D3593"), Color(hex: "#5856D6"), Color(hex: "#9B8FFF")
             ]
         )
     } else {
@@ -118,32 +141,36 @@ Group {
 }
 .opacity(0.35)   // semi-transparent overlay on waveform area
 ```
-Animate MeshGradient points via `withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true))` toggling between two point configurations.
 
-#### AI Orb (Pulsating Nebula)
+Animate MeshGradient points via `withAnimation(.easeInOut(duration: 3).repeatForever(autoreverses: true))` toggling between two point configurations. Point positions are `SIMD2<Float>` values in the `[0,1]` unit square.
+
+#### AI Orb (Pulsating Nebula) — TimelineView + Canvas Approach
 
 ```swift
 TimelineView(.animation) { timeline in
     Canvas { context, size in
         let t = timeline.date.timeIntervalSinceReferenceDate
         let center = CGPoint(x: size.width / 2, y: size.height / 2)
-        // Layer concentric circles with phase-offset sine modulation
         for layer in 0..<4 {
-            let phase = Double(layer) * .pi / 2
-            let pulse = (sin(t * 1.4 + phase) + 1) / 2   // 0...1
+            let phase  = Double(layer) * .pi / 2
+            let pulse  = (sin(t * 1.4 + phase) + 1) / 2   // 0...1
             let radius = 40 + pulse * 20 + Double(layer) * 12
             let opacity = 0.6 - Double(layer) * 0.12
             context.fill(
-                Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius,
-                                       width: radius * 2, height: radius * 2)),
-                with: .color(Color(hex: "#5856D6").opacity(opacity))
+                Path(ellipseIn: CGRect(
+                    x: center.x - radius, y: center.y - radius,
+                    width: radius * 2,    height: radius * 2
+                )),
+                with: .color(Color.deepIndigo.opacity(opacity))
             )
         }
     }
 }
 ```
 
-Alternatively, use `PhaseAnimator` (iOS 17) for a cleaner declarative approach when the orb has discrete states (idle → processing → done):
+#### AI Orb — PhaseAnimator Approach (preferred for discrete states)
+
+Use `PhaseAnimator` (iOS 17) when the orb has named discrete states (idle → processing → complete):
 
 ```swift
 PhaseAnimator([OrbPhase.idle, .pulsing, .done], trigger: isProcessing) { phase in
@@ -153,10 +180,12 @@ PhaseAnimator([OrbPhase.idle, .pulsing, .done], trigger: isProcessing) { phase i
 }
 ```
 
+PhaseAnimator is cleaner than raw TimelineView when there are more than two named animation states. Use TimelineView + Canvas when the orb must animate continuously every frame regardless of processing state.
+
 #### Pill Buttons with Inner Glow
 
 ```swift
-Button(action: onTap) {
+Button(action: { tapCount += 1; onTap() }) {
     Text(label)
         .fontWeight(.semibold)
         .padding(.horizontal, 32).padding(.vertical, 14)
@@ -164,8 +193,8 @@ Button(action: onTap) {
 }
 .background(
     Capsule()
-        .fill(Color(hex: "#5856D6"))
-        .shadow(color: Color(hex: "#5856D6").opacity(0.55), radius: 12, y: 4)  // outer glow
+        .fill(Color.deepIndigo)
+        .shadow(color: Color.deepIndigo.opacity(0.55), radius: 12, y: 4)   // outer glow
 )
 .overlay(
     Capsule()
@@ -175,7 +204,9 @@ Button(action: onTap) {
 .sensoryFeedback(.impact(.medium), trigger: tapCount)
 ```
 
-#### Elevated Drag Shadows
+The "inner glow" is achieved by two separate layers: `ShadowStyle.inner` applied via `.fill(.shadow(.inner(...)))` adds inward blur, while the `.inset(by:1).stroke(...)` overlay adds the visible highlight ring. Both together produce the lit-from-inside effect.
+
+#### Elevated Drag Shadows (Micro-interaction)
 
 ```swift
 @GestureState private var isDragging = false
@@ -200,15 +231,14 @@ cardView
 LazyVStack(alignment: .leading, spacing: 12) {
     ForEach(clips) { clip in
         HStack(alignment: .top, spacing: 0) {
-            // Central line column
             VStack(spacing: 0) {
-                Circle().fill(Color.deepIndigo).frame(width: 10, height: 10)
+                Circle().fill(Color.deepIndigo)
+                    .frame(width: 10, height: 10)
                     .padding(.top, 14)
-                Rectangle().fill(Color.deepIndigo.opacity(0.3)).frame(width: 2)
+                Rectangle().fill(Color.deepIndigo.opacity(0.3))
+                    .frame(width: 2)
             }
             .frame(width: 24)
-
-            // Card content
             AudioCardView(clip: clip)
                 .padding(.leading, 8)
         }
@@ -223,20 +253,22 @@ LazyVStack(alignment: .leading, spacing: 12) {
 | Recommended | Alternative | When to Use Alternative |
 |-------------|-------------|-------------------------|
 | `Canvas` + `TimelineView` for orb | `SceneKit` / `RealityKit` sphere | Only if orb needs genuine 3D lighting with specular highlights; overkill for 2D pulsing circle |
-| `.ultraThinMaterial` | `UIVisualEffectView` via `UIViewRepresentable` | Only if a custom blur style not exposed in SwiftUI is needed (e.g., `.systemChromeMaterial`) |
+| `.ultraThinMaterial` | `UIVisualEffectView` via `UIViewRepresentable` | Only if a custom blur style not in SwiftUI's `Material` enum is needed (e.g., `.systemChromeMaterial`) |
 | `MeshGradient` with `#available` guard | Third-party gradient library | Never — project constraint is native frameworks only |
-| `PhaseAnimator` for orb states | `withAnimation` + multiple `@State` flags | PhaseAnimator is cleaner for > 2 discrete named states |
-| `sensoryFeedback` (iOS 17) | `UIImpactFeedbackGenerator` | `UIImpactFeedbackGenerator` is still valid; use when timing must be driven from a non-SwiftUI callback |
+| `PhaseAnimator` for orb states | `withAnimation` + multiple `@State` flags | PhaseAnimator cleaner for > 2 named states; raw `@State` fine for simple two-state toggle |
+| `sensoryFeedback` (iOS 17) | `UIImpactFeedbackGenerator` | Use `UIImpactFeedbackGenerator` only when haptic timing must be triggered from a non-SwiftUI callback (e.g., AVFoundation completion handler) |
 
 ### What NOT to Use — UI Restyle
 
 | Avoid | Why | Use Instead |
 |-------|-----|-------------|
-| `.cornerRadius()` modifier | Deprecated iOS 17+; produces `.circular` style, not the squircle `.continuous` shape | `.clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))` |
-| Third-party animation or gradient packages | Project constraint: native Apple frameworks only | `MeshGradient`, `Canvas`, `PhaseAnimator` |
-| `SpriteKit` for orb | Heavy game-framework dependency for a 2D circle effect | `Canvas` + `TimelineView` |
-| Placing `shadow()` inside `visualEffect` block | SwiftUI constraint: shadow is a rendering modifier, not a visual effect transform; placing it inside `visualEffect` is ignored or broken | Apply `shadow()` as a separate modifier outside `visualEffect` |
-| Animating `MeshGradient` on iOS 17 (no guard) | `MeshGradient` is iOS 18+ only; calling it without `#available` is a compile error | `if #available(iOS 18, *) { MeshGradient(...) } else { LinearGradient(...) }` |
+| `.cornerRadius()` modifier | Deprecated iOS 17+; silently uses `.circular` arc, not the squircle `.continuous` style | `.clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))` |
+| Third-party animation or gradient packages | Project constraint: native Apple frameworks only; no SPM additions for UI | `MeshGradient`, `Canvas`, `PhaseAnimator` |
+| `SpriteKit` for the orb | Heavy game-framework overhead for a 2D pulsating circle; adds 1–2MB to binary | `Canvas` + `TimelineView` — zero overhead, runs on Metal |
+| Placing `shadow()` inside `visualEffect` block | Shadow is a rendering modifier, not a geometric transform; ignored or silently broken inside `visualEffect` | Apply `shadow()` as a separate standalone modifier outside `visualEffect` |
+| Calling `MeshGradient` without `#available` guard | `MeshGradient` is iOS 18+ only; compile error on Xcode 15 / iOS 17 targets | `if #available(iOS 18, *) { MeshGradient(...) } else { LinearGradient(...) }` |
+| Raising minimum deployment to iOS 18 | Excludes all users still on iOS 17; unnecessary — only one feature needs the guard | Keep iOS 17.0 floor; gate MeshGradient only |
+| Metal `.metal` shader files for orb | Correct tool for complex GPU effects, but adds `.metal` build phase + shader compilation overhead for an effect achievable with Canvas | `Canvas` + `TimelineView` sufficient; add Metal only if orb needs per-pixel noise/distortion effects |
 
 ---
 
@@ -326,7 +358,7 @@ Key rules:
 |---|---|---|
 | Swift 6 strict concurrency | Xcode 16 | Language version, not runtime |
 | SwiftUI (project feature set) | iOS 17.0 | PROJECT.md sets iOS 17.0+ minimum |
-| `MeshGradient` | **iOS 18.0** | Guard with `#available(iOS 18, *)`; use LinearGradient fallback |
+| `MeshGradient` | **iOS 18.0** | Guard with `#available(iOS 18, *)`; use LinearGradient fallback on iOS 17 |
 | `PhaseAnimator` / `KeyframeAnimator` | iOS 17.0 | At project floor; no guard needed |
 | `sensoryFeedback` | iOS 17.0 | At project floor; no guard needed |
 | `scrollTransition` | iOS 17.0 | At project floor; no guard needed |
@@ -345,18 +377,21 @@ Key rules:
 
 ## Sources
 
-**UI Restyle APIs:**
-- [MeshGradient — Apple Developer Documentation](https://developer.apple.com/documentation/SwiftUI/MeshGradient) — iOS 18.0+ confirmed
-- [Mesh Gradients in SwiftUI explained — Donny Wals](https://www.donnywals.com/getting-started-with-mesh-gradients-on-ios-18/) — iOS 18 requirement and animation patterns (HIGH confidence)
-- [Material — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/material/) — iOS 15+ availability
-- [ultraThinMaterial — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/shapestyle/ultrathinmaterial) — iOS 15+ confirmed
-- [RoundedCornerStyle.continuous — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/roundedcornerstyle/continuous) — squircle style, iOS 17 default change confirmed
-- [phaseAnimator — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/view/phaseanimator(_:content:animation:)) — iOS 17+ confirmed
-- [SensoryFeedback — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/sensoryfeedback) — iOS 17+ confirmed
-- [TimelineView + Canvas — Kodeco](https://www.kodeco.com/27594491-using-timelineview-and-canvas-in-swiftui) — iOS 15+, pulsating patterns (MEDIUM confidence)
-- [scrollTransition iOS 17 — swdevnotes](https://swdevnotes.com/swift/2024/scroll-transition-effects-in-ios-17/) — iOS 17 confirmed (MEDIUM confidence)
-- [Inner Shadow SwiftUI — Design+Code Handbook](https://designcode.io/swiftui-handbook-inner-shadow/) — ShadowStyle.inner iOS 16+ (MEDIUM confidence)
-- [SwiftUI Glow Gradient Button iOS 17 — Dev Genius](https://blog.devgenius.io/swiftui-creating-a-custom-glow-gradient-button-in-ios-17-d17ffc4af97a) — pill button glow patterns (MEDIUM confidence)
+**UI Restyle APIs (verified 2026-04-11):**
+- [MeshGradient — Apple Developer Documentation](https://developer.apple.com/documentation/SwiftUI/MeshGradient) — iOS 18.0+ confirmed (HIGH)
+- [WWDC 2024: What's new in SwiftUI](https://developer.apple.com/videos/play/wwdc2024/10144/) — MeshGradient, PhaseAnimator introduced iOS 18/17 (HIGH)
+- [WWDC 2024: Create custom visual effects with SwiftUI](https://developer.apple.com/videos/play/wwdc2024/10151/) — Metal shader modifiers, visualEffect, scrollTransition (HIGH)
+- [Mesh Gradients in SwiftUI explained — Donny Wals](https://www.donnywals.com/getting-started-with-mesh-gradients-on-ios-18/) — iOS 18 requirement and animation patterns (HIGH)
+- [Material — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/material/) — iOS 15+ availability (HIGH)
+- [ultraThinMaterial — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/shapestyle/ultrathinmaterial) — iOS 15+ confirmed (HIGH)
+- [RoundedCornerStyle.continuous — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/roundedcornerstyle/continuous) — squircle style (HIGH)
+- [SensoryFeedback — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/sensoryfeedback) — iOS 17+ confirmed (HIGH)
+- [ShadowStyle.inner — Apple Developer Documentation](https://developer.apple.com/documentation/swiftui/shadowstyle/inner(color:radius:x:y:)) — iOS 16+ confirmed (HIGH)
+- [Sensory feedback in SwiftUI — Swift with Majid](https://swiftwithmajid.com/2023/10/10/sensory-feedback-in-swiftui/) — sensoryFeedback vs UIImpactFeedbackGenerator comparison (MEDIUM)
+- [TimelineView + Canvas — Kodeco](https://www.kodeco.com/27594491-using-timelineview-and-canvas-in-swiftui) — iOS 15+, pulsating patterns (MEDIUM)
+- [Scroll transition effects iOS 17 — swdevnotes](https://swdevnotes.com/swift/2024/scroll-transition-effects-in-ios-17/) — scrollTransition iOS 17 (MEDIUM)
+- [Inner Shadow — Design+Code Handbook](https://designcode.io/swiftui-handbook-inner-shadow/) — ShadowStyle.inner usage patterns (MEDIUM)
+- [SwiftUI Glow Gradient Button iOS 17 — Dev Genius](https://blog.devgenius.io/swiftui-creating-a-custom-glow-gradient-button-in-ios-17-d17ffc4af97a) — pill button glow patterns (MEDIUM)
 
 **Audio Stack:**
 - Apple Developer Documentation — AVMutableComposition: https://developer.apple.com/documentation/avfoundation/avmutablecomposition
@@ -368,4 +403,4 @@ Key rules:
 ---
 
 *Stack research for: SonicMerge — audio pipeline (v1.0) + Modern Spatial Utility UI restyle (v1.1)*
-*Last updated: 2026-04-08*
+*Last updated: 2026-04-11*
