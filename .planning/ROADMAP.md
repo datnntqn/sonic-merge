@@ -4,6 +4,8 @@
 
 SonicMerge delivers a complete on-device audio merge and denoising workflow in five phases. Phase 1 lays the data model and import foundation that every other phase builds on. Phase 2 ships the core merge pipeline and Mixing Station UI — the primary user workflow. Phase 3 integrates the Core ML denoising pipeline, the product's primary differentiator. Phase 4 adds LUFS loudness normalization to make exports podcast-ready. Phase 5 completes the intake surface with the Share Extension so users can route audio from any app into SonicMerge.
 
+**Milestone v1.1 (Phases 6–9)** reskins the entire UI to the "Modern Spatial Utility" aesthetic. All four phases are visual-only — no ViewModel or service changes. Phase 6 builds the design system tokens and reusable components that phases 7–9 consume. Phase 7 applies them to the Mixing Station. Phase 8 handles the highest-complexity screen (Cleaning Lab + AI Orb). Phase 9 locks in app-wide haptics, dark mode completeness, and accessibility fallbacks.
+
 ## Phases
 
 **Phase Numbering:**
@@ -12,11 +14,20 @@ SonicMerge delivers a complete on-device audio merge and denoising workflow in f
 
 Decimal phases appear between their surrounding integers in numeric order.
 
+### Milestone v1.0
+
 - [x] **Phase 1: Foundation + Import Pipeline** - Stable data models, audio session, and correct import with format normalization (completed 2026-03-08)
 - [ ] **Phase 2: Merge Pipeline + Mixing Station UI** - Full clip editing workflow and export to .m4a/.wav
 - [x] **Phase 3: AI Denoising Pipeline** - Core ML on-device denoising with A/B comparison (completed 2026-03-12)
 - [x] **Phase 4: LUFS Normalization + Export Polish** - Podcast-standard loudness and polished export completion UX (completed 2026-03-28)
 - [x] **Phase 5: Share Extension** - Receive audio from any app via iOS Share Sheet (completed 2026-04-08)
+
+### Milestone v1.1 — Modern Spatial Utility Restyle
+
+- [ ] **Phase 6: Design System Foundation** - Color tokens, SquircleCard, PillButton, and glassmorphism header primitives
+- [ ] **Phase 7: Mixing Station Restyle** - Apply design system to Mixing Station screens (timeline, cards, waveforms, gaps)
+- [ ] **Phase 8: Cleaning Lab + AI Orb** - Restyle Cleaning Lab and implement AI Orb pulsating nebula visualizer
+- [ ] **Phase 9: Polish + Accessibility Audit** - App-wide haptics, dark mode completeness, and accessibility fallbacks
 
 ## Phase Details
 
@@ -103,10 +114,63 @@ Plans:
 - [x] 05-01-PLAN.md — Main app wiring: duplicate detection in importFiles, scenePhase pending import handler, URL scheme registration, tests (Wave 1)
 - [x] 05-02-PLAN.md — Share Extension target: ShareExtensionViewController, HUD UI, Info.plist, entitlements, Xcode project wiring + human verification (Wave 2)
 
+---
+
+## Milestone v1.1 — Modern Spatial Utility Restyle
+
+### Phase 6: Design System Foundation
+**Goal**: Every screen in the app has access to a centralized color token system, reusable SquircleCard and PillButton components, and a glassmorphism header — the visual language that all v1.1 restyling phases consume.
+**Depends on**: Phase 5 (v1.0 complete)
+**Requirements**: DS-01, DS-02, DS-03, DS-04
+**Success Criteria** (what must be TRUE):
+  1. Switching the device to dark mode shows pure black backgrounds with Deep Indigo accents; switching to light mode shows off-white backgrounds with Deep Indigo accents — across all screens.
+  2. A SquircleCard component renders with a continuous 24pt corner radius and optional glass material background visible in both light and dark modes.
+  3. A PillButton renders with an inner glow highlight, fires a distinct haptic tap on press, and shows a visually distinct disabled state.
+  4. The app header displays the "Private by Design" banner with a Deep Indigo glow accent rendered through an ultraThinMaterial blur layer.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 7: Mixing Station Restyle
+**Goal**: The Mixing Station uses the Vertical Timeline Hybrid layout with a central connecting line, all audio cards are SquircleCards with mesh gradient waveforms, gap controls use pill buttons, and drag interactions show elevated shadow micro-animations.
+**Depends on**: Phase 6
+**Requirements**: MIX-01, MIX-02, MIX-03, MIX-04, MIX-05
+**Success Criteria** (what must be TRUE):
+  1. Audio clip cards display as squircle cards (24pt radius) with a Deep Indigo-to-Purple gradient waveform overlay visible in both light and dark modes.
+  2. The clip list renders a visible central connecting line running through all cards in the Vertical Timeline Hybrid layout.
+  3. Waveform thumbnails use MeshGradient on iOS 18 devices and fall back to a LinearGradient on iOS 17 without visual breakage.
+  4. Gap row controls between clips render as pill buttons using design system tokens.
+  5. Dragging an audio card produces a visible scale-up and elevated shadow animation for the duration of the drag gesture.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 8: Cleaning Lab + AI Orb
+**Goal**: The Cleaning Lab shows a pulsating nebula sphere AI Orb during denoising, all controls use Lime Green AI highlights and PillButton style, and the full screen supports dark mode with correct contrast.
+**Depends on**: Phase 7
+**Requirements**: CL-01, CL-02, CL-03
+**Success Criteria** (what must be TRUE):
+  1. While denoising is active, a pulsating nebula sphere animation (TimelineView + Canvas) fills the AI Orb area; on devices with reduceMotion enabled, a static sphere renders instead.
+  2. The denoising progress indicator, noise slider, and action buttons use Lime Green (#A7C957) as their accent color.
+  3. All Cleaning Lab interactive controls render as pill buttons and show correct dark mode styling (pure black background, Deep Indigo accents) without any hardcoded light-mode colors.
+**Plans**: TBD
+**UI hint**: yes
+
+### Phase 9: Polish + Accessibility Audit
+**Goal**: Every interactive button in the app provides haptic feedback, dark mode is complete and contrast-correct across all screens, and users with reduceTransparency or reduceMotion enabled receive solid-background and static-visual fallbacks throughout.
+**Depends on**: Phase 8
+**Requirements**: POL-01, POL-02, POL-03
+**Success Criteria** (what must be TRUE):
+  1. Tapping any interactive button anywhere in the app produces a haptic response via the sensoryFeedback modifier.
+  2. Dark mode is enabled on a physical device and all screens show pure black backgrounds with no residual white or grey card backgrounds.
+  3. With Accessibility > Increase Contrast + Reduce Transparency enabled, all glass/blur surfaces are replaced by solid opaque backgrounds, and all text passes a 4.5:1 contrast ratio check.
+  4. With Accessibility > Reduce Motion enabled, all animated visuals (AI Orb, drag micro-animations, gradient transitions) are replaced by static equivalents with no crash or missing UI.
+**Plans**: TBD
+**UI hint**: yes
+
 ## Progress
 
 **Execution Order:**
-Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+v1.0 phases execute in numeric order: 1 → 2 → 3 → 4 → 5
+v1.1 phases execute in numeric order: 6 → 7 → 8 → 9
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
@@ -115,3 +179,7 @@ Phases execute in numeric order: 1 → 2 → 3 → 4 → 5
 | 3. AI Denoising Pipeline | 4/4 | Complete   | 2026-03-12 |
 | 4. LUFS Normalization + Export Polish | 5/5 | Complete   | 2026-03-28 |
 | 5. Share Extension | 2/2 | Complete   | 2026-04-08 |
+| 6. Design System Foundation | 0/TBD | Not started | — |
+| 7. Mixing Station Restyle | 0/TBD | Not started | — |
+| 8. Cleaning Lab + AI Orb | 0/TBD | Not started | — |
+| 9. Polish + Accessibility Audit | 0/TBD | Not started | — |

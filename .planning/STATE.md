@@ -4,10 +4,10 @@ milestone: v1.1
 milestone_name: Modern Spatial Utility Restyle
 status: planning
 stopped_at: ""
-last_updated: "2026-04-08"
-last_activity: 2026-04-08
+last_updated: "2026-04-11"
+last_activity: 2026-04-11
 progress:
-  total_phases: 0
+  total_phases: 4
   completed_phases: 0
   total_plans: 0
   completed_plans: 0
@@ -21,14 +21,14 @@ progress:
 See: .planning/PROJECT.md (updated 2026-04-08)
 
 **Core value:** Users can merge audio clips and remove background noise in seconds — all on-device, with no quality loss and no privacy concerns.
-**Current focus:** Defining requirements for v1.1
+**Current focus:** v1.1 Modern Spatial Utility Restyle — roadmap created, ready to plan Phase 6
 
 ## Current Position
 
-Phase: Not started (defining requirements)
+Phase: Phase 6 (not started)
 Plan: —
-Status: Defining requirements
-Last activity: 2026-04-08 — Milestone v1.1 started
+Status: Roadmap created — ready for /gsd:plan-phase 6
+Last activity: 2026-04-11 — v1.1 roadmap created (Phases 6–9)
 
 Progress: [░░░░░░░░░░] 0%
 
@@ -120,6 +120,11 @@ Recent decisions affecting current work:
 - [Phase 05-share-extension]: loadFileRepresentation (not loadDataRepresentation) used for memory-safe file copy — satisfies 120 MB extension ceiling for 30 MB+ audio files
 - [Phase 05-share-extension]: UserDefaults(suiteName: appGroupID) + synchronize() used for pending file notification — extensionContext.open() is unsupported for Share Extensions
 - [Phase 05-share-extension]: NSExtensionActivationRule uses SUBQUERY UTI-CONFORMS-TO 'public.audio' instead of TRUEPREDICATE to prevent App Store rejection
+- [v1.1 Roadmap]: MeshGradient is iOS 18+ — all uses require #available(iOS 18, *) guard with LinearGradient fallback for iOS 17
+- [v1.1 Roadmap]: AI Orb is highest-complexity rendering — placed in Phase 8 after design system is proven in Phase 7
+- [v1.1 Roadmap]: Vertical timeline connecting line is highest-risk Mixing Station element — may need prototype spike in Phase 7 plan
+- [v1.1 Roadmap]: Max 2 blur layers per screen (GPU budget on A14) — enforce during Phase 7 and Phase 8 implementation
+- [v1.1 Roadmap]: Accessibility fallbacks (reduceTransparency, reduceMotion) must be built in each phase, not retrofitted — Phase 9 audits, not implements first occurrence
 
 ### Pending Todos
 
@@ -132,6 +137,7 @@ None yet.
 
 ## Session Continuity
 
-Last session: 2026-04-08T14:11:12.712Z
-Stopped at: Completed 05-02-PLAN.md Task 1; Task 2 is checkpoint:human-action (Xcode target wiring)
+Last session: 2026-04-11
+Stopped at: v1.1 roadmap created — Phases 6, 7, 8, 9 defined
 Resume file: None
+Next action: /gsd:plan-phase 6

@@ -130,27 +130,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXP-04 | Phase 2 | Complete |
 | UX-01 | Phase 2 | Complete |
 | UX-02 | Phase 3 | Complete |
-| DS-01 | — | Pending |
-| DS-02 | — | Pending |
-| DS-03 | — | Pending |
-| DS-04 | — | Pending |
-| MIX-01 | — | Pending |
-| MIX-02 | — | Pending |
-| MIX-03 | — | Pending |
-| MIX-04 | — | Pending |
-| MIX-05 | — | Pending |
-| CL-01 | — | Pending |
-| CL-02 | — | Pending |
-| CL-03 | — | Pending |
-| POL-01 | — | Pending |
-| POL-02 | — | Pending |
-| POL-03 | — | Pending |
+| DS-01 | Phase 6 | Pending |
+| DS-02 | Phase 6 | Pending |
+| DS-03 | Phase 6 | Pending |
+| DS-04 | Phase 6 | Pending |
+| MIX-01 | Phase 7 | Pending |
+| MIX-02 | Phase 7 | Pending |
+| MIX-03 | Phase 7 | Pending |
+| MIX-04 | Phase 7 | Pending |
+| MIX-05 | Phase 7 | Pending |
+| CL-01 | Phase 8 | Pending |
+| CL-02 | Phase 8 | Pending |
+| CL-03 | Phase 8 | Pending |
+| POL-01 | Phase 9 | Pending |
+| POL-02 | Phase 9 | Pending |
+| POL-03 | Phase 9 | Pending |
 
 **Coverage:**
 - v1 requirements: 17 total, 17 mapped (Complete)
-- v1.1 requirements: 13 total, 0 mapped (Pending roadmap)
-- Unmapped: 13
+- v1.1 requirements: 13 total, 13 mapped (Complete)
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-04-11 — v1.1 requirements added*
+*Last updated: 2026-04-11 — v1.1 traceability mapped to Phases 6–9*
