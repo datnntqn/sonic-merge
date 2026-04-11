@@ -127,8 +127,11 @@ Plans:
   2. A SquircleCard component renders with a continuous 24pt corner radius and optional glass material background visible in both light and dark modes.
   3. A PillButton renders with an inner glow highlight, fires a distinct haptic tap on press, and shows a visually distinct disabled state.
   4. The app header displays the "Private by Design" banner with a Deep Indigo glow accent rendered through an ultraThinMaterial blur layer.
-**Plans**: TBD
-**UI hint**: yes
+**Plans**: 2 plans
+
+Plans:
+- [ ] 06-01-PLAN.md — Color token migration: v1.1 palette hex values, 4 new semantic slots, Radius.card 24pt, Spacing enum, tests (Wave 1)
+- [ ] 06-02-PLAN.md — Components: SquircleCard, PillButtonStyle, glassmorphism header restyle + human verification (Wave 2)
 
 ### Phase 7: Mixing Station Restyle
 **Goal**: The Mixing Station uses the Vertical Timeline Hybrid layout with a central connecting line, all audio cards are SquircleCards with mesh gradient waveforms, gap controls use pill buttons, and drag interactions show elevated shadow micro-animations.
@@ -179,7 +182,7 @@ v1.1 phases execute in numeric order: 6 → 7 → 8 → 9
 | 3. AI Denoising Pipeline | 4/4 | Complete   | 2026-03-12 |
 | 4. LUFS Normalization + Export Polish | 5/5 | Complete   | 2026-03-28 |
 | 5. Share Extension | 2/2 | Complete   | 2026-04-08 |
-| 6. Design System Foundation | 0/TBD | Not started | — |
+| 6. Design System Foundation | 0/2 | Not started | — |
 | 7. Mixing Station Restyle | 0/TBD | Not started | — |
 | 8. Cleaning Lab + AI Orb | 0/TBD | Not started | — |
 | 9. Polish + Accessibility Audit | 0/TBD | Not started | — |
