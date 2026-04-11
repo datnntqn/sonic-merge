@@ -15,12 +15,13 @@ enum TrustSignalCopy {
 
 struct LocalFirstTrustStrip: View {
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "lock.shield.fill")
                 .font(.title3)
-                .foregroundStyle(Color(uiColor: semantic.trustIcon))
+                .foregroundStyle(Color(uiColor: semantic.accentGlow))
             VStack(alignment: .leading, spacing: 4) {
                 Text(TrustSignalCopy.localFirstTitle)
                     .font(.subheadline.weight(.semibold))
@@ -33,12 +34,32 @@ struct LocalFirstTrustStrip: View {
             Spacer(minLength: 0)
         }
         .padding(12)
-        .background(Color(uiColor: semantic.surfaceElevated))
-        .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous))
+        .background(glassBackground)
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous)
-                .strokeBorder(Color(uiColor: semantic.trustIcon).opacity(0.25), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .strokeBorder(
+                    Color(uiColor: semantic.accentGlow).opacity(0.30),
+                    lineWidth: 1
+                )
         )
-        .shadow(color: Color.black.opacity(0.08), radius: 10, x: 0, y: 4)
+        .shadow(
+            color: Color(uiColor: semantic.accentGlow).opacity(0.20),
+            radius: 12,
+            x: 0,
+            y: 0
+        )
+    }
+
+    @ViewBuilder
+    private var glassBackground: some View {
+        if reduceTransparency {
+            Color(uiColor: semantic.surfaceCard)
+        } else {
+            ZStack {
+                Color(uiColor: semantic.accentGlow).opacity(0.08)
+                Rectangle().fill(.ultraThinMaterial)
+            }
+        }
     }
 }
