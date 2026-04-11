@@ -1,7 +1,8 @@
 ---
 phase: 6
 slug: design-system-foundation
-status: draft
+status: approved
+reviewed_at: "2026-04-11"
 shadcn_initialized: false
 preset: none
 created: 2026-04-11
