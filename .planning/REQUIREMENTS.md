@@ -45,7 +45,7 @@ Requirements for v1.1 "Modern Spatial Utility Restyle". Visual-only milestone â€
 
 ### Design System
 
-- [ ] **DS-01**: App uses a centralized color token system with distinct light mode (off-white #FBFBFC, Deep Indigo #5856D6) and dark mode (pure black #000000, Deep Indigo #5856D6, Lime Green #A7C957) palettes
+- [x] **DS-01**: App uses a centralized color token system with distinct light mode (off-white #FBFBFC, Deep Indigo #5856D6) and dark mode (pure black #000000, Deep Indigo #5856D6, Lime Green #A7C957) palettes
 - [ ] **DS-02**: Reusable SquircleCard component with continuous 24pt corner radius, optional glass material background, and configurable glow shadow
 - [ ] **DS-03**: PillButton ButtonStyle with inner glow highlight, haptic press feedback via sensoryFeedback, and proper disabled state styling
 - [ ] **DS-04**: Glassmorphism header using .ultraThinMaterial with "Private by Design" banner text and Deep Indigo glow accent
@@ -130,7 +130,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXP-04 | Phase 2 | Complete |
 | UX-01 | Phase 2 | Complete |
 | UX-02 | Phase 3 | Complete |
-| DS-01 | Phase 6 | Pending |
+| DS-01 | Phase 6 | Complete |
 | DS-02 | Phase 6 | Pending |
 | DS-03 | Phase 6 | Pending |
 | DS-04 | Phase 6 | Pending |
