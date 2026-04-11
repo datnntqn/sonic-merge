@@ -24,7 +24,7 @@ Decimal phases appear between their surrounding integers in numeric order.
 
 ### Milestone v1.1 — Modern Spatial Utility Restyle
 
-- [ ] **Phase 6: Design System Foundation** - Color tokens, SquircleCard, PillButton, and glassmorphism header primitives
+- [x] **Phase 6: Design System Foundation** - Color tokens, SquircleCard, PillButton, and glassmorphism header primitives (completed 2026-04-11)
 - [ ] **Phase 7: Mixing Station Restyle** - Apply design system to Mixing Station screens (timeline, cards, waveforms, gaps)
 - [ ] **Phase 8: Cleaning Lab + AI Orb** - Restyle Cleaning Lab and implement AI Orb pulsating nebula visualizer
 - [ ] **Phase 9: Polish + Accessibility Audit** - App-wide haptics, dark mode completeness, and accessibility fallbacks
@@ -131,7 +131,7 @@ Plans:
 
 Plans:
 - [x] 06-01-PLAN.md — Color token migration: v1.1 palette hex values, 4 new semantic slots, Radius.card 24pt, Spacing enum, tests (Wave 1)
-- [ ] 06-02-PLAN.md — Components: SquircleCard, PillButtonStyle, glassmorphism header restyle + human verification (Wave 2)
+- [x] 06-02-PLAN.md — Components: SquircleCard, PillButtonStyle, glassmorphism header restyle + human verification (Wave 2)
 
 ### Phase 7: Mixing Station Restyle
 **Goal**: The Mixing Station uses the Vertical Timeline Hybrid layout with a central connecting line, all audio cards are SquircleCards with mesh gradient waveforms, gap controls use pill buttons, and drag interactions show elevated shadow micro-animations.
@@ -182,7 +182,7 @@ v1.1 phases execute in numeric order: 6 → 7 → 8 → 9
 | 3. AI Denoising Pipeline | 4/4 | Complete   | 2026-03-12 |
 | 4. LUFS Normalization + Export Polish | 5/5 | Complete   | 2026-03-28 |
 | 5. Share Extension | 2/2 | Complete   | 2026-04-08 |
-| 6. Design System Foundation | 1/2 | In Progress|  |
+| 6. Design System Foundation | 2/2 | Complete   | 2026-04-11 |
 | 7. Mixing Station Restyle | 0/TBD | Not started | — |
 | 8. Cleaning Lab + AI Orb | 0/TBD | Not started | — |
 | 9. Polish + Accessibility Audit | 0/TBD | Not started | — |
