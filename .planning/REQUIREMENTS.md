@@ -39,6 +39,37 @@ Requirements for initial release. Each maps to roadmap phases.
 - [x] **UX-01**: App applies "Minimalist Soft Professional" theme throughout (background #F8F9FA, accent #007AFF, AI accent #5856D6, card #FFFFFF, text #1C1C1E; corner radius 2pt; SF font)
 - [x] **UX-02**: User receives haptic feedback when toggling Before/After comparison
 
+## v1.1 Requirements
+
+Requirements for v1.1 "Modern Spatial Utility Restyle". Visual-only milestone — no functional changes to ViewModels or services.
+
+### Design System
+
+- [ ] **DS-01**: App uses a centralized color token system with distinct light mode (off-white #FBFBFC, Deep Indigo #5856D6) and dark mode (pure black #000000, Deep Indigo #5856D6, Lime Green #A7C957) palettes
+- [ ] **DS-02**: Reusable SquircleCard component with continuous 24pt corner radius, optional glass material background, and configurable glow shadow
+- [ ] **DS-03**: PillButton ButtonStyle with inner glow highlight, haptic press feedback via sensoryFeedback, and proper disabled state styling
+- [ ] **DS-04**: Glassmorphism header using .ultraThinMaterial with "Private by Design" banner text and Deep Indigo glow accent
+
+### Mixing Station
+
+- [ ] **MIX-01**: Audio clip cards use SquircleCard with gradient waveform overlay (Deep Indigo → Purple) and elevated drag shadow on interaction
+- [ ] **MIX-02**: Mixing Station uses Vertical Timeline Hybrid layout with a central connecting line between audio cards
+- [ ] **MIX-03**: Waveform thumbnails render with mesh gradient (iOS 18 MeshGradient with LinearGradient fallback for iOS 17)
+- [ ] **MIX-04**: Gap row controls are restyled with pill buttons and design system tokens
+- [ ] **MIX-05**: Dragging an audio card shows elevated shadow and scale micro-interaction animation
+
+### Cleaning Lab
+
+- [ ] **CL-01**: AI Orb visualizer displays a pulsating nebula sphere animation (TimelineView + Canvas) during denoising, with reduceMotion static fallback
+- [ ] **CL-02**: AI-specific controls use Lime Green (#A7C957) accent color for denoise progress, slider, and action indicators
+- [ ] **CL-03**: All Cleaning Lab controls use PillButton style and design system color tokens for full dark mode support
+
+### Polish
+
+- [ ] **POL-01**: All interactive buttons throughout the app provide haptic feedback via sensoryFeedback modifier
+- [ ] **POL-02**: Full dark mode support across all screens: pure black background, Deep Indigo accent, proper contrast ratios
+- [ ] **POL-03**: Accessibility fallbacks: solid backgrounds when reduceTransparency is on, static visuals when reduceMotion is on, minimum 4.5:1 text contrast on all glass surfaces
+
 ## v2 Requirements
 
 Deferred to future release. Tracked but not in current roadmap.
@@ -74,6 +105,7 @@ Explicitly excluded. Documented to prevent scope creep.
 | Real-time call noise cancellation | Different product (Krisp category); AVAudioEngine Voice Processing cannot denoise files anyway |
 | Multi-track mixing | Different category (GarageBand); doubles scope |
 | OAuth / accounts / sync | No user data collected; privacy-first design |
+| Functional ViewModel/service changes | v1.1 is visual-only restyle; no business logic changes |
 
 ## Traceability
 
@@ -98,12 +130,27 @@ Which phases cover which requirements. Updated during roadmap creation.
 | EXP-04 | Phase 2 | Complete |
 | UX-01 | Phase 2 | Complete |
 | UX-02 | Phase 3 | Complete |
+| DS-01 | — | Pending |
+| DS-02 | — | Pending |
+| DS-03 | — | Pending |
+| DS-04 | — | Pending |
+| MIX-01 | — | Pending |
+| MIX-02 | — | Pending |
+| MIX-03 | — | Pending |
+| MIX-04 | — | Pending |
+| MIX-05 | — | Pending |
+| CL-01 | — | Pending |
+| CL-02 | — | Pending |
+| CL-03 | — | Pending |
+| POL-01 | — | Pending |
+| POL-02 | — | Pending |
+| POL-03 | — | Pending |
 
 **Coverage:**
-- v1 requirements: 17 total
-- Mapped to phases: 17
-- Unmapped: 0
+- v1 requirements: 17 total, 17 mapped (Complete)
+- v1.1 requirements: 13 total, 0 mapped (Pending roadmap)
+- Unmapped: 13
 
 ---
 *Requirements defined: 2026-03-08*
-*Last updated: 2026-03-08 — traceability updated after roadmap creation*
+*Last updated: 2026-04-11 — v1.1 requirements added*
