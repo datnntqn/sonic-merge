@@ -56,7 +56,7 @@ Requirements for v1.1 "Modern Spatial Utility Restyle". Visual-only milestone â€
 - [x] **MIX-02**: Mixing Station uses Vertical Timeline Hybrid layout with a central connecting line between audio cards
 - [x] **MIX-03**: Waveform thumbnails render with mesh gradient (iOS 18 MeshGradient with LinearGradient fallback for iOS 17)
 - [x] **MIX-04**: Gap row controls are restyled with pill buttons and design system tokens
-- [ ] **MIX-05**: Dragging an audio card shows elevated shadow and scale micro-interaction animation
+- [x] **MIX-05**: Dragging an audio card shows elevated shadow and scale micro-interaction animation
 
 ### Cleaning Lab
 
@@ -138,7 +138,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIX-02 | Phase 7 | Complete |
 | MIX-03 | Phase 7 | Complete |
 | MIX-04 | Phase 7 | Complete |
-| MIX-05 | Phase 7 | Pending |
+| MIX-05 | Phase 7 | Complete |
 | CL-01 | Phase 8 | Pending |
 | CL-02 | Phase 8 | Pending |
 | CL-03 | Phase 8 | Pending |
