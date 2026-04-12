@@ -148,7 +148,7 @@ Plans:
 Plans:
 - [x] 07-01-PLAN.md — Foundation: accentGradientEnd token, TimelineSpineView primitive, PillButtonStyle Variant/Size extension (Wave 1)
 - [ ] 07-02-PLAN.md — MergeSlotRow: SquircleCard wrap, masked mesh gradient waveform, icon-pill play button, drag micro-animation (Wave 2)
-- [ ] 07-03-PLAN.md — GapRowView: HStack of 4 PillButtonStyle compact pills with filled/outline selection (Wave 2)
+- [x] 07-03-PLAN.md — GapRowView: HStack of 4 PillButtonStyle compact pills with filled/outline selection (Wave 2)
 - [ ] 07-04-PLAN.md — MergeTimelineView: spine background on clip rows, opaque operator chips, SquircleCard output card, typography migration (Wave 3)
 - [ ] 07-05-PLAN.md — Human verification checkpoint: all 5 MIX success criteria + reorder crash drill + accessibility smoke test (Wave 4)
 **UI hint**: yes
