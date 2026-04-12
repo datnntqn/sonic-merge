@@ -36,15 +36,15 @@ Users can merge audio clips and remove background noise in seconds — all on-de
 - ✓ User can normalize loudness via LUFS normalization before export — v1.0/Phase 4
 - ✓ User can delete and reorder clips via swipe/long-press gestures — v1.0/Phase 2
 - ✓ User can toggle Before/After comparison with haptic feedback — v1.0/Phase 3
+- ✓ Vertical Timeline Hybrid layout with central connecting line for audio cards — v1.1/Phase 7
+- ✓ Squircle audio cards (24pt radius) with semi-transparent mesh gradient waveforms — v1.1/Phase 7
+- ✓ Elevated drag shadows on card interaction (micro-interactions) — v1.1/Phase 7
+- ✓ Pill-shaped buttons with inner glow and haptic-responsive states — v1.1/Phases 6,7
 
 ### Active
 
 - [ ] Design system with color tokens for light/dark mode and reusable components
 - [ ] Glassmorphism header with "Private by Design" banner and Indigo glow
-- [ ] Vertical Timeline Hybrid layout with central connecting line for audio cards
-- [ ] Squircle audio cards (24pt radius) with semi-transparent mesh gradient waveforms
-- [ ] Elevated drag shadows on card interaction (micro-interactions)
-- [ ] Pill-shaped buttons with inner glow and haptic-responsive states
 - [ ] AI Orb visualizer (pulsating nebula sphere) for denoise section
 - [ ] Dark mode: pure black #000000, Deep Indigo #5856D6 accent, Lime Green #A7C957 AI highlights
 - [ ] Light mode: off-white #FBFBFC background, Deep Indigo #5856D6 accent
@@ -190,4 +190,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-08 after milestone v1.1 started*
+*Last updated: 2026-04-12 after Phase 7 (Mixing Station Restyle) completed*
