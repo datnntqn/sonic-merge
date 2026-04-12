@@ -2,7 +2,6 @@
 // SonicMerge
 
 import SwiftUI
-import UIKit
 
 enum GapRowAccessibility {
     static let label = "Transition between clips"
@@ -15,7 +14,6 @@ struct GapRowView: View {
     let transition: GapTransition
     let onUpdate: (_ gapDuration: Double?, _ isCrossfade: Bool?) -> Void
 
-    @Environment(\.sonicMergeSemantic) private var semantic
     @State private var selection: GapOption
 
     enum GapOption: String, CaseIterable, Hashable {
@@ -44,21 +42,27 @@ struct GapRowView: View {
     }
 
     var body: some View {
-        Picker("Gap", selection: $selection) {
+        HStack(spacing: SonicMergeTheme.Spacing.sm) {
             ForEach(GapOption.allCases, id: \.self) { option in
-                Text(option.rawValue).tag(option)
+                Button {
+                    selection = option
+                } label: {
+                    Text(option.rawValue)
+                }
+                .buttonStyle(
+                    selection == option
+                        ? PillButtonStyle(variant: .filled,  size: .compact)
+                        : PillButtonStyle(variant: .outline, size: .compact)
+                )
+                .accessibilityAddTraits(selection == option ? .isSelected : [])
             }
         }
-        .pickerStyle(.segmented)
-        .tint(Color(uiColor: semantic.accentAction))
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, SonicMergeTheme.Spacing.md)
+        .padding(.vertical, SonicMergeTheme.Spacing.sm)
+        .background(Color.clear) // Phase 7: transparent so the timeline spine shows through
         .accessibilityElement(children: .combine)
         .accessibilityLabel(GapRowAccessibility.label)
-        .background(Color(uiColor: semantic.surfaceElevated).opacity(0.65))
-        .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.chip, style: .continuous))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
         .onChange(of: selection) { _, newValue in
             onUpdate(newValue.gapDuration, newValue.isCrossfade)
         }
