@@ -86,27 +86,66 @@ private struct MergeSlotWaveformView: View {
     @Environment(\.sonicMergeSemantic) private var semantic
 
     var body: some View {
-        Canvas { context, size in
-            guard !peaks.isEmpty else { return }
-            let barWidth = size.width / CGFloat(peaks.count)
-            let color = Color(uiColor: semantic.accentWaveform)
-
-            for (i, peak) in peaks.enumerated() {
-                let barHeight = CGFloat(peak) * size.height * 0.92
-                let x = CGFloat(i) * barWidth
-                let y = (size.height - barHeight) / 2
-                let rect = CGRect(
-                    x: x,
-                    y: y,
-                    width: max(barWidth - 1.2, 1),
-                    height: max(barHeight, 2)
-                )
-                context.fill(Path(rect), with: .color(color.opacity(0.95)))
-            }
-        }
-        .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+        ZStack {
+            // Backing well — mode-dependent contrast. Light: off-white, dark: near-black.
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(Color(uiColor: semantic.surfaceBase).opacity(0.85))
-        )
+
+            // Full-thumbnail gradient, masked by the bar shapes so only the bars are visible.
+            waveformGradient
+                .mask {
+                    Canvas { context, size in
+                        guard !peaks.isEmpty else { return }
+                        let barWidth = size.width / CGFloat(peaks.count)
+                        for (i, peak) in peaks.enumerated() {
+                            let barHeight = CGFloat(peak) * size.height * 0.92
+                            let x = CGFloat(i) * barWidth
+                            let y = (size.height - barHeight) / 2
+                            let rect = CGRect(
+                                x: x,
+                                y: y,
+                                width: max(barWidth - 1.2, 1),
+                                height: max(barHeight, 2)
+                            )
+                            context.fill(Path(rect), with: .color(.white))
+                        }
+                    }
+                }
+        }
+    }
+
+    @ViewBuilder
+    private var waveformGradient: some View {
+        if #available(iOS 18.0, *) {
+            MeshGradient(
+                width: 3,
+                height: 3,
+                points: [
+                    [0.0, 0.0], [0.5, 0.0], [1.0, 0.0],
+                    [0.0, 0.5], [0.5, 0.5], [1.0, 0.5],
+                    [0.0, 1.0], [0.5, 1.0], [1.0, 1.0]
+                ],
+                colors: [
+                    Color(uiColor: semantic.accentAction),       // top-left Deep Indigo
+                    Color(uiColor: semantic.accentAction),       // top-mid  Deep Indigo
+                    Color(uiColor: semantic.accentGradientEnd),  // top-right Purple mix
+                    Color(uiColor: semantic.accentAction),       // mid-left Deep Indigo
+                    Color(uiColor: semantic.accentGradientEnd),  // center   Purple mix
+                    Color(uiColor: semantic.accentGradientEnd),  // mid-right Purple
+                    Color(uiColor: semantic.accentGradientEnd),  // bot-left Purple mix
+                    Color(uiColor: semantic.accentGradientEnd),  // bot-mid  Purple
+                    Color(uiColor: semantic.accentGradientEnd)   // bot-right Purple
+                ]
+            )
+        } else {
+            LinearGradient(
+                colors: [
+                    Color(uiColor: semantic.accentAction),
+                    Color(uiColor: semantic.accentGradientEnd)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+        }
     }
 }
