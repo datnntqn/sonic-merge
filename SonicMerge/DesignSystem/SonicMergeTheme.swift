@@ -42,6 +42,9 @@ enum SonicMergeTheme {
 
         /// Dark mode secondary text — muted 0.55 luminance
         static let darkTextSecondary = UIColor(white: 0.55, alpha: 1)
+
+        /// System Purple #AF52DE — mesh gradient end-stop on waveform thumbnails (Phase 7, MIX-03)
+        static let systemPurple = UIColor(red: 175 / 255, green: 82 / 255, blue: 222 / 255, alpha: 1)
     }
 
     enum Radius {

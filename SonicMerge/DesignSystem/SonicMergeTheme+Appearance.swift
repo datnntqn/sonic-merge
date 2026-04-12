@@ -43,6 +43,9 @@ struct SonicMergeSemantic {
     /// Glassmorphism header tint — #FBFBFC at 0.6 opacity light / #000000 at 0.7 opacity dark
     var surfaceGlass: UIColor
 
+    /// System Purple #AF52DE — waveform mesh gradient end-stop (Phase 7, MIX-03)
+    var accentGradientEnd: UIColor
+
     // MARK: - Factory methods
 
     static func resolved(
@@ -77,7 +80,8 @@ struct SonicMergeSemantic {
             accentAI: SonicMergeTheme.ColorPalette.limeGreen,                 // #A7C957
             accentGlow: SonicMergeTheme.ColorPalette.aiAccent,                // Deep Indigo #5856D6
             surfaceCard: SonicMergeTheme.ColorPalette.cardSurface,            // #FFFFFF
-            surfaceGlass: UIColor(red: 251 / 255, green: 251 / 255, blue: 252 / 255, alpha: 0.6)
+            surfaceGlass: UIColor(red: 251 / 255, green: 251 / 255, blue: 252 / 255, alpha: 0.6),
+            accentGradientEnd: SonicMergeTheme.ColorPalette.systemPurple      // #AF52DE
         )
     }
 
@@ -96,7 +100,8 @@ struct SonicMergeSemantic {
             accentAI: SonicMergeTheme.ColorPalette.limeGreen,                 // #A7C957
             accentGlow: SonicMergeTheme.ColorPalette.aiAccent,                // Deep Indigo #5856D6
             surfaceCard: SonicMergeTheme.ColorPalette.darkCardSurface,        // #0F0F0F
-            surfaceGlass: UIColor(red: 0, green: 0, blue: 0, alpha: 0.7)      // black@0.7
+            surfaceGlass: UIColor(red: 0, green: 0, blue: 0, alpha: 0.7),     // black@0.7
+            accentGradientEnd: SonicMergeTheme.ColorPalette.systemPurple      // #AF52DE
         )
     }
 }
