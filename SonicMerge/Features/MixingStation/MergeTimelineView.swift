@@ -28,11 +28,11 @@ struct MergeTimelineView: View {
             Section {
                 VStack(alignment: .leading, spacing: 6) {
                     Text("SEQUENCE")
-                        .font(.system(.caption, design: .rounded, weight: .heavy))
+                        .font(.system(.caption, design: .rounded, weight: .semibold))
                         .tracking(1.2)
                         .foregroundStyle(Color(uiColor: semantic.accentAction))
                     Text(summarySubtitle)
-                        .font(.system(.caption, design: .rounded, weight: .medium))
+                        .font(.system(.caption, design: .rounded, weight: .regular))
                         .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -57,7 +57,7 @@ struct MergeTimelineView: View {
                             onPreviewTap: { viewModel.toggleClipPreview(clip) },
                             onDelete: { viewModel.deleteClip(id: clip.id) }
                         )
-                        .padding(.vertical, 6)
+                        .padding(.vertical, SonicMergeTheme.Spacing.sm)
 
                         if index < viewModel.clips.count - 1,
                            let transition = clip.gapTransition {
@@ -68,6 +68,12 @@ struct MergeTimelineView: View {
                                     isCrossfade: isCrossfade
                                 )
                             }
+                        }
+                    }
+                    .background(alignment: .leading) {
+                        // Phase 7 MIX-02: central connecting line. Hidden when only one clip exists.
+                        if viewModel.clips.count >= 2 {
+                            TimelineSpineView()
                         }
                     }
                     .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
@@ -109,7 +115,7 @@ struct MergeTimelineView: View {
     }
 
     private var mergeOutputCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: SonicMergeTheme.Spacing.md) {
             Text("OUTPUT")
                 .font(.system(.caption, design: .rounded, weight: .heavy))
                 .tracking(1.2)
