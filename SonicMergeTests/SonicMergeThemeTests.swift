@@ -69,6 +69,16 @@ struct SonicMergeThemeTests {
         #expect(abs(Double(b) - (15.0 / 255.0)) < 0.01)
     }
 
+    @Test func systemPurple_isAF52DE() {
+        // Per Phase 7 UI-SPEC: waveform mesh gradient end-stop #AF52DE
+        let c = SonicMergeTheme.ColorPalette.systemPurple
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        #expect(c.getRed(&r, green: &g, blue: &b, alpha: &a))
+        #expect(abs(Double(r) - (175.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (82.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (222.0 / 255.0)) < 0.01)
+    }
+
     // MARK: - Radius
 
     @Test func radius_card_is24() {
@@ -128,6 +138,24 @@ struct SonicMergeThemeTests {
         #expect(abs(Double(r) - (167.0 / 255.0)) < 0.01)
         #expect(abs(Double(g) - (201.0 / 255.0)) < 0.01)
         #expect(abs(Double(b) - (87.0 / 255.0)) < 0.01)
+    }
+
+    @Test func lightSemantic_accentGradientEnd_isSystemPurple() {
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .system)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        #expect(semantic.accentGradientEnd.getRed(&r, green: &g, blue: &b, alpha: &a))
+        #expect(abs(Double(r) - (175.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (82.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (222.0 / 255.0)) < 0.01)
+    }
+
+    @Test func darkSemantic_accentGradientEnd_isSystemPurple() {
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .system)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        #expect(semantic.accentGradientEnd.getRed(&r, green: &g, blue: &b, alpha: &a))
+        #expect(abs(Double(r) - (175.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (82.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (222.0 / 255.0)) < 0.01)
     }
 
     @Test func darkSemantic_hasPureBlackBase() {
