@@ -1,7 +1,7 @@
 // MergeSlotRow.swift
 // SonicMerge
 //
-// Conveyor-style slot: larger waveform, play, reorder handle.
+// Phase 7: SquircleCard-wrapped slot with gradient waveform and drag micro-animation.
 
 import SwiftUI
 import UIKit
@@ -14,49 +14,53 @@ struct MergeSlotRow: View {
     var onDelete: (() -> Void)? = nil
 
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var peaks: [Float] = Array(repeating: 0, count: 50)
 
+    /// Phase 7 drag micro-animation (MIX-05). Mirrors "is a finger currently on this row"
+    /// into SwiftUI state via a no-op DragGesture(minimumDistance: 0) running in parallel
+    /// with the system List.onMove reorder gesture. The system gesture keeps reordering
+    /// working (protects the reorder-crash fix); this one only drives visual state.
+    @GestureState private var isDragTouch: Bool = false
+
     var body: some View {
-        HStack(alignment: .center, spacing: 14) {
-            MergeSlotWaveformView(peaks: peaks)
-                .frame(width: 100, height: 52)
-                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+        SquircleCard(glassEnabled: false, glowEnabled: isDragTouch) {
+            HStack(alignment: .center, spacing: SonicMergeTheme.Spacing.md) {
+                MergeSlotWaveformView(peaks: peaks)
+                    .frame(width: 100, height: 52)
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(clip.displayName)
-                    .font(.system(.body, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
-                    .lineLimit(1)
-                Text(ClipDurationFormatting.mmss(from: clip.duration))
-                    .font(.system(.caption, design: .rounded, weight: .medium))
-                    .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                VStack(alignment: .leading, spacing: SonicMergeTheme.Spacing.xs) {
+                    Text(clip.displayName)
+                        .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                        .lineLimit(1)
+                    Text(ClipDurationFormatting.mmss(from: clip.duration))
+                        .font(.system(.caption, design: .rounded, weight: .regular))
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                }
+
+                Spacer(minLength: 8)
+
+                Button(action: onPreviewTap) {
+                    Image(systemName: isPreviewing ? "stop.fill" : "play.fill")
+                        .font(.system(size: 16, weight: .semibold))
+                }
+                .buttonStyle(PillButtonStyle(variant: .filled, size: .icon))
+                .accessibilityLabel(isPreviewing ? "Stop preview" : "Preview clip")
             }
-
-            Spacer(minLength: 8)
-
-            Button(action: onPreviewTap) {
-                Image(systemName: isPreviewing ? "stop.fill" : "play.fill")
-                    .font(.system(size: 16, weight: .bold))
-                    .foregroundStyle(Color(uiColor: semantic.surfaceBase))
-                    .frame(width: 40, height: 40)
-                    .background(
-                        Circle()
-                            .fill(Color(uiColor: semantic.accentAction))
-                    )
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(isPreviewing ? "Stop preview" : "Preview clip")
         }
-        .padding(14)
-        .background(
-            RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous)
-                .fill(Color(uiColor: semantic.surfaceSlot))
+        .scaleEffect(isDragTouch ? 1.03 : 1.0)
+        .animation(
+            reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72),
+            value: isDragTouch
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous)
-                .strokeBorder(Color(uiColor: semantic.accentAction).opacity(0.18), lineWidth: 1)
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .updating($isDragTouch) { _, state, _ in state = true }
         )
-        .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 4)
+        .sensoryFeedback(.impact(weight: .medium), trigger: isDragTouch)
+        .sensoryFeedback(.impact(weight: .light), trigger: !isDragTouch)
         .contextMenu {
             if let onDelete {
                 Button(role: .destructive) {
