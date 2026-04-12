@@ -52,10 +52,10 @@ Requirements for v1.1 "Modern Spatial Utility Restyle". Visual-only milestone �
 
 ### Mixing Station
 
-- [ ] **MIX-01**: Audio clip cards use SquircleCard with gradient waveform overlay (Deep Indigo → Purple) and elevated drag shadow on interaction
-- [ ] **MIX-02**: Mixing Station uses Vertical Timeline Hybrid layout with a central connecting line between audio cards
-- [ ] **MIX-03**: Waveform thumbnails render with mesh gradient (iOS 18 MeshGradient with LinearGradient fallback for iOS 17)
-- [ ] **MIX-04**: Gap row controls are restyled with pill buttons and design system tokens
+- [x] **MIX-01**: Audio clip cards use SquircleCard with gradient waveform overlay (Deep Indigo → Purple) and elevated drag shadow on interaction
+- [x] **MIX-02**: Mixing Station uses Vertical Timeline Hybrid layout with a central connecting line between audio cards
+- [x] **MIX-03**: Waveform thumbnails render with mesh gradient (iOS 18 MeshGradient with LinearGradient fallback for iOS 17)
+- [x] **MIX-04**: Gap row controls are restyled with pill buttons and design system tokens
 - [ ] **MIX-05**: Dragging an audio card shows elevated shadow and scale micro-interaction animation
 
 ### Cleaning Lab
@@ -134,10 +134,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | DS-02 | Phase 6 | Complete |
 | DS-03 | Phase 6 | Complete |
 | DS-04 | Phase 6 | Complete |
-| MIX-01 | Phase 7 | Pending |
-| MIX-02 | Phase 7 | Pending |
-| MIX-03 | Phase 7 | Pending |
-| MIX-04 | Phase 7 | Pending |
+| MIX-01 | Phase 7 | Complete |
+| MIX-02 | Phase 7 | Complete |
+| MIX-03 | Phase 7 | Complete |
+| MIX-04 | Phase 7 | Complete |
 | MIX-05 | Phase 7 | Pending |
 | CL-01 | Phase 8 | Pending |
 | CL-02 | Phase 8 | Pending |
