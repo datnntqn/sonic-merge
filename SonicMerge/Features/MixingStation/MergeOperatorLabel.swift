@@ -18,16 +18,16 @@ struct MergeOperatorLabel: View {
         HStack {
             Spacer()
             Image(systemName: symbolName)
-                .font(.system(size: 22, weight: .bold, design: .rounded))
+                .font(.system(.title3, design: .rounded, weight: .semibold))
                 .foregroundStyle(Color(uiColor: semantic.accentAction).opacity(0.9))
                 .frame(width: 44, height: 44)
                 .background(
                     Circle()
-                        .fill(Color(uiColor: semantic.surfaceElevated).opacity(0.55))
+                        .fill(Color(uiColor: semantic.surfaceBase)) // opaque — spine threads through
                 )
                 .overlay(
                     Circle()
-                        .strokeBorder(Color(uiColor: semantic.accentAction).opacity(0.35), lineWidth: 1)
+                        .strokeBorder(Color(uiColor: semantic.accentGlow).opacity(0.35), lineWidth: 1)
                 )
             Spacer()
         }

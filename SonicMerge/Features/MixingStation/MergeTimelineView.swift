@@ -115,37 +115,23 @@ struct MergeTimelineView: View {
     }
 
     private var mergeOutputCard: some View {
-        VStack(alignment: .leading, spacing: SonicMergeTheme.Spacing.md) {
-            Text("OUTPUT")
-                .font(.system(.caption, design: .rounded, weight: .heavy))
-                .tracking(1.2)
-                .foregroundStyle(Color(uiColor: semantic.accentAction))
+        SquircleCard(glassEnabled: false, glowEnabled: false) {
+            VStack(alignment: .leading, spacing: SonicMergeTheme.Spacing.md) {
+                Text("OUTPUT")
+                    .font(.system(.caption, design: .rounded, weight: .semibold))
+                    .tracking(1.2)
+                    .foregroundStyle(Color(uiColor: semantic.accentAction))
 
-            Text("Estimated merged length ~\(ClipDurationFormatting.mmss(from: totalDuration))")
-                .font(.system(.subheadline, design: .rounded, weight: .medium))
-                .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                Text("Estimated merged length ~\(ClipDurationFormatting.mmss(from: totalDuration))")
+                    .font(.system(.subheadline, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
 
-            Button(action: onExportTap) {
-                Label("Export merged audio", systemImage: "square.and.arrow.up")
-                    .font(.system(.body, design: .rounded, weight: .bold))
-                    .foregroundStyle(Color(uiColor: semantic.surfaceBase))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(
-                        RoundedRectangle(cornerRadius: 14, style: .continuous)
-                            .fill(Color(uiColor: semantic.accentAction))
-                    )
+                Button(action: onExportTap) {
+                    Label("Export merged audio", systemImage: "square.and.arrow.up")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PillButtonStyle(variant: .filled, size: .regular))
             }
-            .buttonStyle(.plain)
         }
-        .padding(18)
-        .background(
-            RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous)
-                .fill(Color(uiColor: semantic.surfaceSlot))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous)
-                .strokeBorder(Color(uiColor: semantic.accentAction).opacity(0.35), lineWidth: 1)
-        )
     }
 }
