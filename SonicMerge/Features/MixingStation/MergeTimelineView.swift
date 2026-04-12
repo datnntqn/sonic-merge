@@ -42,22 +42,35 @@ struct MergeTimelineView: View {
                 .listRowSeparator(.hidden)
             }
 
-            ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
-                Section {
-                    if index > 0 {
-                        MergeOperatorLabel(kind: .plus)
-                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 0, trailing: 16))
-                            .listRowBackground(Color.clear)
-                            .listRowSeparator(.hidden)
-                    }
+            Section {
+                ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
+                    VStack(spacing: 0) {
+                        if index > 0 {
+                            MergeOperatorLabel(kind: .plus)
+                                .padding(.top, 4)
+                                .padding(.bottom, 2)
+                        }
 
-                    MergeSlotRow(
-                        clip: clip,
-                        isPreviewing: viewModel.previewingClipID == clip.id,
-                        onPreviewTap: { viewModel.toggleClipPreview(clip) },
-                        onDelete: { viewModel.deleteClip(id: clip.id) }
-                    )
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        MergeSlotRow(
+                            clip: clip,
+                            isPreviewing: viewModel.previewingClipID == clip.id,
+                            onPreviewTap: { viewModel.toggleClipPreview(clip) },
+                            onDelete: { viewModel.deleteClip(id: clip.id) }
+                        )
+                        .padding(.vertical, 6)
+
+                        if index < viewModel.clips.count - 1,
+                           let transition = clip.gapTransition {
+                            GapRowView(transition: transition) { gapDuration, isCrossfade in
+                                viewModel.updateTransition(
+                                    transition,
+                                    gapDuration: gapDuration,
+                                    isCrossfade: isCrossfade
+                                )
+                            }
+                        }
+                    }
+                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
                     .listRowBackground(Color.clear)
                     .listRowSeparator(.hidden)
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -67,23 +80,9 @@ struct MergeTimelineView: View {
                             Label("Delete", systemImage: "trash")
                         }
                     }
-
-                    if index < viewModel.clips.count - 1,
-                       let transition = clip.gapTransition {
-                        GapRowView(transition: transition) { gapDuration, isCrossfade in
-                            viewModel.updateTransition(
-                                transition,
-                                gapDuration: gapDuration,
-                                isCrossfade: isCrossfade
-                            )
-                        }
-                        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
-                    }
                 }
+                .onMove { from, to in viewModel.moveClip(fromOffsets: from, toOffset: to) }
             }
-            .onMove { from, to in viewModel.moveClip(fromOffsets: from, toOffset: to) }
 
             Section {
                 MergeOperatorLabel(kind: .equals)

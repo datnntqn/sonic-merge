@@ -37,7 +37,12 @@
       "WebFetch(domain:www.photoroom.com)",
       "WebFetch(domain:noisereducerai.com)",
       "Skill(gsd:plan-phase)",
-      "Skill(gsd:discuss-phase)"
+      "Skill(gsd:discuss-phase)",
+      "Bash(rm /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMergeShareExtension/ShareViewController.swift)",
+      "Bash(rm -rf /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMergeShareExtension/Base.lproj)",
+      "WebFetch(domain:www.donnywals.com)",
+      "WebFetch(domain:axesslab.com)",
+      "Skill(gsd:ui-phase)"
     ]
   }
 }

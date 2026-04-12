@@ -46,11 +46,6 @@ struct MergeSlotRow: View {
             }
             .buttonStyle(.plain)
             .accessibilityLabel(isPreviewing ? "Stop preview" : "Preview clip")
-
-            Image(systemName: "line.3.horizontal")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(Color(uiColor: semantic.textSecondary))
-                .accessibilityLabel("Reorder clip")
         }
         .padding(14)
         .background(

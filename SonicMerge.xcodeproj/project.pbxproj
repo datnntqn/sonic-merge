@@ -55,6 +55,13 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		3F4C12D42F869AC4001E4968 /* Exceptions for "SonicMergeShareExtension" folder in "SonicMergeShareExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 3F4C12C22F869AC4001E4968 /* SonicMergeShareExtension */;
+		};
 		3FA1001C2F5E000000000002 /* Exceptions for "SonicMergeTests" folder in "SonicMergeTests" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
@@ -76,13 +83,6 @@
 				Info.plist,
 			);
 			target = 3FCEB0122F5DAED600901F90 /* SonicMerge */;
-		};
-		3F4C12D42F869AC4001E4968 /* Exceptions for "SonicMergeShareExtension" folder in "SonicMergeShareExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = 3F4C12C22F869AC4001E4968 /* SonicMergeShareExtension */;
 		};
 /* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
