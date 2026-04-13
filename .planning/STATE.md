@@ -1,7 +1,7 @@
 ---
 gsd_state_version: 1.0
-milestone: v1.0
-milestone_name: "- [x] **Phase 1: Foundation + Import Pipeline** - Stable data models, audio session, and correct import with format normalization"
+milestone: v1.1
+milestone_name: "Modern Spatial Utility Restyle"
 status: verifying
 stopped_at: Completed 07-05-PLAN.md
 last_updated: "2026-04-12T14:07:08.257Z"

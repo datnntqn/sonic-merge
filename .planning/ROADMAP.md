@@ -116,8 +116,6 @@ Plans:
 
 ---
 
-## Milestone v1.1 — Modern Spatial Utility Restyle
-
 ### Phase 6: Design System Foundation
 **Goal**: Every screen in the app has access to a centralized color token system, reusable SquircleCard and PillButton components, and a glassmorphism header — the visual language that all v1.1 restyling phases consume.
 **Depends on**: Phase 5 (v1.0 complete)
