@@ -162,7 +162,7 @@ Plans:
 **Plans**: 3 plans
 
 Plans:
-- [ ] 08-01-PLAN.md — PillButtonStyle Tint enum extension + backward-compat tests (Wave 1)
+- [x] 08-01-PLAN.md — PillButtonStyle Tint enum extension + backward-compat tests (Wave 1)
 - [ ] 08-02-PLAN.md — AIOrbView (TimelineView + Canvas nebula sphere) + LimeGreenSlider (custom gesture slider) (Wave 2)
 - [ ] 08-03-PLAN.md — CleaningLabView full restyle: SquircleCard migration, PillButton controls, AI Orb integration, dark mode, human verification (Wave 3)
 **UI hint**: yes
