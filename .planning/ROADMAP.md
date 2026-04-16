@@ -159,7 +159,12 @@ Plans:
   1. While denoising is active, a pulsating nebula sphere animation (TimelineView + Canvas) fills the AI Orb area; on devices with reduceMotion enabled, a static sphere renders instead.
   2. The denoising progress indicator, noise slider, and action buttons use Lime Green (#A7C957) as their accent color.
   3. All Cleaning Lab interactive controls render as pill buttons and show correct dark mode styling (pure black background, Deep Indigo accents) without any hardcoded light-mode colors.
-**Plans**: TBD
+**Plans**: 3 plans
+
+Plans:
+- [ ] 08-01-PLAN.md — PillButtonStyle Tint enum extension + backward-compat tests (Wave 1)
+- [ ] 08-02-PLAN.md — AIOrbView (TimelineView + Canvas nebula sphere) + LimeGreenSlider (custom gesture slider) (Wave 2)
+- [ ] 08-03-PLAN.md — CleaningLabView full restyle: SquircleCard migration, PillButton controls, AI Orb integration, dark mode, human verification (Wave 3)
 **UI hint**: yes
 
 ### Phase 9: Polish + Accessibility Audit
@@ -189,5 +194,5 @@ v1.1 phases execute in numeric order: 6 → 7 → 8 → 9
 | 5. Share Extension | 2/2 | Complete   | 2026-04-08 |
 | 6. Design System Foundation | 2/2 | Complete   | 2026-04-11 |
 | 7. Mixing Station Restyle | 0/TBD | Not started | — |
-| 8. Cleaning Lab + AI Orb | 0/TBD | Not started | — |
+| 8. Cleaning Lab + AI Orb | 0/3 | Not started | — |
 | 9. Polish + Accessibility Audit | 0/TBD | Not started | — |
