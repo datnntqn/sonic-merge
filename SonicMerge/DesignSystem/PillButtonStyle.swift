@@ -3,7 +3,8 @@
 //
 // DS-03: Pill button style with inner glow and haptic. English comments.
 // Phase 7: extended with Variant (filled/outline) and Size (regular/compact/icon) parameters.
-// Defaults (variant: .filled, size: .regular) preserve Phase 6 visual exactly.
+// Phase 8: extended with Tint enum (.accent/.ai) for Lime Green AI action pills.
+// Defaults (variant: .filled, size: .regular, tint: .accent) preserve Phase 6/7 visual exactly.
 
 import SwiftUI
 
@@ -16,15 +17,22 @@ struct PillButtonStyle: ButtonStyle {
     enum Size {
         case regular    // 24pt horizontal, 12pt vertical, 44pt min-height (Phase 6 default)
         case compact    // 16pt horizontal, 12pt vertical, 44pt min-height (Phase 7 gap row)
-        case icon       //  0pt horizontal,  0pt vertical, 44×44 fixed frame (Phase 7 play button)
+        case icon       //  0pt horizontal,  0pt vertical, 44x44 fixed frame (Phase 7 play button)
+    }
+
+    enum Tint {
+        case accent  // Deep Indigo (Phase 6/7 default) — white label, accentAction fill
+        case ai      // Lime Green (Phase 8 AI actions) — dark #1C1C1E label, accentAI fill (WCAG AAA 7.38:1)
     }
 
     let variant: Variant
     let size: Size
+    let tint: Tint
 
-    init(variant: Variant = .filled, size: Size = .regular) {
+    init(variant: Variant = .filled, size: Size = .regular, tint: Tint = .accent) {
         self.variant = variant
         self.size = size
+        self.tint = tint
     }
 
     @Environment(\.sonicMergeSemantic) private var semantic
@@ -76,19 +84,23 @@ struct PillButtonStyle: ButtonStyle {
     // MARK: - Colors
 
     private var labelColor: Color {
-        switch variant {
-        case .filled:  return .white
-        case .outline: return Color(uiColor: semantic.textPrimary)
+        switch (variant, tint) {
+        case (.filled, .accent): return .white
+        case (.filled, .ai):     return Color(uiColor: SonicMergeTheme.ColorPalette.primaryText) // #1C1C1E — 7.38:1 AAA on Lime Green
+        case (.outline, _):      return Color(uiColor: semantic.textPrimary)
         }
     }
 
     @ViewBuilder
     private var backgroundFill: some View {
-        switch variant {
-        case .filled:
+        switch (variant, tint) {
+        case (.filled, .accent):
             Color(uiColor: semantic.accentAction)
                 .opacity(isEnabled ? 1.0 : 0.35)
-        case .outline:
+        case (.filled, .ai):
+            Color(uiColor: semantic.accentAI)
+                .opacity(isEnabled ? 1.0 : 0.35)
+        case (.outline, _):
             Color.clear
         }
     }
@@ -96,9 +108,12 @@ struct PillButtonStyle: ButtonStyle {
     @ViewBuilder
     private var borderOverlay: some View {
         if variant == .outline {
+            let strokeColor = tint == .ai
+                ? Color(uiColor: semantic.accentAI)
+                : Color(uiColor: semantic.accentAction)
             Capsule()
                 .strokeBorder(
-                    Color(uiColor: semantic.accentAction).opacity(isEnabled ? 0.5 : 0.2),
+                    strokeColor.opacity(isEnabled ? 0.5 : 0.2),
                     lineWidth: 1
                 )
                 .allowsHitTesting(false)
@@ -146,6 +161,10 @@ struct PillButtonStyle: ButtonStyle {
                 .font(.system(size: 16, weight: .semibold))
         }
         .buttonStyle(PillButtonStyle(variant: .filled, size: .icon))
+        Button("Clean Audio") { }
+            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+        Button("AI Denoise") { }
+            .buttonStyle(PillButtonStyle(variant: .outline, size: .regular, tint: .ai))
     }
     .padding()
 }
