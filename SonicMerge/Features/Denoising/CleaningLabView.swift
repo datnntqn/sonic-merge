@@ -1,20 +1,22 @@
 // CleaningLabView.swift
 // SonicMerge
 //
-// Full Cleaning Lab screen (Plan 03-04).
+// Full Cleaning Lab screen — Phase 8 restyle (Plan 03).
 //
 // Pure rendering layer over CleaningLabViewModel.
 // All business logic (pipeline, A/B playback, blending, haptics) lives in the ViewModel.
 //
-// Sections:
-// 1. Stale result banner
-// 2. Waveform display
-// 3. Intensity slider
-// 4. A/B comparison button
-// 5. Denoise / Re-process action button
-// 6. Export toolbar button (presents ExportFormatSheet → ExportProgressSheet)
-// 7. Progress modal (non-dismissible, reuses ExportProgressSheet)
+// Layout order (Phase 8):
+// 1. onDeviceAIHero trust strip (SquircleCard)
+// 2. staleBanner (conditional, SquircleCard)
+// 3. AIOrbView hero (SquircleCard, always visible, renders idle/processing/success states)
+// 4. waveformSection (SquircleCard)
+// 5. intensitySlider with LimeGreenSlider (SquircleCard)
+// 6. abComparisonButton (bare pill on surfaceBase, shown when hasDenoisedResult)
+// 7. denoiseActionButton (bare pill on surfaceBase, shown when !isProcessing)
+// + Export toolbar button → ExportFormatSheet → ExportProgressSheet → ActivityViewController
 // + Error alert
+// NOTE: Denoising progress modal sheet REMOVED — progress is shown inline via AIOrbView.
 
 import SwiftUI
 import UIKit
@@ -33,6 +35,7 @@ struct CleaningLabView: View {
     let mergedFileURL: URL
 
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(\.colorScheme) private var colorScheme
 
     @State private var viewModel = CleaningLabViewModel()
     @State private var showExportSheet = false
@@ -56,38 +59,45 @@ struct CleaningLabView: View {
 
     var body: some View {
         ScrollView {
-            VStack(spacing: 20) {
+            VStack(spacing: SonicMergeTheme.Spacing.lg) {
+                // 1. Trust strip — always visible
                 onDeviceAIHero
 
-                // 1. Stale result banner
+                // 2. Stale result banner (conditional)
                 if viewModel.showsStaleResultBanner && viewModel.hasDenoisedResult {
                     staleBanner
                 }
 
-                // 2. Waveform display
+                // 3. AI Orb hero (always visible — renders idle/processing/success internally)
+                SquircleCard(glassEnabled: false, glowEnabled: false) {
+                    AIOrbView(viewModel: viewModel)
+                        .padding(.vertical, SonicMergeTheme.Spacing.xl)
+                }
+
+                // 4. Waveform display
                 waveformSection
 
-                // 3. Intensity slider (always visible, dimmed before processing)
+                // 5. Intensity slider (always visible, dimmed during processing)
                 intensitySlider
 
-                // 4. A/B comparison button (shown when denoised result available)
+                // 6. A/B comparison button (shown when denoised result available)
                 if viewModel.hasDenoisedResult {
                     abComparisonButton
                 }
 
-                // 5. Denoise / Re-process action button (shown when NOT processing)
+                // 7. Denoise / Re-process action button (shown when NOT processing)
                 if !viewModel.isProcessing {
                     denoiseActionButton
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 20)
+            .padding(.horizontal, SonicMergeTheme.Spacing.md)
+            .padding(.vertical, SonicMergeTheme.Spacing.xl)
         }
         .background(Color(uiColor: semantic.surfaceBase))
         .navigationTitle("Cleaning Lab")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        // 6. Export format picker
+        // Export format picker
         .sheet(isPresented: $showExportSheet) {
             ExportFormatSheet(isPresented: $showExportSheet) { options in
                 startExport(options: options)
@@ -108,7 +118,7 @@ struct CleaningLabView: View {
             )
             .interactiveDismissDisabled(true)
         }
-        // Share sheet after successful export (replaces imperative shareExportedFile helper)
+        // Share sheet after successful export
         .sheet(isPresented: $showShareSheet) {
             if let url = exportedFileURL {
                 ActivityViewController(activityItems: [url], onDismiss: {
@@ -119,218 +129,184 @@ struct CleaningLabView: View {
                 })
             }
         }
-        // 7. Progress modal (non-dismissible) — reuses ExportProgressSheet
-        .sheet(isPresented: .constant(viewModel.isProcessing)) {
-            ExportProgressSheet(
-                progress: viewModel.progress,
-                onCancel: { viewModel.cancelDenoising() }
-            )
-            .interactiveDismissDisabled(true)
-        }
         // Error alert
         .alert("Denoising Failed", isPresented: errorAlertBinding) {
             Button("OK") {}
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
+        // Haptic triggers
+        .sensoryFeedback(.success, trigger: viewModel.hasDenoisedResult)
+        .sensoryFeedback(.error, trigger: viewModel.errorMessage != nil)
     }
 
     // MARK: - Subviews
 
-     private var onDeviceAIHero: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "cpu")
-                .foregroundStyle(Color(uiColor: semantic.trustIcon))
-            VStack(alignment: .leading, spacing: 4) {
-                Text(TrustSignalCopy.aiDenoiseTitle)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
-                Text(TrustSignalCopy.aiDenoiseSubtitle)
-                    .font(.caption)
-                    .foregroundStyle(Color(uiColor: semantic.textSecondary))
-            }
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .background(Color(uiColor: semantic.surfaceElevated))
-        .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous))
-        .overlay(
-            RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous)
-                .strokeBorder(Color(uiColor: semantic.trustIcon).opacity(0.28), lineWidth: 1)
-        )
-        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
-    }
-
-    // 1. Stale result banner
-    private var staleBanner: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "exclamationmark.triangle.fill")
-                .foregroundStyle(Color(red: 0.8, green: 0.4, blue: 0.0))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Clips have changed.")
-                    .font(.system(.subheadline, weight: .semibold))
-                    .foregroundStyle(Color(red: 0.5, green: 0.25, blue: 0.0))
-                Text("Re-process to update the denoised audio.")
-                    .font(.system(.caption))
-                    .foregroundStyle(Color(red: 0.5, green: 0.25, blue: 0.0))
-            }
-
-            Spacer()
-
-            Button("Re-process") {
-                viewModel.startDenoising(mergedFileURL: mergedFileURL)
-            }
-            .font(.system(.caption, weight: .semibold))
-            .foregroundStyle(Color(red: 0.7, green: 0.35, blue: 0.0))
-        }
-        .padding(12)
-        .background(Color(red: 1.0, green: 0.88, blue: 0.6))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-    }
-
-    // 2. Waveform display
-    private var waveformSection: some View {
-        GeometryReader { geometry in
-            ZStack {
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color(uiColor: semantic.surfaceSlot))
-
-                if viewModel.isProcessing && viewModel.waveformPeaks.isEmpty {
-                    Text("Processing...")
-                        .font(.system(.caption))
+    /// Trust strip — on-device AI indicator
+    private var onDeviceAIHero: some View {
+        SquircleCard(glassEnabled: false, glowEnabled: false) {
+            HStack(alignment: .top, spacing: SonicMergeTheme.Spacing.sm) {
+                Image(systemName: "cpu")
+                    .foregroundStyle(Color(uiColor: semantic.trustIcon))
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(TrustSignalCopy.aiDenoiseTitle)
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                    Text(TrustSignalCopy.aiDenoiseSubtitle)
+                        .font(.caption)
                         .foregroundStyle(Color(uiColor: semantic.textSecondary))
-                } else if !viewModel.waveformPeaks.isEmpty {
-                    WaveformCanvasView(peaks: viewModel.waveformPeaks)
-                        .padding(.horizontal, 8)
-                } else if !viewModel.hasDenoisedResult {
-                    VStack(spacing: 8) {
-                        Image(systemName: "waveform")
-                            .font(.system(size: 32))
+                }
+                Spacer(minLength: 0)
+            }
+        }
+    }
+
+    /// Stale result banner — shown when clips have changed after denoising
+    private var staleBanner: some View {
+        SquircleCard(glassEnabled: false, glowEnabled: false) {
+            HStack(spacing: SonicMergeTheme.Spacing.sm) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(Color.orange)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Clips have changed.")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                    Text("Re-process to update the denoised audio.")
+                        .font(.caption)
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                }
+
+                Spacer()
+
+                Button("Re-process") {
+                    viewModel.startDenoising(mergedFileURL: mergedFileURL)
+                }
+                .buttonStyle(PillButtonStyle(variant: .filled, size: .compact, tint: .ai))
+            }
+        }
+        .transition(.opacity)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Stale result warning. Clips have changed. Re-process to update the denoised audio.")
+    }
+
+    /// Waveform display — shows peaks, processing state, or empty state
+    private var waveformSection: some View {
+        SquircleCard(glassEnabled: false, glowEnabled: false) {
+            GeometryReader { geometry in
+                ZStack {
+                    if viewModel.isProcessing && viewModel.waveformPeaks.isEmpty {
+                        Text("Processing\u{2026}")
+                            .font(.caption)
                             .foregroundStyle(Color(uiColor: semantic.textSecondary))
-                        Text("Tap \"Denoise Audio\" to begin")
-                            .font(.system(.caption))
-                            .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                    } else if !viewModel.waveformPeaks.isEmpty {
+                        WaveformCanvasView(peaks: viewModel.waveformPeaks)
+                            .padding(.horizontal, SonicMergeTheme.Spacing.sm)
+                    } else if !viewModel.hasDenoisedResult {
+                        VStack(spacing: SonicMergeTheme.Spacing.sm) {
+                            Image(systemName: "waveform")
+                                .font(.system(size: 32))
+                                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                            Text("Tap \"Denoise Audio\" to begin")
+                                .font(.caption)
+                                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                        }
                     }
                 }
             }
+            .padding(-SonicMergeTheme.Spacing.md)
+            .padding(SonicMergeTheme.Spacing.sm)
         }
         .frame(height: 120)
     }
 
-    // 3. Intensity slider
+    /// Intensity slider — LimeGreenSlider with Noise Reduction label
     private var intensitySlider: some View {
-        VStack(spacing: 8) {
-            HStack {
-                Text("Noise Reduction")
-                    .font(.system(.subheadline, weight: .medium))
-                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
-                Spacer()
-                Text("\(Int(viewModel.intensity * 100))%")
-                    .font(.system(.subheadline, weight: .semibold))
-                    .foregroundStyle(Color(uiColor: semantic.accentAction))
-                    .monospacedDigit()
-                    .frame(minWidth: 40, alignment: .trailing)
-            }
+        SquircleCard(glassEnabled: false, glowEnabled: false) {
+            VStack(spacing: SonicMergeTheme.Spacing.sm) {
+                HStack {
+                    Text("Noise Reduction")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                    Spacer()
+                    Text("\(Int(viewModel.intensity * 100))%")
+                        .font(.title3)
+                        .fontWeight(.semibold)
+                        .fontDesign(.rounded)
+                        .monospacedDigit()
+                        .foregroundStyle(
+                            colorScheme == .dark
+                                ? Color(uiColor: semantic.accentAI)
+                                : Color(uiColor: semantic.accentAction)
+                        )
+                        .frame(minWidth: 40, alignment: .trailing)
+                }
 
-            Slider(
-                value: Binding(
-                    get: { viewModel.intensity },
-                    set: { viewModel.onIntensityChanged($0) }
-                ),
-                in: 0...1
-            )
-            .tint(Color(uiColor: semantic.accentAction))
-            .disabled(viewModel.isProcessing)
-            .opacity(viewModel.isProcessing ? 0.5 : 1.0)
+                LimeGreenSlider(
+                    value: Binding(
+                        get: { Double(viewModel.intensity) },
+                        set: { viewModel.onIntensityChanged(Float($0)) }
+                    ),
+                    in: 0...1
+                )
+            }
         }
-        .padding(16)
-        .background(Color(uiColor: semantic.surfaceElevated))
-        .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-        .shadow(color: Color.black.opacity(0.06), radius: 6, x: 0, y: 2)
+        .disabled(viewModel.isProcessing)
+        .opacity(viewModel.isProcessing ? 0.5 : 1.0)
+        .accessibilityElement(children: .contain)
     }
 
-    // 4. A/B comparison button
+    /// A/B comparison button — hold-to-hear-original interaction
     private var abComparisonButton: some View {
         VStack(spacing: 6) {
-            // Long-press gesture for hold-to-hear-original
             Button {} label: {
-                HStack(spacing: 8) {
-                    Image(systemName: viewModel.isHoldingOriginal ? "headphones" : "waveform.and.magnifyingglass")
+                HStack(spacing: SonicMergeTheme.Spacing.sm) {
+                    Image(systemName: viewModel.isHoldingOriginal ? "headphones" : "waveform.badge.magnifyingglass")
+                        .font(.system(size: 16, weight: .semibold))
                     Text(viewModel.isHoldingOriginal ? "Original" : "Denoised")
-                        .font(.system(.body, weight: .semibold))
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
                 }
-                .foregroundStyle(
-                    viewModel.isHoldingOriginal
-                        ? Color(uiColor: semantic.surfaceBase)
-                        : Color(uiColor: semantic.accentAction)
-                )
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    viewModel.isHoldingOriginal
-                        ? Color(uiColor: semantic.accentAction)
-                        : Color(uiColor: semantic.accentAction).opacity(0.12)
-                )
-                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .stroke(Color(uiColor: semantic.accentAction), lineWidth: 1.5)
-                )
             }
+            .buttonStyle(
+                viewModel.isHoldingOriginal
+                    ? PillButtonStyle(variant: .filled, size: .regular, tint: .accent)
+                    : PillButtonStyle(variant: .outline, size: .regular, tint: .accent)
+            )
             .onLongPressGesture(
                 minimumDuration: 0,
                 pressing: { isPressing in
-                    if isPressing {
-                        viewModel.holdBegan()
-                    } else {
-                        viewModel.holdEnded()
-                    }
+                    if isPressing { viewModel.holdBegan() } else { viewModel.holdEnded() }
                 },
                 perform: {}
             )
+            .sensoryFeedback(.impact(weight: .medium), trigger: viewModel.isHoldingOriginal)
 
             Text("Hold to compare with original")
-                .font(.system(.caption))
+                .font(.caption)
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
         }
+        .accessibilityLabel("Compare with original. Hold to listen to the original audio. Release to hear the denoised version.")
     }
 
-    // 5. Denoise / Re-process action button
+    /// Denoise / Re-process primary CTA — Lime Green filled pill
     private var denoiseActionButton: some View {
         Button {
             viewModel.startDenoising(mergedFileURL: mergedFileURL)
         } label: {
             Text(viewModel.hasDenoisedResult ? "Re-process" : "Denoise Audio")
-                .font(.system(.body, design: .rounded, weight: .semibold))
-                .foregroundStyle(
-                    viewModel.hasDenoisedResult
-                        ? Color(uiColor: semantic.textPrimary)
-                        : Color(uiColor: semantic.surfaceBase)
-                )
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 14)
-                .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .fill(
-                            viewModel.hasDenoisedResult
-                                ? Color(uiColor: semantic.surfaceElevated)
-                                : Color(uiColor: semantic.accentAction)
-                        )
-                )
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
-                        .strokeBorder(
-                            viewModel.hasDenoisedResult
-                                ? Color(uiColor: semantic.textSecondary).opacity(0.4)
-                                : Color.clear,
-                            lineWidth: 1
-                        )
-                )
         }
+        .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+        .sensoryFeedback(.success, trigger: viewModel.isProcessing)
+        .accessibilityHint("Starts on-device AI noise reduction")
     }
 
-    // 6. Export toolbar button
+    /// Export toolbar button
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
@@ -367,7 +343,7 @@ struct CleaningLabView: View {
                 inputURL: sourceURL,
                 format: options.format,
                 destinationURL: destinationURL,
-                lufsNormalize: options.lufsNormalize   // NEW — threads LUFS flag
+                lufsNormalize: options.lufsNormalize   // threads LUFS flag
             )
             for await p in stream {
                 guard !Task.isCancelled else { break }
@@ -421,13 +397,13 @@ private struct WaveformCanvasView: View {
                 context.fill(path, with: .color(Color(uiColor: semantic.accentWaveform).opacity(0.88)))
             }
 
-            // Scrub line (center)
+            // Scrub line (center) — textPrimary@0.3 for visibility in both light and dark mode
             var scrubPath = Path()
             scrubPath.move(to: CGPoint(x: size.width / 2, y: 4))
             scrubPath.addLine(to: CGPoint(x: size.width / 2, y: size.height - 4))
             context.stroke(
                 scrubPath,
-                with: .color(.white.opacity(0.6)),
+                with: .color(Color(uiColor: semantic.textPrimary).opacity(0.3)),
                 lineWidth: 1.5
             )
         }
