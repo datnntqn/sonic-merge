@@ -60,8 +60,8 @@ Requirements for v1.1 "Modern Spatial Utility Restyle". Visual-only milestone â€
 
 ### Cleaning Lab
 
-- [ ] **CL-01**: AI Orb visualizer displays a pulsating nebula sphere animation (TimelineView + Canvas) during denoising, with reduceMotion static fallback
-- [ ] **CL-02**: AI-specific controls use Lime Green (#A7C957) accent color for denoise progress, slider, and action indicators
+- [x] **CL-01**: AI Orb visualizer displays a pulsating nebula sphere animation (TimelineView + Canvas) during denoising, with reduceMotion static fallback
+- [x] **CL-02**: AI-specific controls use Lime Green (#A7C957) accent color for denoise progress, slider, and action indicators
 - [ ] **CL-03**: All Cleaning Lab controls use PillButton style and design system color tokens for full dark mode support
 
 ### Polish
@@ -139,8 +139,8 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIX-03 | Phase 7 | Complete |
 | MIX-04 | Phase 7 | Complete |
 | MIX-05 | Phase 7 | Complete |
-| CL-01 | Phase 8 | Pending |
-| CL-02 | Phase 8 | Pending |
+| CL-01 | Phase 8 | Complete |
+| CL-02 | Phase 8 | Complete |
 | CL-03 | Phase 8 | Pending |
 | POL-01 | Phase 9 | Pending |
 | POL-02 | Phase 9 | Pending |
