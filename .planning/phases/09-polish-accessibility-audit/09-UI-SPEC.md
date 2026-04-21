@@ -77,7 +77,7 @@ Phase 9 introduces no new color tokens. The existing palette is extended to shee
 | Secondary (30%) | #0F0F0F dark / #FFFFFF light (`surfaceCard`) | SquircleCard fill, sheet content areas |
 | Accent (10%) | #5856D6 Deep Indigo (`accentAction`) | Primary CTAs, progress tints, waveform accent, trust strip glow |
 | AI Accent | #A7C957 Lime Green (`accentAI`) | AI/denoising controls exclusively (LimeGreenSlider, AI Orb ring, "Denoise Audio" button) |
-| Destructive | System Red (`.red`) | Destructive button roles (swipe-to-delete, Cancel in export progress) |
+| Destructive | System Red (`.red`) | Destructive button roles (swipe-to-delete, Cancel Export in export progress) |
 
 Accent reserved for: Export CTA in output card, Import button in empty state, toolbar icon tint, segmented picker tint, LUFS toggle tint, ProgressView tint in ExportProgressSheet.
 
@@ -117,12 +117,12 @@ Source: codebase scan — ExportFormatSheet.swift, ExportProgressSheet.swift, Cl
 | Location | Current state | Required fix |
 |----------|--------------|-------------|
 | `MixingStationView` empty-state "Import Audio" button (line 122) | Raw `.clipShape(RoundedRectangle)`, no sensoryFeedback | Migrate to `PillButtonStyle(variant: .filled, size: .regular)` + inherits built-in haptic |
-| `ExportFormatSheet` "Export" button (line 60-71) | Raw `Button` with hardcoded background, no sensoryFeedback | Migrate to `PillButtonStyle(variant: .filled, size: .regular)` |
-| `ExportProgressSheet` "Cancel" button (line 31) | `Button(role: .destructive)`, no sensoryFeedback | Add `.sensoryFeedback(.impact(weight: .medium), trigger: {boolean state})` OR migrate to `PillButtonStyle` with destructive tint; must retain `.destructive` role for accessibility |
+| `ExportFormatSheet` "Export Audio" button (line 60-71) | Raw `Button` with hardcoded background, no sensoryFeedback | Migrate to `PillButtonStyle(variant: .filled, size: .regular)` |
+| `ExportProgressSheet` "Cancel Export" button (line 31) | `Button(role: .destructive)`, no sensoryFeedback | Add `.sensoryFeedback(.impact(weight: .medium), trigger: {boolean state})` OR migrate to `PillButtonStyle` with destructive tint; must retain `.destructive` role for accessibility |
 | Toolbar buttons (`MixingStationView` toolbar: Import, Export, Denoise, Appearance) | SwiftUI system `ToolbarItem` buttons — system haptic via UIKit is typically absent | Add `.sensoryFeedback(.impact(weight: .light), trigger: {respective state bool})` at the toolbar level |
 
 Buttons intentionally excluded from haptic requirement:
-- Alert "OK" button — system sheet, UIKit handles gesture; adding `sensoryFeedback` here is a no-op on system alerts.
+- Alert "Got It" button — system sheet, UIKit handles gesture; adding `sensoryFeedback` here is a no-op on system alerts.
 - Context menu "Delete Clip" — system haptic provided by iOS long-press context menu presentation.
 - List swipe-to-delete — system haptic provided by iOS swipe action.
 
@@ -174,7 +174,7 @@ Note on PillButton white label on Deep Indigo: contrast is 3.2:1 which is below 
 
 ## Copywriting Contract
 
-Phase 9 introduces no new screen flows. Copies below are the existing strings found in the codebase (unchanged). Presented here for checker completeness.
+Phase 9 introduces no new screen flows. Copies below are the existing strings found in the codebase, with fixes applied per checker review.
 
 | Element | Copy |
 |---------|------|
@@ -182,12 +182,12 @@ Phase 9 introduces no new screen flows. Copies below are the existing strings fo
 | Empty state body | "Tap Import to add audio files" |
 | Import CTA | "Import Audio" |
 | Export CTA (output card) | "Export merged audio" |
-| Export format sheet CTA | "Export" |
+| Export format sheet CTA | "Export Audio" |
 | Export progress title (normalizing) | "Exporting & Normalizing..." |
 | Export progress title (plain) | "Exporting..." |
-| Export progress cancel | "Cancel" |
+| Export progress cancel | "Cancel Export" |
 | Denoise primary CTA (no result) | "Denoise Audio" |
-| Denoise primary CTA (re-process) | "Re-process" |
+| Denoise primary CTA (re-process) | "Re-process Audio" |
 | AI Orb label (idle) | "Ready to denoise" |
 | AI Orb label (processing) | "Denoising…" (Unicode single-char ellipsis U+2026) |
 | AI Orb label (success) | "Denoised" |
@@ -197,9 +197,9 @@ Phase 9 introduces no new screen flows. Copies below are the existing strings fo
 | A/B hint text | "Hold to compare with original" |
 | Stale banner heading | "Clips have changed." |
 | Stale banner body | "Re-process to update the denoised audio." |
-| Stale banner CTA | "Re-process" |
+| Stale banner CTA | "Re-process Audio" |
 | Error alert title | "Denoising Failed" |
-| Error alert dismiss | "OK" |
+| Error alert dismiss | "Got It" |
 | Trust strip title (Mixing Station) | "Private by design" |
 | Trust strip body (Mixing Station) | "Audio stays on your iPhone. Processing runs on-device — no upload, no account." |
 | Trust strip title (Cleaning Lab) | "On-device AI denoise" |
@@ -207,7 +207,7 @@ Phase 9 introduces no new screen flows. Copies below are the existing strings fo
 
 Destructive actions in this phase:
 - **Delete Clip (swipe or context menu):** No additional confirmation required — swipe-to-delete is a standard iOS pattern with undo via shake gesture. Haptic: system-provided.
-- **Cancel Export (ExportProgressSheet):** Shown as destructive-role button; no secondary confirmation required (export re-starts trivially). Haptic: `.impact(weight: .medium)` to be added in Phase 9.
+- **Cancel Export (ExportProgressSheet):** Shown as `Button(role: .destructive)` with label "Cancel Export"; no secondary confirmation required (export re-starts trivially). Haptic: `.impact(weight: .medium)` to be added in Phase 9.
 - **Cancel Denoising (AIOrbView):** Outline pill, no confirmation dialog. Haptic: `.impact(weight: .medium)` — already present.
 
 ---
@@ -220,7 +220,7 @@ Screens and components to verify with dark mode on a physical device:
 |-------------------|----------------|-------|
 | MixingStationView (empty state) | Background pure black, "Import Audio" button Deep Indigo | Empty-state button uses hardcoded background — fix in POL-01 remediation |
 | MixingStationView (timeline) | Background pure black, clip cards #0F0F0F, spine visible | MergeTimelineView uses semantic — should be correct |
-| ExportFormatSheet | Background, text, progress tint, Export button | Hardcoded colors — POL-02 remediation target |
+| ExportFormatSheet | Background, text, progress tint, Export Audio button | Hardcoded colors — POL-02 remediation target |
 | ExportProgressSheet | Background, text, ProgressView tint | Hardcoded colors — POL-02 remediation target |
 | CleaningLabView | Background pure black, AI Orb, slider, cards | Phase 8 complete — expected PASS |
 | AIOrbView | Nebula blobs, progress ring, labels | Phase 8 complete — expected PASS |
@@ -249,6 +249,10 @@ Not applicable. This project does not use shadcn or any third-party component re
 - Auditing and wrapping `ExportProgressSheet` and `ExportFormatSheet` in `@Environment(\.sonicMergeSemantic)` injection
 - Verifying `reduceMotion` guard on `staleBanner` transition and AI Orb progress ring animation
 - Human verification of all 4 success criteria on a physical device
+- Updating alert dismiss label from "OK" to "Got It" in CleaningLabView error alert
+- Updating ExportProgressSheet cancel button label from "Cancel" to "Cancel Export"
+- Updating ExportFormatSheet CTA label from "Export" to "Export Audio"
+- Updating stale banner CTA label from "Re-process" to "Re-process Audio"
 
 **Out of scope (deferred or already done):**
 - `ClipCardView` restyle — superseded by `MergeSlotRow` in Phase 7; ClipCardView is dead code
