@@ -20,16 +20,18 @@ struct ExportFormatSheet: View {
     @State private var selectedFormat: ExportFormat = .m4a
     @AppStorage("lufsNormalizationEnabled") private var lufsEnabled: Bool = false
 
+    @Environment(\.sonicMergeSemantic) private var semantic
+
     var body: some View {
         VStack(spacing: 24) {
             Text("Export Format")
                 .font(.system(.headline))
-                .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
+                .foregroundStyle(Color(uiColor: semantic.textPrimary))
                 .padding(.top, 20)
 
             Text("Files are rendered locally on your device.")
                 .font(.caption)
-                .foregroundStyle(.secondary)
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
 
@@ -45,30 +47,23 @@ struct ExportFormatSheet: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Normalize to -16 LUFS")
                         .font(.system(.body))
-                        .foregroundStyle(Color(uiColor: SonicMergeTheme.ColorPalette.primaryText))
+                        .foregroundStyle(Color(uiColor: semantic.textPrimary))
                     Text("Podcast standard (-16 LUFS)")
                         .font(.system(.caption))
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 }
                 Spacer()
                 Toggle("", isOn: $lufsEnabled)
                     .labelsHidden()
-                    .tint(Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent))
+                    .tint(Color(uiColor: semantic.accentAction))
             }
             .padding(.horizontal, 24)
 
-            Button(action: {
+            Button("Export Audio") {
                 isPresented = false
                 onExport(ExportOptions(format: selectedFormat, lufsNormalize: lufsEnabled))
-            }) {
-                Text("Export")
-                    .font(.system(.body, design: .default, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Color(uiColor: SonicMergeTheme.ColorPalette.primaryAccent))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
+            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular))
             .padding(.horizontal, 24)
             .padding(.bottom, 32)
         }
