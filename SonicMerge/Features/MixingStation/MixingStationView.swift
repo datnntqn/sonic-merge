@@ -18,6 +18,12 @@ struct MixingStationView: View {
     @State private var showCleaningLab = false
     @State private var mergedFileURLForCleaning: URL?
 
+    // POL-01: one trigger @State per toolbar button — prevents cross-firing
+    @State private var importHaptic = false
+    @State private var appearanceHaptic = false
+    @State private var exportHaptic = false
+    @State private var denoiseHaptic = false
+
     private var themePreference: ThemePreference {
         ThemePreference(rawValue: themePreferenceRaw) ?? .system
     }
@@ -131,10 +137,14 @@ struct MixingStationView: View {
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
         ToolbarItem(placement: .topBarLeading) {
-            Button(action: { showDocumentPicker = true }) {
+            Button {
+                importHaptic.toggle()
+                showDocumentPicker = true
+            } label: {
                 Label("Import", systemImage: "plus")
             }
             .disabled(viewModel.isImporting || viewModel.isExporting)
+            .sensoryFeedback(.impact(weight: .light), trigger: importHaptic)
         }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
@@ -146,20 +156,27 @@ struct MixingStationView: View {
             } label: {
                 Label("Appearance", systemImage: "paintpalette")
             }
-        }
-        ToolbarItem(placement: .topBarTrailing) {
-            Button(action: { showExportSheet = true }) {
-                Label("Export", systemImage: "square.and.arrow.up")
-            }
-            .disabled(viewModel.clips.isEmpty || viewModel.isExporting)
+            .sensoryFeedback(.impact(weight: .light), trigger: themePreferenceRaw)
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
+                exportHaptic.toggle()
+                showExportSheet = true
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .disabled(viewModel.clips.isEmpty || viewModel.isExporting)
+            .sensoryFeedback(.impact(weight: .light), trigger: exportHaptic)
+        }
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                denoiseHaptic.toggle()
                 navigateToCleaningLab()
             } label: {
                 Label("Denoise", systemImage: "wand.and.sparkles")
             }
             .disabled(viewModel.clips.isEmpty)
+            .sensoryFeedback(.impact(weight: .light), trigger: denoiseHaptic)
         }
     }
 
