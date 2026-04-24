@@ -192,7 +192,7 @@ struct AIOrbView: View {
                         )
                         .rotationEffect(.degrees(-90))
                         .frame(width: 256, height: 256)
-                        .animation(.easeOut(duration: 0.25), value: viewModel.progress)
+                        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: viewModel.progress)
                         .accessibilityHidden(true)
                 }
 
