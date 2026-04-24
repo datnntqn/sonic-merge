@@ -36,6 +36,7 @@ struct CleaningLabView: View {
 
     @Environment(\.sonicMergeSemantic) private var semantic
     @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var viewModel = CleaningLabViewModel()
     @State private var showExportSheet = false
@@ -131,7 +132,7 @@ struct CleaningLabView: View {
         }
         // Error alert
         .alert("Denoising Failed", isPresented: errorAlertBinding) {
-            Button("OK") {}
+            Button("Got It") {}
         } message: {
             Text(viewModel.errorMessage ?? "")
         }
@@ -181,13 +182,13 @@ struct CleaningLabView: View {
 
                 Spacer()
 
-                Button("Re-process") {
+                Button("Re-process Audio") {
                     viewModel.startDenoising(mergedFileURL: mergedFileURL)
                 }
                 .buttonStyle(PillButtonStyle(variant: .filled, size: .compact, tint: .ai))
             }
         }
-        .transition(.opacity)
+        .transition(reduceMotion ? .identity : .opacity)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Stale result warning. Clips have changed. Re-process to update the denoised audio.")
     }
