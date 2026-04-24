@@ -119,15 +119,12 @@ struct MixingStationView: View {
             Text("Tap Import to add audio files")
                 .font(.system(.body, design: .rounded))
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
-            Button(action: { showDocumentPicker = true }) {
+            Button {
+                showDocumentPicker = true
+            } label: {
                 Label("Import Audio", systemImage: "plus.circle.fill")
-                    .font(.system(.body, design: .rounded, weight: .semibold))
-                    .foregroundStyle(Color(uiColor: semantic.surfaceBase))
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
-                    .background(Color(uiColor: semantic.accentAction))
-                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             }
+            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular))
         }
     }
 
