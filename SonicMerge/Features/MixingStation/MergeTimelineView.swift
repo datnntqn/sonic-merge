@@ -1,7 +1,10 @@
 // MergeTimelineView.swift
 // SonicMerge
 //
-// Vertical “conveyor”: trust strip, sequence slots with + between clips, = then output card.
+// Vertical "conveyor": trust strip, sequence header, clip column with junctions,
+// equals operator, output card. Phase 10: List → ScrollView { LazyVStack } so the
+// 3-line reorder handles disappear; reorder is now via .draggable + .dropDestination.
+// See docs/superpowers/specs/2026-04-24-main-screen-continuous-stream-design.md (D-08).
 
 import SwiftUI
 import UIKit
@@ -9,6 +12,7 @@ import UIKit
 struct MergeTimelineView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Phase 10 D-06: shared with MixingStationView via @AppStorage. Once the user
     /// has imported a clip, this flips to true permanently and the trust banner is
@@ -22,101 +26,107 @@ struct MergeTimelineView: View {
     }
 
     var body: some View {
-        List {
-            if !hasImportedFirstClip {
-                Section {
+        ScrollView {
+            LazyVStack(spacing: 0) {
+                if !hasImportedFirstClip {
                     LocalFirstTrustStrip()
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        .listRowBackground(Color.clear)
-                        .listRowSeparator(.hidden)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, SonicMergeTheme.Spacing.sm)
                 }
-            }
 
-            Section {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("SEQUENCE")
-                        .font(.system(.caption, design: .rounded, weight: .semibold))
-                        .tracking(1.2)
-                        .foregroundStyle(Color(uiColor: semantic.accentAction))
-                    Text(summarySubtitle)
-                        .font(.system(.caption, design: .rounded, weight: .regular))
-                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, 8)
-                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
-                .listRowBackground(Color.clear)
-                .listRowSeparator(.hidden)
-            }
+                sequenceHeader
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
 
-            Section {
                 ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
-                    VStack(spacing: 0) {
-                        MergeSlotRow(
-                            clip: clip,
-                            isPreviewing: viewModel.previewingClipID == clip.id,
-                            onPreviewTap: { viewModel.toggleClipPreview(clip) },
-                            onDelete: { viewModel.deleteClip(id: clip.id) }
-                        )
-                        // Phase 10: 6pt vertical so card↔junction gap totals 12pt
-                        // (6pt below card + 6pt above junction).
-                        .padding(.vertical, 6)
-
-                        if index < viewModel.clips.count - 1,
-                           let transition = clip.gapTransition {
-                            JunctionView(transition: transition) { gapDuration, isCrossfade in
-                                viewModel.updateTransition(
-                                    transition,
-                                    gapDuration: gapDuration,
-                                    isCrossfade: isCrossfade
-                                )
-                            }
-                            .padding(.vertical, 6)
-                        }
-                    }
-                    .background(alignment: .leading) {
-                        // Phase 7 MIX-02 / Phase 10: central connecting line. Hidden when
-                        // only one clip exists.
-                        if viewModel.clips.count >= 2 {
-                            TimelineSpineView()
-                        }
-                    }
-                    .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                        Button(role: .destructive) {
-                            viewModel.deleteClip(id: clip.id)
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
-                    }
+                    clipRow(index: index, clip: clip)
                 }
-                .onMove { from, to in viewModel.moveClip(fromOffsets: from, toOffset: to) }
-            }
+                .animation(
+                    reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.78),
+                    value: viewModel.clips.map(\.id)
+                )
 
-            Section {
                 MergeOperatorLabel(kind: .equals)
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 4, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                    .padding(.horizontal, 16)
+                    .padding(.top, SonicMergeTheme.Spacing.sm)
+                    .padding(.bottom, 4)
 
                 mergeOutputCard
-                    .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 20, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+                    .padding(.horizontal, 16)
+                    .padding(.top, 4)
+                    .padding(.bottom, 20)
             }
         }
-        .listStyle(.plain)
-        .scrollContentBackground(.hidden)
         .background(Color(uiColor: semantic.surfaceBase))
-        .environment(\.editMode, .constant(.active))
     }
 
-    private var summarySubtitle: String {
-        let n = viewModel.clips.count
-        let dur = ClipDurationFormatting.mmss(from: totalDuration)
-        return "\(n) clip\(n == 1 ? "" : "s") · ~\(dur)"
+    // MARK: - Subviews
+
+    private var sequenceHeader: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SEQUENCE")
+                .font(.system(.caption, design: .rounded, weight: .semibold))
+                .tracking(1.2)
+                .foregroundStyle(Color(uiColor: semantic.accentAction))
+            Text(summarySubtitle)
+                .font(.system(.caption, design: .rounded, weight: .regular))
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, SonicMergeTheme.Spacing.sm)
+    }
+
+    private func clipRow(index: Int, clip: AudioClip) -> some View {
+        VStack(spacing: 0) {
+            MergeSlotRow(
+                clip: clip,
+                isPreviewing: viewModel.previewingClipID == clip.id,
+                onPreviewTap: { viewModel.toggleClipPreview(clip) },
+                onDelete: { viewModel.deleteClip(id: clip.id) }
+            )
+            // Phase 10: 6pt vertical so card↔junction gap totals 12pt
+            // (6pt below card + 6pt above junction).
+            .padding(.vertical, 6)
+
+            if index < viewModel.clips.count - 1,
+               let transition = clip.gapTransition {
+                JunctionView(transition: transition) { gapDuration, isCrossfade in
+                    viewModel.updateTransition(
+                        transition,
+                        gapDuration: gapDuration,
+                        isCrossfade: isCrossfade
+                    )
+                }
+                .padding(.vertical, 6)
+            }
+        }
+        .background(alignment: .leading) {
+            // Phase 7 MIX-02 / Phase 10: central connecting line. Hidden when
+            // only one clip exists.
+            if viewModel.clips.count >= 2 {
+                TimelineSpineView()
+            }
+        }
+        .padding(.horizontal, 16)
+        // UUID isn't Transferable by default; the uuidString is the drag payload.
+        .draggable(clip.id.uuidString)
+        .dropDestination(for: String.self) { droppedIDStrings, _ in
+            handleDrop(droppedIDStrings: droppedIDStrings, ontoIndex: index)
+        }
+        .accessibilityActions {
+            // SwiftUI moveClip uses "insert before this offset" semantics, so
+            // moving down from index `i` targets `i + 2` (not `i + 1`).
+            if index > 0 {
+                Button("Move up") {
+                    viewModel.moveClip(fromOffsets: IndexSet([index]), toOffset: index - 1)
+                }
+            }
+            if index < viewModel.clips.count - 1 {
+                Button("Move down") {
+                    viewModel.moveClip(fromOffsets: IndexSet([index]), toOffset: index + 2)
+                }
+            }
+        }
     }
 
     private var mergeOutputCard: some View {
@@ -138,5 +148,32 @@ struct MergeTimelineView: View {
                 .buttonStyle(PillButtonStyle(variant: .filled, size: .regular))
             }
         }
+    }
+
+    // MARK: - Reorder Helpers
+
+    /// Computes the moveClip toOffset based on the drop's destination row.
+    /// Returns true if a reorder was performed, false if the drop was a no-op
+    /// (drop onto self, or the dragged ID is no longer in the collection).
+    @discardableResult
+    private func handleDrop(droppedIDStrings: [String], ontoIndex destIndex: Int) -> Bool {
+        guard let droppedString = droppedIDStrings.first,
+              let droppedID = UUID(uuidString: droppedString),
+              let from = viewModel.clips.firstIndex(where: { $0.id == droppedID }),
+              from != destIndex
+        else { return false }
+
+        // SwiftUI moveClip uses "insert before this offset" semantics:
+        //   - moving DOWN (from < destIndex): toOffset = destIndex + 1
+        //   - moving UP   (from > destIndex): toOffset = destIndex
+        let toOffset = from < destIndex ? destIndex + 1 : destIndex
+        viewModel.moveClip(fromOffsets: IndexSet([from]), toOffset: toOffset)
+        return true
+    }
+
+    private var summarySubtitle: String {
+        let n = viewModel.clips.count
+        let dur = ClipDurationFormatting.mmss(from: totalDuration)
+        return "\(n) clip\(n == 1 ? "" : "s") · ~\(dur)"
     }
 }
