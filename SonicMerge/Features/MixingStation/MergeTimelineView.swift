@@ -4,10 +4,12 @@
 // Vertical "conveyor": trust strip, sequence header, clip column with junctions,
 // equals operator, output card. Phase 10: List → ScrollView { LazyVStack } so the
 // 3-line reorder handles disappear; reorder is now via .draggable + .dropDestination.
-// See docs/superpowers/specs/2026-04-24-main-screen-continuous-stream-design.md (D-08).
+// See docs/superpowers/specs/2026-04-24-main-screen-continuous-stream-design.md
+// (D-08). Wave 8 adds D-05 "Insert clip here" via a pendingInsert async gate.
 
 import SwiftUI
 import UIKit
+import UniformTypeIdentifiers
 
 struct MergeTimelineView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
@@ -18,6 +20,13 @@ struct MergeTimelineView: View {
     /// has imported a clip, this flips to true permanently and the trust banner is
     /// hidden on every subsequent launch.
     @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
+
+    /// Phase 10 Wave-8 (D-05 / R-03): captures (target index, clips.count at the
+    /// time of the junction tap) so the .onChange(of: viewModel.clips.count)
+    /// observer can move newly-imported tail clips into the right slot. Cleared
+    /// after the reorder fires, on cancel, or on a delta <= 0 import result.
+    @State private var pendingInsert: (index: Int, oldCount: Int)?
+    @State private var showInsertPicker: Bool = false
 
     let onExportTap: () -> Void
 
@@ -58,6 +67,35 @@ struct MergeTimelineView: View {
             }
         }
         .background(Color(uiColor: semantic.surfaceBase))
+        .fileImporter(
+            isPresented: $showInsertPicker,
+            allowedContentTypes: UTType.audioImportTypes,
+            allowsMultipleSelection: true
+        ) { result in
+            switch result {
+            case .success(let urls):
+                viewModel.importFiles(urls)
+            case .failure:
+                // User cancelled or an error fired before any clip was added.
+                // Drop the pending gate so a later toolbar import can't be
+                // mis-attributed to this junction tap.
+                pendingInsert = nil
+            }
+        }
+        .onChange(of: viewModel.clips.count) { _, newCount in
+            guard let pending = pendingInsert else { return }
+            let delta = newCount - pending.oldCount
+            guard delta > 0 else {
+                // Cancel, all-duplicates skip, or unrelated decrease — abandon.
+                pendingInsert = nil
+                return
+            }
+            // Newly-imported clips occupy the tail positions [oldCount ..< newCount].
+            // Move them as a batch to the requested junction position.
+            let tail = pending.oldCount ..< newCount
+            viewModel.moveClip(fromOffsets: IndexSet(tail), toOffset: pending.index)
+            pendingInsert = nil
+        }
     }
 
     // MARK: - Subviews
@@ -90,13 +128,24 @@ struct MergeTimelineView: View {
 
             if index < viewModel.clips.count - 1,
                let transition = clip.gapTransition {
-                JunctionView(transition: transition) { gapDuration, isCrossfade in
-                    viewModel.updateTransition(
-                        transition,
-                        gapDuration: gapDuration,
-                        isCrossfade: isCrossfade
-                    )
-                }
+                JunctionView(
+                    transition: transition,
+                    onTransitionChange: { gapDuration, isCrossfade in
+                        viewModel.updateTransition(
+                            transition,
+                            gapDuration: gapDuration,
+                            isCrossfade: isCrossfade
+                        )
+                    },
+                    onInsertClip: {
+                        // Junction at row index `index` sits AFTER clip[index]
+                        // and BEFORE clip[index + 1]. Insert target is therefore
+                        // position index + 1 (uses moveClip's "insert before
+                        // this offset" semantic).
+                        pendingInsert = (index: index + 1, oldCount: viewModel.clips.count)
+                        showInsertPicker = true
+                    }
+                )
                 .padding(.vertical, 6)
             }
         }

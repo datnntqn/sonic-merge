@@ -5,10 +5,11 @@
 // horizontal pill-row layout (4 chips taking ~120pt vertical) with a single
 // 28pt capsule that opens a native iOS Menu on tap. See
 // docs/superpowers/specs/2026-04-24-main-screen-continuous-stream-design.md
-// for the full design contract (D-02 / D-04).
+// for the full design contract (D-02 / D-04 / D-05).
 //
-// Note: "Insert clip here" (D-05) is intentionally omitted in the initial Wave-3
-// drop — its async orchestration (R-03) is gated behind the Wave-5 reorder spike.
+// Wave 8 (D-05): "Insert clip here" is rendered when an onInsertClip callback
+// is supplied. The async orchestration (R-03) lives in the parent view via a
+// pendingInsert gate.
 
 import SwiftUI
 import UIKit
@@ -16,6 +17,9 @@ import UIKit
 struct JunctionView: View {
     let transition: GapTransition
     let onTransitionChange: (_ gapDuration: Double?, _ isCrossfade: Bool?) -> Void
+    /// Optional Wave-8 (D-05): if non-nil, the Menu shows an "Insert clip here"
+    /// action. When tapped, the parent owns the file-importer + reorder dance.
+    let onInsertClip: (() -> Void)?
 
     @Environment(\.sonicMergeSemantic) private var semantic
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
@@ -53,10 +57,12 @@ struct JunctionView: View {
 
     init(
         transition: GapTransition,
-        onTransitionChange: @escaping (Double?, Bool?) -> Void
+        onTransitionChange: @escaping (Double?, Bool?) -> Void,
+        onInsertClip: (() -> Void)? = nil
     ) {
         self.transition = transition
         self.onTransitionChange = onTransitionChange
+        self.onInsertClip = onInsertClip
         let initial: Choice = transition.isCrossfade
             ? .crossfade
             : .gap(transition.gapDuration)
@@ -75,6 +81,12 @@ struct JunctionView: View {
                 picked = .crossfade
             } label: {
                 Label("Crossfade", systemImage: "arrow.triangle.merge")
+            }
+            if let onInsertClip {
+                Divider()
+                Button(action: onInsertClip) {
+                    Label("Insert clip here", systemImage: "plus")
+                }
             }
         } label: {
             capsule
