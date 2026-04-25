@@ -79,16 +79,16 @@ human_verification:
 
 ### Observable Truths
 
-| # | Truth | Status | Evidence |
-|---|-------|--------|----------|
-| 1 | User can tap SonicMerge in iOS Share Sheet when sharing an audio file | FAILED | Extension target is wired in project.pbxproj and embedded in main app, but AppConstants.swift is missing from extension's source files (compile error), and ShareExtensionViewController.swift is untracked |
-| 2 | Shared audio file is copied to the App Group clips directory | FAILED | ShareExtensionViewController.swift correctly calls AppConstants.clipsDirectory() but AppConstants is not compiled into the extension — will not build |
-| 3 | Extension shows "Adding to SonicMerge..." HUD with filename and spinner | FAILED | ShareHUDView.swift/ShareHUDModel.swift are committed and correct, but the ViewController wiring them (ShareExtensionViewController.swift) is untracked; HEAD has Xcode template ShareViewController.swift instead |
-| 4 | Extension auto-dismisses after file copy completes | FAILED | extensionContext?.completeRequest wiring exists in untracked ShareExtensionViewController.swift; committed principal class has no auto-dismiss |
-| 5 | Sharing a 30 MB+ file does not crash the extension | PARTIAL | loadFileRepresentation (not loadDataRepresentation) is used in ShareExtensionViewController.swift — correct pattern — but file is untracked and extension cannot build |
-| 6 | When user opens SonicMerge after sharing, the shared file appears as a clip | VERIFIED | Plan 01 wiring is correct: scenePhase .active drains pendingImportFilename from App Group UserDefaults and calls importFiles(). Code is committed and tested. |
-| 7 | Duplicate displayName files are silently skipped during import | VERIFIED | MixingStationViewModel.isDisplayNameDuplicate() is committed, tested (testDuplicateDisplayNameIsSkipped passes), and guards performImport before normalization |
-| 8 | Main app picks up pending import filename from UserDefaults on scenePhase .active | VERIFIED | SonicMergeApp.swift reads and clears pendingImportFilename on scenePhase == .active; testPendingImportPickedUpOnActive test passes |
+| #   | Truth                                                                             | Status   | Evidence                                                                                                                                                                                                          |
+| --- | --------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | User can tap SonicMerge in iOS Share Sheet when sharing an audio file             | FAILED   | Extension target is wired in project.pbxproj and embedded in main app, but AppConstants.swift is missing from extension's source files (compile error), and ShareExtensionViewController.swift is untracked       |
+| 2   | Shared audio file is copied to the App Group clips directory                      | FAILED   | ShareExtensionViewController.swift correctly calls AppConstants.clipsDirectory() but AppConstants is not compiled into the extension — will not build                                                             |
+| 3   | Extension shows "Adding to SonicMerge..." HUD with filename and spinner           | FAILED   | ShareHUDView.swift/ShareHUDModel.swift are committed and correct, but the ViewController wiring them (ShareExtensionViewController.swift) is untracked; HEAD has Xcode template ShareViewController.swift instead |
+| 4   | Extension auto-dismisses after file copy completes                                | FAILED   | extensionContext?.completeRequest wiring exists in untracked ShareExtensionViewController.swift; committed principal class has no auto-dismiss                                                                    |
+| 5   | Sharing a 30 MB+ file does not crash the extension                                | PARTIAL  | loadFileRepresentation (not loadDataRepresentation) is used in ShareExtensionViewController.swift — correct pattern — but file is untracked and extension cannot build                                            |
+| 6   | When user opens SonicMerge after sharing, the shared file appears as a clip       | VERIFIED | Plan 01 wiring is correct: scenePhase .active drains pendingImportFilename from App Group UserDefaults and calls importFiles(). Code is committed and tested.                                                     |
+| 7   | Duplicate displayName files are silently skipped during import                    | VERIFIED | MixingStationViewModel.isDisplayNameDuplicate() is committed, tested (testDuplicateDisplayNameIsSkipped passes), and guards performImport before normalization                                                    |
+| 8   | Main app picks up pending import filename from UserDefaults on scenePhase .active | VERIFIED | SonicMergeApp.swift reads and clears pendingImportFilename on scenePhase == .active; testPendingImportPickedUpOnActive test passes                                                                                |
 
 **Score:** 3/8 truths verified (2 partial/prerequisite concerns add up to 4 if counting unit-tested behaviors from Plan 01 separately, but end-to-end share flow = failed)
 
@@ -98,43 +98,43 @@ human_verification:
 
 ### Plan 01 Artifacts
 
-| Artifact | Expected | Status | Details |
-|----------|----------|--------|---------|
-| `SonicMergeTests/ShareExtensionTests.swift` | Wave 0 test stubs | VERIFIED | File exists with 3 stubs (testFileCopyToClipsDirectory, testLargeFileCopyDoesNotCrash, testPendingKeyWrittenAndCleared) — intentionally RED as designed |
-| `SonicMergeTests/MixingStationViewModelTests.swift` | Duplicate detection + pending pickup tests | VERIFIED | testDuplicateDisplayNameIsSkipped and testPendingImportPickedUpOnActive both present and passing |
-| `SonicMerge/Features/MixingStation/MixingStationViewModel.swift` | isDuplicate guard + isDisplayNameDuplicate helper | VERIFIED | isDuplicate guard at line 119-121, isDisplayNameDuplicate() public helper at line 92-94 |
-| `SonicMerge/SonicMergeApp.swift` | scenePhase pending import handler + onOpenURL | VERIFIED | scenePhase .onChange handler present at line 76-85, onOpenURL at line 91-101 |
-| `SonicMerge/Info.plist` | sonicmerge:// URL scheme registration | VERIFIED | CFBundleURLSchemes contains "sonicmerge", GENERATE_INFOPLIST_FILE = NO correctly set |
+| Artifact                                                         | Expected                                          | Status   | Details                                                                                                                                                 |
+| ---------------------------------------------------------------- | ------------------------------------------------- | -------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SonicMergeTests/ShareExtensionTests.swift`                      | Wave 0 test stubs                                 | VERIFIED | File exists with 3 stubs (testFileCopyToClipsDirectory, testLargeFileCopyDoesNotCrash, testPendingKeyWrittenAndCleared) — intentionally RED as designed |
+| `SonicMergeTests/MixingStationViewModelTests.swift`              | Duplicate detection + pending pickup tests        | VERIFIED | testDuplicateDisplayNameIsSkipped and testPendingImportPickedUpOnActive both present and passing                                                        |
+| `SonicMerge/Features/MixingStation/MixingStationViewModel.swift` | isDuplicate guard + isDisplayNameDuplicate helper | VERIFIED | isDuplicate guard at line 119-121, isDisplayNameDuplicate() public helper at line 92-94                                                                 |
+| `SonicMerge/SonicMergeApp.swift`                                 | scenePhase pending import handler + onOpenURL     | VERIFIED | scenePhase .onChange handler present at line 76-85, onOpenURL at line 91-101                                                                            |
+| `SonicMerge/Info.plist`                                          | sonicmerge:// URL scheme registration             | VERIFIED | CFBundleURLSchemes contains "sonicmerge", GENERATE_INFOPLIST_FILE = NO correctly set                                                                    |
 
 ### Plan 02 Artifacts
 
-| Artifact | Expected | Status | Details |
-|----------|----------|--------|---------|
-| `SonicMergeShareExtension/ShareExtensionViewController.swift` | NSExtensionPrincipalClass, UIViewController hosting SwiftUI HUD | STUB/UNCOMMITTED | File exists in working tree with correct implementation but is UNTRACKED — not committed. HEAD has Xcode template ShareViewController.swift instead. |
-| `SonicMergeShareExtension/ShareHUDView.swift` | SwiftUI HUD with "Adding to SonicMerge..." | VERIFIED | File committed with correct content — "Adding to SonicMerge...", "Added!", accent color #007AFF, cornerRadius 12 |
-| `SonicMergeShareExtension/ShareHUDModel.swift` | @Observable model with enum HUDState | VERIFIED | File committed with HUDState enum (copying/success/error), @Observable annotation |
-| `SonicMergeShareExtension/Info.plist` | NSExtension config with audio-only activation rule | PARTIAL | File committed — UTI-CONFORMS-TO "public.audio" predicate is correct. However NSExtensionPrincipalClass points to ShareViewController in HEAD (not ShareExtensionViewController). Additionally GENERATE_INFOPLIST_FILE = YES conflicts with manual Info.plist. Working tree has the correct principal class but is not committed. |
-| `SonicMergeShareExtension/SonicMergeShareExtension.entitlements` | App Group entitlement | VERIFIED | group.com.yourteam.SonicMerge correctly present, file committed |
+| Artifact                                                         | Expected                                                        | Status           | Details                                                                                                                                                                                                                                                                                                                           |
+| ---------------------------------------------------------------- | --------------------------------------------------------------- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SonicMergeShareExtension/ShareExtensionViewController.swift`    | NSExtensionPrincipalClass, UIViewController hosting SwiftUI HUD | STUB/UNCOMMITTED | File exists in working tree with correct implementation but is UNTRACKED — not committed. HEAD has Xcode template ShareViewController.swift instead.                                                                                                                                                                              |
+| `SonicMergeShareExtension/ShareHUDView.swift`                    | SwiftUI HUD with "Adding to SonicMerge..."                      | VERIFIED         | File committed with correct content — "Adding to SonicMerge...", "Added!", accent color #007AFF, cornerRadius 12                                                                                                                                                                                                                  |
+| `SonicMergeShareExtension/ShareHUDModel.swift`                   | @Observable model with enum HUDState                            | VERIFIED         | File committed with HUDState enum (copying/success/error), @Observable annotation                                                                                                                                                                                                                                                 |
+| `SonicMergeShareExtension/Info.plist`                            | NSExtension config with audio-only activation rule              | PARTIAL          | File committed — UTI-CONFORMS-TO "public.audio" predicate is correct. However NSExtensionPrincipalClass points to ShareViewController in HEAD (not ShareExtensionViewController). Additionally GENERATE_INFOPLIST_FILE = YES conflicts with manual Info.plist. Working tree has the correct principal class but is not committed. |
+| `SonicMergeShareExtension/SonicMergeShareExtension.entitlements` | App Group entitlement                                           | VERIFIED         | group.com.yourteam.SonicMerge correctly present, file committed                                                                                                                                                                                                                                                                   |
 
 ---
 
 ## Key Link Verification
 
-| From | To | Via | Status | Details |
-|------|----|----|--------|---------|
-| `SonicMergeApp.swift` | `MixingStationViewModel.importFiles` | scenePhase .active drains pendingImportFilename from App Group UserDefaults | WIRED | Pattern present at line 76-85. UserDefaults read + removeObject + importFiles all called. |
-| `ShareExtensionViewController.swift` | `AppConstants.clipsDirectory()` | FileManager.copyItem to App Group shared container | BROKEN | AppConstants.swift is not in the extension target's source files — will fail to compile |
-| `ShareExtensionViewController.swift` | `UserDefaults(suiteName: AppConstants.appGroupID)` | Writes pendingImportFilename key for main app pickup | BROKEN | Same root cause — AppConstants not compiled into extension |
-| `Info.plist` | `NSExtensionPrincipalClass` | Maps to @objc(ShareExtensionViewController) | BROKEN (committed state) | HEAD's Info.plist points to ShareViewController (template), not ShareExtensionViewController |
+| From                                 | To                                                 | Via                                                                         | Status                   | Details                                                                                      |
+| ------------------------------------ | -------------------------------------------------- | --------------------------------------------------------------------------- | ------------------------ | -------------------------------------------------------------------------------------------- |
+| `SonicMergeApp.swift`                | `MixingStationViewModel.importFiles`               | scenePhase .active drains pendingImportFilename from App Group UserDefaults | WIRED                    | Pattern present at line 76-85. UserDefaults read + removeObject + importFiles all called.    |
+| `ShareExtensionViewController.swift` | `AppConstants.clipsDirectory()`                    | FileManager.copyItem to App Group shared container                          | BROKEN                   | AppConstants.swift is not in the extension target's source files — will fail to compile      |
+| `ShareExtensionViewController.swift` | `UserDefaults(suiteName: AppConstants.appGroupID)` | Writes pendingImportFilename key for main app pickup                        | BROKEN                   | Same root cause — AppConstants not compiled into extension                                   |
+| `Info.plist`                         | `NSExtensionPrincipalClass`                        | Maps to @objc(ShareExtensionViewController)                                 | BROKEN (committed state) | HEAD's Info.plist points to ShareViewController (template), not ShareExtensionViewController |
 
 ---
 
 ## Data-Flow Trace (Level 4)
 
-| Artifact | Data Variable | Source | Produces Real Data | Status |
-|----------|---------------|--------|--------------------|--------|
-| `MixingStationView` (clip list) | `vm.clips` | `MixingStationViewModel.fetchAll()` via SwiftData ModelContext | Yes — SwiftData query `FetchDescriptor<AudioClip>` | FLOWING |
-| `ShareHUDView` | `model.filename`, `model.state` | `ShareExtensionViewController.loadAndCopyFile()` sets hudModel.filename/state | Yes — populated from NSItemProvider tempURL.lastPathComponent | FLOWING (in working tree code; extension cannot build yet) |
+| Artifact                        | Data Variable                   | Source                                                                        | Produces Real Data                                            | Status                                                     |
+| ------------------------------- | ------------------------------- | ----------------------------------------------------------------------------- | ------------------------------------------------------------- | ---------------------------------------------------------- |
+| `MixingStationView` (clip list) | `vm.clips`                      | `MixingStationViewModel.fetchAll()` via SwiftData ModelContext                | Yes — SwiftData query `FetchDescriptor<AudioClip>`            | FLOWING                                                    |
+| `ShareHUDView`                  | `model.filename`, `model.state` | `ShareExtensionViewController.loadAndCopyFile()` sets hudModel.filename/state | Yes — populated from NSItemProvider tempURL.lastPathComponent | FLOWING (in working tree code; extension cannot build yet) |
 
 ---
 
@@ -142,32 +142,32 @@ human_verification:
 
 Step 7b: Extension cannot be built from CLI because AppConstants.swift is missing from the extension target — xcodebuild for the extension would fail. Main app behavioral checks:
 
-| Behavior | Command | Result | Status |
-|----------|---------|--------|--------|
-| isDisplayNameDuplicate helper exists | `grep -n "func isDisplayNameDuplicate" MixingStationViewModel.swift` | 1 match at line 92 | PASS |
-| pendingImportFilename wired in SonicMergeApp | `grep -n "pendingImportFilename" SonicMergeApp.swift` | 2 matches (read + clear) | PASS |
-| scenePhase handler present | `grep -n "scenePhase" SonicMergeApp.swift` | 4 matches | PASS |
-| ShareExtensionViewController.swift not committed | `git ls-tree HEAD SonicMergeShareExtension/` | File missing from HEAD (only ShareViewController.swift, ShareHUDModel, ShareHUDView, entitlements, Info.plist) | FAIL |
-| AppConstants.swift in extension target | Check project.pbxproj fileSystemSynchronizedGroups for extension | Only SonicMergeShareExtension/ folder listed | FAIL |
+| Behavior                                         | Command                                                              | Result                                                                                                         | Status |
+| ------------------------------------------------ | -------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ------ |
+| isDisplayNameDuplicate helper exists             | `grep -n "func isDisplayNameDuplicate" MixingStationViewModel.swift` | 1 match at line 92                                                                                             | PASS   |
+| pendingImportFilename wired in SonicMergeApp     | `grep -n "pendingImportFilename" SonicMergeApp.swift`                | 2 matches (read + clear)                                                                                       | PASS   |
+| scenePhase handler present                       | `grep -n "scenePhase" SonicMergeApp.swift`                           | 4 matches                                                                                                      | PASS   |
+| ShareExtensionViewController.swift not committed | `git ls-tree HEAD SonicMergeShareExtension/`                         | File missing from HEAD (only ShareViewController.swift, ShareHUDModel, ShareHUDView, entitlements, Info.plist) | FAIL   |
+| AppConstants.swift in extension target           | Check project.pbxproj fileSystemSynchronizedGroups for extension     | Only SonicMergeShareExtension/ folder listed                                                                   | FAIL   |
 
 ---
 
 ## Requirements Coverage
 
-| Requirement | Source Plan | Description | Status | Evidence |
-|-------------|-------------|-------------|--------|----------|
-| IMP-02 | 05-01, 05-02 | User can receive audio files (.m4a, .wav, .aac) via iOS Share Sheet from other apps | BLOCKED | End-to-end flow blocked by: (1) ShareExtensionViewController.swift untracked, (2) AppConstants.swift not in extension target, (3) GENERATE_INFOPLIST_FILE conflict. The main app pickup side (Plan 01) is complete and tested. The extension process side (Plan 02) cannot build in current committed state. |
+| Requirement | Source Plan  | Description                                                                         | Status  | Evidence                                                                                                                                                                                                                                                                                                     |
+| ----------- | ------------ | ----------------------------------------------------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| IMP-02      | 05-01, 05-02 | User can receive audio files (.m4a, .wav, .aac) via iOS Share Sheet from other apps | BLOCKED | End-to-end flow blocked by: (1) ShareExtensionViewController.swift untracked, (2) AppConstants.swift not in extension target, (3) GENERATE_INFOPLIST_FILE conflict. The main app pickup side (Plan 01) is complete and tested. The extension process side (Plan 02) cannot build in current committed state. |
 
 ---
 
 ## Anti-Patterns Found
 
-| File | Line | Pattern | Severity | Impact |
-|------|------|---------|----------|--------|
-| `SonicMerge.xcodeproj/project.pbxproj` | 362, 393 | `GENERATE_INFOPLIST_FILE = YES` alongside `INFOPLIST_FILE = SonicMergeShareExtension/Info.plist` | BLOCKER | When GENERATE_INFOPLIST_FILE = YES, Xcode generates an Info.plist automatically; the INFOPLIST_FILE setting specifies the source but auto-generation takes precedence over the custom keys. The NSExtensionActivationRule with audio-only predicate will be lost, and the extension will appear for all file types (App Store rejection risk). |
-| `SonicMergeShareExtension/ShareExtensionViewController.swift` | 76, 100 | Uses `AppConstants` which is not compiled into the extension target | BLOCKER | Extension will not compile — "use of unresolved identifier 'AppConstants'" |
-| `SonicMergeShareExtension/ShareExtensionViewController.swift` | (whole file) | File is untracked in git | BLOCKER | Not committed — HEAD has Xcode template ShareViewController.swift as principal class instead |
-| `SonicMergeTests/ShareExtensionTests.swift` | 22, 31, 39 | All 3 tests are intentional stubs with `#expect(Bool(false))` | WARNING | Intentionally RED (Wave 0 baseline per plan design). Not a defect — these stubs should be implemented once extension can be unit tested. |
+| File                                                          | Line         | Pattern                                                                                          | Severity | Impact                                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------------------------------ | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SonicMerge.xcodeproj/project.pbxproj`                        | 362, 393     | `GENERATE_INFOPLIST_FILE = YES` alongside `INFOPLIST_FILE = SonicMergeShareExtension/Info.plist` | BLOCKER  | When GENERATE_INFOPLIST_FILE = YES, Xcode generates an Info.plist automatically; the INFOPLIST_FILE setting specifies the source but auto-generation takes precedence over the custom keys. The NSExtensionActivationRule with audio-only predicate will be lost, and the extension will appear for all file types (App Store rejection risk). |
+| `SonicMergeShareExtension/ShareExtensionViewController.swift` | 76, 100      | Uses `AppConstants` which is not compiled into the extension target                              | BLOCKER  | Extension will not compile — "use of unresolved identifier 'AppConstants'"                                                                                                                                                                                                                                                                     |
+| `SonicMergeShareExtension/ShareExtensionViewController.swift` | (whole file) | File is untracked in git                                                                         | BLOCKER  | Not committed — HEAD has Xcode template ShareViewController.swift as principal class instead                                                                                                                                                                                                                                                   |
+| `SonicMergeTests/ShareExtensionTests.swift`                   | 22, 31, 39   | All 3 tests are intentional stubs with `#expect(Bool(false))`                                    | WARNING  | Intentionally RED (Wave 0 baseline per plan design). Not a defect — these stubs should be implemented once extension can be unit tested.                                                                                                                                                                                                       |
 
 ---
 

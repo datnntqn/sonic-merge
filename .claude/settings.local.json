@@ -42,7 +42,24 @@
       "Bash(rm -rf /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMergeShareExtension/Base.lproj)",
       "WebFetch(domain:www.donnywals.com)",
       "WebFetch(domain:axesslab.com)",
-      "Skill(gsd:ui-phase)"
+      "Skill(gsd:ui-phase)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 16' test)",
+      "Bash(python3 *)",
+      "Bash(set -o pipefail)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' test)",
+      "Bash(echo \"EXIT=$?\")",
+      "Read(//Users/datnnt/.claude/plugins/**)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -configuration Debug build)",
+      "Bash(tee /tmp/sm-p2.log)",
+      "Bash(echo \"---EXIT=$?\")",
+      "Read(//private/tmp/**)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -parallel-testing-enabled NO test)",
+      "Bash(tee /tmp/sm-p2-serial.log)",
+      "Bash(gh pr create --title 'Phase 9: Polish + accessibility audit \\(POL-01/02/03\\)' --body ' *)",
+      "Bash(tee /tmp/sm-p10.log)",
+      "Bash(tee /tmp/sm-p10b.log)",
+      "Read(//tmp/**)",
+      "Bash(tee /tmp/sm-p10c.log)"
     ]
   }
 }
