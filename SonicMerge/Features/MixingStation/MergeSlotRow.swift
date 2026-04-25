@@ -43,10 +43,12 @@ struct MergeSlotRow: View {
             cardContent
                 .offset(x: swipeOffset)
         }
-        // Existing Phase 7 touch-tracking — fires on touch-down for visual feedback.
-        // Kept as the primary .gesture; Phase 10 swipe is added as .simultaneousGesture
-        // so they coexist without one stealing the other's events.
-        .gesture(
+        // Phase 7 touch-tracking + Phase 10 swipe-to-delete are BOTH attached as
+        // .simultaneousGesture so neither claims touch ownership. .draggable
+        // (Wave 5, applied by the parent MergeTimelineView) is a long-press-based
+        // system gesture; if any DragGesture(minimumDistance: 0) here is attached
+        // via .gesture (primary), the long-press never fires and reorder breaks.
+        .simultaneousGesture(
             DragGesture(minimumDistance: 0)
                 .updating($isDragTouch) { _, state, _ in state = true }
         )

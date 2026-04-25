@@ -125,6 +125,29 @@ struct MergeTimelineView: View {
             // Phase 10: 6pt vertical so card↔junction gap totals 12pt
             // (6pt below card + 6pt above junction).
             .padding(.vertical, 6)
+            // .draggable / .dropDestination scoped to ONLY the card so the
+            // junction below isn't draggable and isn't a drop target — both
+            // would produce confusing reorder behavior.
+            // UUID isn't Transferable by default; the uuidString is the drag
+            // payload, decoded back via UUID(uuidString:) in handleDrop.
+            .draggable(clip.id.uuidString)
+            .dropDestination(for: String.self) { droppedIDStrings, _ in
+                handleDrop(droppedIDStrings: droppedIDStrings, ontoIndex: index)
+            }
+            .accessibilityActions {
+                // SwiftUI moveClip uses "insert before this offset" semantics,
+                // so moving down from index `i` targets `i + 2` (not `i + 1`).
+                if index > 0 {
+                    Button("Move up") {
+                        viewModel.moveClip(fromOffsets: IndexSet([index]), toOffset: index - 1)
+                    }
+                }
+                if index < viewModel.clips.count - 1 {
+                    Button("Move down") {
+                        viewModel.moveClip(fromOffsets: IndexSet([index]), toOffset: index + 2)
+                    }
+                }
+            }
 
             if index < viewModel.clips.count - 1,
                let transition = clip.gapTransition {
@@ -157,25 +180,6 @@ struct MergeTimelineView: View {
             }
         }
         .padding(.horizontal, 16)
-        // UUID isn't Transferable by default; the uuidString is the drag payload.
-        .draggable(clip.id.uuidString)
-        .dropDestination(for: String.self) { droppedIDStrings, _ in
-            handleDrop(droppedIDStrings: droppedIDStrings, ontoIndex: index)
-        }
-        .accessibilityActions {
-            // SwiftUI moveClip uses "insert before this offset" semantics, so
-            // moving down from index `i` targets `i + 2` (not `i + 1`).
-            if index > 0 {
-                Button("Move up") {
-                    viewModel.moveClip(fromOffsets: IndexSet([index]), toOffset: index - 1)
-                }
-            }
-            if index < viewModel.clips.count - 1 {
-                Button("Move down") {
-                    viewModel.moveClip(fromOffsets: IndexSet([index]), toOffset: index + 2)
-                }
-            }
-        }
     }
 
     private var mergeOutputCard: some View {
