@@ -38,6 +38,14 @@ struct CleaningLabView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    /// Phase 10 D-06 reuse: once the user has ever imported a clip in Mixing
+    /// Station this is true permanently. The Cleaning Lab is only reachable
+    /// after at least one import, so in practice the on-device-AI banner shows
+    /// only on edge-case re-installs / fresh DBs — keeping it bounded mirrors
+    /// the Mixing Station trust-banner pattern and recovers ~90pt of vertical
+    /// space so the primary CTA is above the fold.
+    @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
+
     @State private var viewModel = CleaningLabViewModel()
     @State private var showExportSheet = false
     @State private var showExportProgressSheet = false
@@ -58,11 +66,22 @@ struct CleaningLabView: View {
 
     // MARK: - Body
 
+    /// Phase 10 hint: only render the waveform card when there's actual content
+    /// to show OR a brief processing transition. In pure idle state the card is
+    /// hidden entirely — the AI Orb's "Ready to denoise" label already conveys
+    /// the state, and dropping the card recovers ~140pt of vertical space.
+    private var shouldShowWaveformSection: Bool {
+        !viewModel.waveformPeaks.isEmpty || viewModel.isProcessing
+    }
+
     var body: some View {
         ScrollView {
-            VStack(spacing: SonicMergeTheme.Spacing.lg) {
-                // 1. Trust strip — always visible
-                onDeviceAIHero
+            VStack(spacing: SonicMergeTheme.Spacing.md) {
+                // 1. Trust strip — first-launch only, gated on the same
+                //    @AppStorage flag as the Mixing Station banner (D-06).
+                if !hasImportedFirstClip {
+                    onDeviceAIHero
+                }
 
                 // 2. Stale result banner (conditional)
                 if viewModel.showsStaleResultBanner && viewModel.hasDenoisedResult {
@@ -72,11 +91,14 @@ struct CleaningLabView: View {
                 // 3. AI Orb hero (always visible — renders idle/processing/success internally)
                 SquircleCard(glassEnabled: false, glowEnabled: false) {
                     AIOrbView(viewModel: viewModel)
-                        .padding(.vertical, SonicMergeTheme.Spacing.xl)
+                        .padding(.vertical, SonicMergeTheme.Spacing.sm)
                 }
 
-                // 4. Waveform display
-                waveformSection
+                // 4. Waveform display — hidden in pure idle state so the slider
+                //    + primary CTA reach above the fold sooner.
+                if shouldShowWaveformSection {
+                    waveformSection
+                }
 
                 // 5. Intensity slider (always visible, dimmed during processing)
                 intensitySlider
@@ -92,7 +114,7 @@ struct CleaningLabView: View {
                 }
             }
             .padding(.horizontal, SonicMergeTheme.Spacing.md)
-            .padding(.vertical, SonicMergeTheme.Spacing.xl)
+            .padding(.vertical, SonicMergeTheme.Spacing.lg)
         }
         .background(Color(uiColor: semantic.surfaceBase))
         .navigationTitle("Cleaning Lab")
@@ -193,34 +215,28 @@ struct CleaningLabView: View {
         .accessibilityLabel("Stale result warning. Clips have changed. Re-process to update the denoised audio.")
     }
 
-    /// Waveform display — shows peaks, processing state, or empty state
+    /// Waveform display — shows peaks or the brief processing transition state.
+    /// Pure idle (no peaks, not processing) is handled at the call site by
+    /// hiding this card entirely; the empty-state hint is no longer needed
+    /// because the AI Orb's "Ready to denoise" label conveys it.
     private var waveformSection: some View {
         SquircleCard(glassEnabled: false, glowEnabled: false) {
-            GeometryReader { geometry in
+            GeometryReader { _ in
                 ZStack {
-                    if viewModel.isProcessing && viewModel.waveformPeaks.isEmpty {
+                    if !viewModel.waveformPeaks.isEmpty {
+                        WaveformCanvasView(peaks: viewModel.waveformPeaks)
+                            .padding(.horizontal, SonicMergeTheme.Spacing.sm)
+                    } else if viewModel.isProcessing {
                         Text("Processing\u{2026}")
                             .font(.caption)
                             .foregroundStyle(Color(uiColor: semantic.textSecondary))
-                    } else if !viewModel.waveformPeaks.isEmpty {
-                        WaveformCanvasView(peaks: viewModel.waveformPeaks)
-                            .padding(.horizontal, SonicMergeTheme.Spacing.sm)
-                    } else if !viewModel.hasDenoisedResult {
-                        VStack(spacing: SonicMergeTheme.Spacing.sm) {
-                            Image(systemName: "waveform")
-                                .font(.system(size: 32))
-                                .foregroundStyle(Color(uiColor: semantic.textSecondary))
-                            Text("Tap \"Denoise Audio\" to begin")
-                                .font(.caption)
-                                .foregroundStyle(Color(uiColor: semantic.textSecondary))
-                        }
                     }
                 }
             }
             .padding(-SonicMergeTheme.Spacing.md)
             .padding(SonicMergeTheme.Spacing.sm)
         }
-        .frame(height: 120)
+        .frame(height: 96)
     }
 
     /// Intensity slider — LimeGreenSlider with Noise Reduction label

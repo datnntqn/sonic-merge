@@ -122,7 +122,11 @@ struct AIOrbView: View {
                 ? Color(uiColor: semantic.accentAI)
                 : Color(uiColor: semantic.accentAction)
         } else {
-            return Color(uiColor: semantic.textSecondary)
+            // Phase 10: idle "Ready to denoise" was textSecondary (~3.39:1
+            // light-mode contrast — fails WCAG AA per the Phase 9 finding).
+            // Promote to textPrimary so the headline state is legible and reads
+            // as the screen's primary status, not a hint.
+            return Color(uiColor: semantic.textPrimary)
         }
     }
 
