@@ -115,16 +115,24 @@ struct MixingStationView: View {
     // MARK: - Subviews
 
     private var emptyState: some View {
-        VStack(spacing: 16) {
+        VStack(spacing: SonicMergeTheme.Spacing.md) {
             Image(systemName: "waveform")
                 .font(.system(size: 48))
                 .foregroundStyle(Color(uiColor: semantic.accentAction))
+                .shadow(
+                    color: Color(uiColor: semantic.accentGlow).opacity(0.35),
+                    radius: 20,
+                    x: 0,
+                    y: 0
+                )
+                .accessibilityHidden(true)
             Text("No clips yet")
                 .font(.system(.title3, design: .rounded, weight: .semibold))
                 .foregroundStyle(Color(uiColor: semantic.textPrimary))
-            Text("Tap Import to add audio files")
+            Text("Tap + to add audio files\nor drop them here")
                 .font(.system(.body, design: .rounded))
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                .multilineTextAlignment(.center)
             Button {
                 showDocumentPicker = true
             } label: {
