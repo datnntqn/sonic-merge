@@ -12,15 +12,21 @@ struct SquircleCard<Content: View>: View {
 
     let glassEnabled: Bool
     let glowEnabled: Bool
+    /// Phase 10: configurable internal padding so the timeline can use tighter
+    /// geometry (10pt vertical / 14pt horizontal) while the OUTPUT card keeps the
+    /// Phase 7 default 16pt uniform.
+    let contentPadding: EdgeInsets
     @ViewBuilder let content: () -> Content
 
     init(
         glassEnabled: Bool = false,
         glowEnabled: Bool = false,
+        contentPadding: EdgeInsets = EdgeInsets(top: 16, leading: 16, bottom: 16, trailing: 16),
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.glassEnabled = glassEnabled
         self.glowEnabled = glowEnabled
+        self.contentPadding = contentPadding
         self.content = content
     }
 
@@ -30,7 +36,7 @@ struct SquircleCard<Content: View>: View {
 
     var body: some View {
         content()
-            .padding(SonicMergeTheme.Spacing.md)       // 16pt internal padding
+            .padding(contentPadding)
             .background(backgroundLayer)
             .clipShape(shape)
             .overlay(borderOverlay)

@@ -24,11 +24,16 @@ struct MergeSlotRow: View {
     @GestureState private var isDragTouch: Bool = false
 
     var body: some View {
-        SquircleCard(glassEnabled: false, glowEnabled: isDragTouch) {
+        SquircleCard(
+            glassEnabled: false,
+            glowEnabled: isDragTouch,
+            // Phase 10: 10pt vertical / 14pt horizontal vs. Phase 7's 16pt uniform.
+            contentPadding: EdgeInsets(top: 10, leading: 14, bottom: 10, trailing: 14)
+        ) {
             HStack(alignment: .center, spacing: SonicMergeTheme.Spacing.md) {
                 MergeSlotWaveformView(peaks: peaks)
-                    .frame(width: 100, height: 52)
-                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                    .frame(width: 96, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
 
                 VStack(alignment: .leading, spacing: SonicMergeTheme.Spacing.xs) {
                     Text(clip.displayName)

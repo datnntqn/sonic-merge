@@ -58,7 +58,9 @@ struct MergeTimelineView: View {
                             onPreviewTap: { viewModel.toggleClipPreview(clip) },
                             onDelete: { viewModel.deleteClip(id: clip.id) }
                         )
-                        .padding(.vertical, SonicMergeTheme.Spacing.sm)
+                        // Phase 10: 6pt vertical so card↔junction gap totals 12pt
+                        // (6pt below card + 6pt above junction).
+                        .padding(.vertical, 6)
 
                         if index < viewModel.clips.count - 1,
                            let transition = clip.gapTransition {
