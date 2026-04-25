@@ -62,13 +62,13 @@ Requirements for v1.1 "Modern Spatial Utility Restyle". Visual-only milestone â€
 
 - [x] **CL-01**: AI Orb visualizer displays a pulsating nebula sphere animation (TimelineView + Canvas) during denoising, with reduceMotion static fallback
 - [x] **CL-02**: AI-specific controls use Lime Green (#A7C957) accent color for denoise progress, slider, and action indicators
-- [ ] **CL-03**: All Cleaning Lab controls use PillButton style and design system color tokens for full dark mode support
+- [x] **CL-03**: All Cleaning Lab controls use PillButton style and design system color tokens for full dark mode support
 
 ### Polish
 
-- [ ] **POL-01**: All interactive buttons throughout the app provide haptic feedback via sensoryFeedback modifier
-- [ ] **POL-02**: Full dark mode support across all screens: pure black background, Deep Indigo accent, proper contrast ratios
-- [ ] **POL-03**: Accessibility fallbacks: solid backgrounds when reduceTransparency is on, static visuals when reduceMotion is on, minimum 4.5:1 text contrast on all glass surfaces
+- [x] **POL-01**: All interactive buttons throughout the app provide haptic feedback via sensoryFeedback modifier
+- [x] **POL-02**: Full dark mode support across all screens: pure black background, Deep Indigo accent, proper contrast ratios
+- [x] **POL-03**: Accessibility fallbacks: solid backgrounds when reduceTransparency is on, static visuals when reduceMotion is on, minimum 4.5:1 text contrast on all glass surfaces
 
 ## v2 Requirements
 
@@ -141,10 +141,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | MIX-05 | Phase 7 | Complete |
 | CL-01 | Phase 8 | Complete |
 | CL-02 | Phase 8 | Complete |
-| CL-03 | Phase 8 | Pending |
-| POL-01 | Phase 9 | Pending |
-| POL-02 | Phase 9 | Pending |
-| POL-03 | Phase 9 | Pending |
+| CL-03 | Phase 8 | Complete |
+| POL-01 | Phase 9 | Complete |
+| POL-02 | Phase 9 | Complete |
+| POL-03 | Phase 9 | Complete |
 
 **Coverage:**
 - v1 requirements: 17 total, 17 mapped (Complete)
