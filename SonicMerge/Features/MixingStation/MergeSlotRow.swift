@@ -18,12 +18,55 @@ struct MergeSlotRow: View {
     @State private var peaks: [Float] = Array(repeating: 0, count: 50)
 
     /// Phase 7 drag micro-animation (MIX-05). Mirrors "is a finger currently on this row"
-    /// into SwiftUI state via a no-op DragGesture(minimumDistance: 0) running in parallel
-    /// with the system List.onMove reorder gesture. The system gesture keeps reordering
-    /// working (protects the reorder-crash fix); this one only drives visual state.
+    /// into SwiftUI state via a no-op DragGesture(minimumDistance: 0). In Phase 10 the
+    /// outer reorder gesture is .draggable (long-press based) — these two coexist via
+    /// .simultaneousGesture and don't conflict.
     @GestureState private var isDragTouch: Bool = false
 
+    /// Phase 10 (R-02 option 1): custom trailing-swipe-to-delete offset.
+    /// Negative values reveal the red Delete swatch behind the card.
+    @State private var swipeOffset: CGFloat = 0
+
+    /// Past this magnitude, releasing the swipe commits the delete. Tunable.
+    private static let swipeCommitThreshold: CGFloat = 80
+    /// Maximum reveal width while finger is down — provides rubber-band feel.
+    private static let swipeMaxReveal: CGFloat = 120
+
     var body: some View {
+        ZStack(alignment: .trailing) {
+            // Behind layer: red Delete swatch revealed by trailing swipe.
+            if onDelete != nil {
+                deleteSwatch
+            }
+
+            // Front layer: the card. Translates left as the user swipes.
+            cardContent
+                .offset(x: swipeOffset)
+        }
+        // Existing Phase 7 touch-tracking — fires on touch-down for visual feedback.
+        // Kept as the primary .gesture; Phase 10 swipe is added as .simultaneousGesture
+        // so they coexist without one stealing the other's events.
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .updating($isDragTouch) { _, state, _ in state = true }
+        )
+        // Phase 10 (R-02 option 1): horizontal swipe-to-delete.
+        .simultaneousGesture(swipeGesture, including: onDelete == nil ? .none : .all)
+        .sensoryFeedback(.impact(weight: .medium), trigger: isDragTouch)
+        .sensoryFeedback(.impact(weight: .light), trigger: !isDragTouch)
+        .contextMenu {
+            if let onDelete {
+                Button(role: .destructive) {
+                    onDelete()
+                } label: {
+                    Label("Delete Clip", systemImage: "trash")
+                }
+            }
+        }
+        .task { loadPeaks() }
+    }
+
+    private var cardContent: some View {
         SquircleCard(
             glassEnabled: false,
             glowEnabled: isDragTouch,
@@ -60,22 +103,54 @@ struct MergeSlotRow: View {
             reduceMotion ? nil : .spring(response: 0.28, dampingFraction: 0.72),
             value: isDragTouch
         )
-        .gesture(
-            DragGesture(minimumDistance: 0)
-                .updating($isDragTouch) { _, state, _ in state = true }
-        )
-        .sensoryFeedback(.impact(weight: .medium), trigger: isDragTouch)
-        .sensoryFeedback(.impact(weight: .light), trigger: !isDragTouch)
-        .contextMenu {
-            if let onDelete {
-                Button(role: .destructive) {
-                    onDelete()
-                } label: {
-                    Label("Delete Clip", systemImage: "trash")
+    }
+
+    private var deleteSwatch: some View {
+        // The swatch grows with the swipe distance. Tinted system red, white trash icon.
+        let reveal = max(0, -swipeOffset)
+        let opacity = min(1, reveal / Self.swipeCommitThreshold)
+        return ZStack(alignment: .trailing) {
+            Color.red
+                .opacity(opacity)
+                .clipShape(RoundedRectangle(cornerRadius: SonicMergeTheme.Radius.card, style: .continuous))
+            Image(systemName: "trash.fill")
+                .font(.system(size: 18, weight: .semibold))
+                .foregroundStyle(.white)
+                .opacity(opacity)
+                .padding(.trailing, max(16, reveal / 4))
+        }
+        .accessibilityHidden(true)
+    }
+
+    private var swipeGesture: some Gesture {
+        DragGesture(minimumDistance: 12)
+            .onChanged { value in
+                // Only react to horizontal-dominant left swipes.
+                guard abs(value.translation.width) > abs(value.translation.height) else { return }
+                guard value.translation.width < 0 else {
+                    if swipeOffset != 0 { swipeOffset = 0 }
+                    return
+                }
+                // Linear up to threshold, then rubber-banded resistance beyond.
+                let raw = value.translation.width
+                if raw >= -Self.swipeCommitThreshold {
+                    swipeOffset = raw
+                } else {
+                    let extra = raw + Self.swipeCommitThreshold
+                    swipeOffset = -Self.swipeCommitThreshold + extra * 0.35
+                }
+                swipeOffset = max(swipeOffset, -Self.swipeMaxReveal)
+            }
+            .onEnded { value in
+                let shouldDelete = value.translation.width < -Self.swipeCommitThreshold
+                    && abs(value.translation.width) > abs(value.translation.height)
+                withAnimation(reduceMotion ? nil : .spring(response: 0.32, dampingFraction: 0.78)) {
+                    swipeOffset = shouldDelete ? -1000 : 0
+                }
+                if shouldDelete {
+                    onDelete?()
                 }
             }
-        }
-        .task { loadPeaks() }
     }
 
     private func loadPeaks() {
