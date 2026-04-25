@@ -13,6 +13,10 @@ struct MixingStationView: View {
 
     @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.system.rawValue
 
+    /// Phase 10 (D-06): persists across launches once the user has ever imported a clip.
+    /// Gates the LocalFirstTrustStrip render in MergeTimelineView.
+    @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
+
     @State private var showDocumentPicker = false
     @State private var showExportSheet = false
     @State private var showCleaningLab = false
@@ -107,6 +111,13 @@ struct MixingStationView: View {
                 mergedFileURLForCleaning = nil
             }
         }
+        .onChange(of: viewModel.clips.count) { _, newCount in
+            // Phase 10 D-06: flip the first-launch trust-banner flag the first
+            // time the user has any clips. Persists across launches via @AppStorage.
+            if newCount > 0 && !hasImportedFirstClip {
+                hasImportedFirstClip = true
+            }
+        }
         .task {
             await viewModel.fetchAll()
         }
@@ -154,17 +165,18 @@ struct MixingStationView: View {
             .disabled(viewModel.isImporting || viewModel.isExporting)
             .sensoryFeedback(.impact(weight: .light), trigger: importHaptic)
         }
+        // Phase 10 D-03: source order Denoise → Export → ••• yields visual layout
+        // (left-to-right) Denoise · Export · ••• at the trailing edge, with ••• as
+        // the canonical "more" position at the far-right corner.
         ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Picker("Appearance", selection: $themePreferenceRaw) {
-                    Text("System").tag(ThemePreference.system.rawValue)
-                    Text("Light").tag(ThemePreference.light.rawValue)
-                    Text("Dark conveyor").tag(ThemePreference.dark.rawValue)
-                }
+            Button {
+                denoiseHaptic.toggle()
+                navigateToCleaningLab()
             } label: {
-                Label("Appearance", systemImage: "paintpalette")
+                Label("Denoise", systemImage: "wand.and.sparkles")
             }
-            .sensoryFeedback(.impact(weight: .light), trigger: themePreferenceRaw)
+            .disabled(viewModel.clips.isEmpty)
+            .sensoryFeedback(.impact(weight: .light), trigger: denoiseHaptic)
         }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
@@ -177,14 +189,16 @@ struct MixingStationView: View {
             .sensoryFeedback(.impact(weight: .light), trigger: exportHaptic)
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                denoiseHaptic.toggle()
-                navigateToCleaningLab()
+            Menu {
+                Picker("Appearance", selection: $themePreferenceRaw) {
+                    Text("System").tag(ThemePreference.system.rawValue)
+                    Text("Light").tag(ThemePreference.light.rawValue)
+                    Text("Dark conveyor").tag(ThemePreference.dark.rawValue)
+                }
             } label: {
-                Label("Denoise", systemImage: "wand.and.sparkles")
+                Label("More options", systemImage: "ellipsis.circle")
             }
-            .disabled(viewModel.clips.isEmpty)
-            .sensoryFeedback(.impact(weight: .light), trigger: denoiseHaptic)
+            .sensoryFeedback(.impact(weight: .light), trigger: themePreferenceRaw)
         }
     }
 

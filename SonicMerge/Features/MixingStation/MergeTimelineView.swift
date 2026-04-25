@@ -10,6 +10,11 @@ struct MergeTimelineView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
     @Environment(\.sonicMergeSemantic) private var semantic
 
+    /// Phase 10 D-06: shared with MixingStationView via @AppStorage. Once the user
+    /// has imported a clip, this flips to true permanently and the trust banner is
+    /// hidden on every subsequent launch.
+    @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
+
     let onExportTap: () -> Void
 
     private var totalDuration: TimeInterval {
@@ -18,11 +23,13 @@ struct MergeTimelineView: View {
 
     var body: some View {
         List {
-            Section {
-                LocalFirstTrustStrip()
-                    .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
+            if !hasImportedFirstClip {
+                Section {
+                    LocalFirstTrustStrip()
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                        .listRowBackground(Color.clear)
+                        .listRowSeparator(.hidden)
+                }
             }
 
             Section {
