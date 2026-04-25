@@ -88,29 +88,20 @@ struct CleaningLabView: View {
                     staleBanner
                 }
 
-                // 3. AI Orb hero (always visible — renders idle/processing/success internally)
-                SquircleCard(glassEnabled: false, glowEnabled: false) {
-                    AIOrbView(viewModel: viewModel)
-                        .padding(.vertical, SonicMergeTheme.Spacing.sm)
-                }
+                // 3. AI Workstation — single cohesive card containing the orb,
+                //    intensity control, A/B compare (when result available),
+                //    and the primary Denoise / Re-process CTA. All controls
+                //    sit on one surface so the screen reads as a single
+                //    workstation rather than four stacked cards. Putting the
+                //    CTA inside the card also removes the prior layout glitch
+                //    where the bare button extended past the card column edges.
+                aiWorkstation
 
-                // 4. Waveform display — hidden in pure idle state so the slider
-                //    + primary CTA reach above the fold sooner.
+                // 4. Output waveform — separate card below the workstation,
+                //    only visible when there's content to render or while
+                //    processing emits intermediate state.
                 if shouldShowWaveformSection {
                     waveformSection
-                }
-
-                // 5. Intensity slider (always visible, dimmed during processing)
-                intensitySlider
-
-                // 6. A/B comparison button (shown when denoised result available)
-                if viewModel.hasDenoisedResult {
-                    abComparisonButton
-                }
-
-                // 7. Denoise / Re-process action button (shown when NOT processing)
-                if !viewModel.isProcessing {
-                    denoiseActionButton
                 }
             }
             .padding(.horizontal, SonicMergeTheme.Spacing.md)
@@ -239,37 +230,62 @@ struct CleaningLabView: View {
         .frame(height: 96)
     }
 
-    /// Intensity slider — LimeGreenSlider with Noise Reduction label
-    private var intensitySlider: some View {
+    /// Phase 10 consolidation — single AI Workstation card holding orb,
+    /// intensity row, A/B compare, and primary CTA. Replaces the prior
+    /// stack of four separate SquircleCards/buttons.
+    private var aiWorkstation: some View {
         SquircleCard(glassEnabled: false, glowEnabled: false) {
-            VStack(spacing: SonicMergeTheme.Spacing.sm) {
-                HStack {
-                    Text("Noise Reduction")
-                        .font(.subheadline)
-                        .fontWeight(.semibold)
-                        .foregroundStyle(Color(uiColor: semantic.textPrimary))
-                    Spacer()
-                    Text("\(Int(viewModel.intensity * 100))%")
-                        .font(.title3)
-                        .fontWeight(.semibold)
-                        .fontDesign(.rounded)
-                        .monospacedDigit()
-                        .foregroundStyle(
-                            colorScheme == .dark
-                                ? Color(uiColor: semantic.accentAI)
-                                : Color(uiColor: semantic.accentAction)
-                        )
-                        .frame(minWidth: 40, alignment: .trailing)
+            VStack(spacing: SonicMergeTheme.Spacing.lg) {
+                AIOrbView(viewModel: viewModel)
+                    .padding(.vertical, SonicMergeTheme.Spacing.sm)
+
+                Divider()
+                    .accessibilityHidden(true)
+
+                intensityRow
+
+                if viewModel.hasDenoisedResult {
+                    abComparisonButton
                 }
 
-                LimeGreenSlider(
-                    value: Binding(
-                        get: { Double(viewModel.intensity) },
-                        set: { viewModel.onIntensityChanged(Float($0)) }
-                    ),
-                    in: 0...1
-                )
+                if !viewModel.isProcessing {
+                    denoiseActionButton
+                }
             }
+        }
+    }
+
+    /// Inline intensity row used inside the workstation card (no nested
+    /// SquircleCard wrapper). Shape and behavior match the prior intensitySlider
+    /// — only the surrounding card chrome is removed.
+    private var intensityRow: some View {
+        VStack(spacing: SonicMergeTheme.Spacing.sm) {
+            HStack {
+                Text("Noise Reduction")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                Spacer()
+                Text("\(Int(viewModel.intensity * 100))%")
+                    .font(.title3)
+                    .fontWeight(.semibold)
+                    .fontDesign(.rounded)
+                    .monospacedDigit()
+                    .foregroundStyle(
+                        colorScheme == .dark
+                            ? Color(uiColor: semantic.accentAI)
+                            : Color(uiColor: semantic.accentAction)
+                    )
+                    .frame(minWidth: 40, alignment: .trailing)
+            }
+
+            LimeGreenSlider(
+                value: Binding(
+                    get: { Double(viewModel.intensity) },
+                    set: { viewModel.onIntensityChanged(Float($0)) }
+                ),
+                in: 0...1
+            )
         }
         .disabled(viewModel.isProcessing)
         .opacity(viewModel.isProcessing ? 0.5 : 1.0)
