@@ -52,12 +52,6 @@ struct MergeTimelineView: View {
             Section {
                 ForEach(Array(viewModel.clips.enumerated()), id: \.element.id) { index, clip in
                     VStack(spacing: 0) {
-                        if index > 0 {
-                            MergeOperatorLabel(kind: .plus)
-                                .padding(.top, 4)
-                                .padding(.bottom, 2)
-                        }
-
                         MergeSlotRow(
                             clip: clip,
                             isPreviewing: viewModel.previewingClipID == clip.id,
@@ -68,17 +62,19 @@ struct MergeTimelineView: View {
 
                         if index < viewModel.clips.count - 1,
                            let transition = clip.gapTransition {
-                            GapRowView(transition: transition) { gapDuration, isCrossfade in
+                            JunctionView(transition: transition) { gapDuration, isCrossfade in
                                 viewModel.updateTransition(
                                     transition,
                                     gapDuration: gapDuration,
                                     isCrossfade: isCrossfade
                                 )
                             }
+                            .padding(.vertical, 6)
                         }
                     }
                     .background(alignment: .leading) {
-                        // Phase 7 MIX-02: central connecting line. Hidden when only one clip exists.
+                        // Phase 7 MIX-02 / Phase 10: central connecting line. Hidden when
+                        // only one clip exists.
                         if viewModel.clips.count >= 2 {
                             TimelineSpineView()
                         }
