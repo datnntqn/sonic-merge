@@ -12,6 +12,12 @@ struct MergeSlotRow: View {
     let isPreviewing: Bool
     let onPreviewTap: () -> Void
     var onDelete: (() -> Void)? = nil
+    /// Phase 10 discoverability: when supplied, a "Move Up" item is rendered in
+    /// the long-press context menu — gives a non-gesture path to reorder for
+    /// users who don't think to drag the card.
+    var onMoveUp: (() -> Void)? = nil
+    /// Likewise for "Move Down". Pass nil at the column edges to hide the option.
+    var onMoveDown: (() -> Void)? = nil
 
     @Environment(\.sonicMergeSemantic) private var semantic
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -57,6 +63,19 @@ struct MergeSlotRow: View {
         .sensoryFeedback(.impact(weight: .medium), trigger: isDragTouch)
         .sensoryFeedback(.impact(weight: .light), trigger: !isDragTouch)
         .contextMenu {
+            if let onMoveUp {
+                Button(action: onMoveUp) {
+                    Label("Move Up", systemImage: "arrow.up")
+                }
+            }
+            if let onMoveDown {
+                Button(action: onMoveDown) {
+                    Label("Move Down", systemImage: "arrow.down")
+                }
+            }
+            if onMoveUp != nil || onMoveDown != nil, onDelete != nil {
+                Divider()
+            }
             if let onDelete {
                 Button(role: .destructive) {
                     onDelete()

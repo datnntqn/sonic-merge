@@ -120,7 +120,15 @@ struct MergeTimelineView: View {
                 clip: clip,
                 isPreviewing: viewModel.previewingClipID == clip.id,
                 onPreviewTap: { viewModel.toggleClipPreview(clip) },
-                onDelete: { viewModel.deleteClip(id: clip.id) }
+                onDelete: { viewModel.deleteClip(id: clip.id) },
+                // moveClip uses "insert before this offset" semantics, so
+                // moving down from index `i` targets `i + 2` (not `i + 1`).
+                onMoveUp: index > 0
+                    ? { viewModel.moveClip(fromOffsets: IndexSet([index]), toOffset: index - 1) }
+                    : nil,
+                onMoveDown: index < viewModel.clips.count - 1
+                    ? { viewModel.moveClip(fromOffsets: IndexSet([index]), toOffset: index + 2) }
+                    : nil
             )
             // Phase 10: 6pt vertical so card↔junction gap totals 12pt
             // (6pt below card + 6pt above junction).
