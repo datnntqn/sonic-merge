@@ -176,6 +176,11 @@ struct MixingStationView: View {
                 Label("Denoise", systemImage: "waveform.badge.minus")
             }
             .disabled(viewModel.clips.isEmpty)
+            // Phase 10: tint Lime Green to reinforce the Phase 8 AI identity —
+            // this is the only AI-feature affordance in the toolbar, and the
+            // tint differentiates it from the indigo-default Export / ••• icons.
+            // iOS dims the tint automatically in the disabled state.
+            .tint(Color(uiColor: semantic.accentAI))
             .sensoryFeedback(.impact(weight: .light), trigger: denoiseHaptic)
         }
         ToolbarItem(placement: .topBarTrailing) {
