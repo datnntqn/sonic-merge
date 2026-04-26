@@ -29,7 +29,7 @@ The floating Apply Cuts button and the parent SegmentedPill (Cleaning Lab Tabs) 
 - Replace the 2-pill `HStack { "Original"; "Cleaned" }` with the existing `SegmentedPill` (clt-t1) bound to a new `enum ABSelection`.
 - Bento card treatment for each filler category and the pause row — extend the existing `groupBackground` helper with a 1pt border (separator color, 50% opacity) and a very soft shadow (radius 4, opacity 0.05, y 2).
 - **Semantic flip on the disabled-row visual:** strikethrough + opacity 0.5 on per-occurrence rows where `isEnabled == true` (i.e. the rows that will be cut). Reverses the current `clt-t4` direction (which dimmed the kept rows). Per-row scope only — category headers + checkboxes stay full opacity.
-- Replace the pause-threshold `Stepper` with a SwiftUI `Slider`, range 0.5...3.0, snap to 0.1s, `.soft` haptic per snap, live-recompute the pauses array on each snap.
+- Replace the pause-threshold `Stepper` with a SwiftUI `Slider`, range 0.5...3.0, snap to 0.1s, `.soft` haptic per snap, live-recompute the pauses array on each snap. **Note: range widens from current 1.0...3.0 to 0.5...3.0** — deliberate behavior change so users can opt in to trimming sub-second breaths (which 1.0s minimum forbade).
 - Counting-text animation on the pause-row "saves" total too.
 - Two new unit tests covering the `setPauseThreshold` behavior.
 
@@ -66,7 +66,7 @@ Both cards use the same `SquircleCard(glassEnabled: false, glowEnabled: false)` 
 The 5 visual states (`.idle / .analyzing / .results / .applied / .stale / .error`) all continue to render their content inside the appropriate card structure:
 - `idle` and `analyzing` keep their existing centered layouts inside a single Summary-styled card (no Filler List Card rendered — there's nothing to list yet).
 - `results` and `applied` render BOTH cards.
-- `stale` renders Summary card with the stale banner + Re-analyze button, plus the dimmed Filler List Card (per spec §6.5 of the original Smart Cut design).
+- `stale` renders Summary card with the stale banner + Re-analyze button, plus the dimmed Filler List Card. The dimmed-list rule comes from the original Smart Cut design at `docs/superpowers/specs/2026-04-26-smart-cut-design.md` §6.5: "filler list is dimmed but visible (so user can see what was found before)" — implemented via the existing `fillerPanel(dimmed: Bool)` parameter on the panel, which applies `.opacity(0.4).disabled(true)` to the whole list. Reuse that helper.
 - `error` renders Summary card with the error message + retry; no Filler List Card.
 
 This keeps `SmartCutCardView`'s state-machine shape identical; only the card containers shift.
@@ -87,10 +87,12 @@ case completed(
 
 The existing `analyze(input:) -> AsyncThrowingStream<Update, Error>` method already has both pieces in scope (it computes `editList` from `state.recognizedSegments` and reads `state.sourceDuration` to call `PauseDetector.detect`). Extending the case is a one-line change in the orchestrator + the integration test's match site.
 
-**`SmartCutViewModel`** gains:
+**`SmartCutViewModel`** (which is `@Observable @MainActor final class`, NOT a Swift `actor`) gains:
 
 ```swift
-// Stored on the actor for slider-driven recompute. Seeded in analyze() completion.
+// Stored on the @MainActor view model for slider-driven recompute. Seeded in analyze() completion.
+// Reset to empty / 0 in invalidate() and requestReanalyze() so a stale cache doesn't survive
+// into a new source's editing session.
 private var cachedRecognizedSegments: [TranscriptionState.RecognizedSegment] = []
 private var cachedSourceDuration: TimeInterval = 0
 
@@ -199,7 +201,28 @@ For filler toggles, the existing flow is unchanged from clt-t4 — `setCategory`
 - Header row: existing title (sparkles icon + "Smart Cut" font.headline) + Reset button (top-right). Unchanged from current implementation.
 - Counts text: existing secondary `Text("Found N fillers + M long pauses")` line.
 - SavesBadge (the existing `private struct SavesBadge` from clt-t3) gets two additions:
-    - `.scaleEffect(pulseScale)` where `pulseScale` animates 1.0↔1.04 with `.easeInOut(duration: 1.7).repeatForever(autoreverses: true)` — but ONLY when `savings > 0`. When `savings == 0`, the badge is grey and static (no `.animation` triggered).
+    - **Pulse, conditional on savings > 0.** Implementation:
+        ```swift
+        @State private var pulseScale: CGFloat = 1.0
+        // ... inside body:
+        Capsule().fill(...)
+            .scaleEffect(pulseScale)
+            .onAppear { startPulseIfNeeded() }
+            .onChange(of: savings) { _, _ in startPulseIfNeeded() }
+
+        private func startPulseIfNeeded() {
+            if savings > 0 {
+                withAnimation(.easeInOut(duration: 1.7).repeatForever(autoreverses: true)) {
+                    pulseScale = 1.04
+                }
+            } else {
+                withAnimation(.easeOut(duration: 0.2)) {
+                    pulseScale = 1.0  // explicitly stop the repeating animation by replacing it with a one-shot to 1.0
+                }
+            }
+        }
+        ```
+        The boundary case (savings drops to 0) is handled by replacing the `.repeatForever` animation with a one-shot `.easeOut` that lands at 1.0. SwiftUI's animation runner treats the new `withAnimation` block as a fresh animation on the same property, cancelling the in-flight repeating one. Without this, a `.repeatForever` would visually freeze at whatever scale the in-flight cycle was at when the conditional removed it.
     - `Text` already has the contentTransition for counting; verified working in clt-t3.
 - A/B SegmentedPill replaces the current 2-pill `HStack`:
     ```swift
@@ -211,6 +234,8 @@ For filler toggles, the existing flow is unchanged from clt-t4 — `setCategory`
     }
     ```
     where `abSelection` is a new computed binding that reads `vm.isPlayingCleaned` and writes via `vm.toggleCleaned()`. New private enum `enum ABSelection: Hashable, CaseIterable { case original, cleaned }`. SegmentedPill's built-in light haptic fires on switch (already in clt-t1).
+
+    **Visibility:** the SegmentedPill renders only in `.results` and `.applied` states (no cleaned audio exists pre-Apply in `.idle` / `.analyzing` / `.error`; in `.stale` the prior cleaned output is invalidated). In `.idle` / `.analyzing` / `.stale` / `.error` the Summary card omits the pill entirely — header + counts + (if applicable) badge only.
 
 The Reset button position (top-right of header row) is unchanged.
 
@@ -235,11 +260,13 @@ The Reset button position (top-right of header row) is unchanged.
 ```
 
 - Each category-block (the existing `categoryGroup(category:)`) keeps its `groupBackground` wrapper, now with `.overlay { RoundedRectangle.strokeBorder(separator @ 0.5 opacity, 1pt) }` and `.shadow(color: .black.opacity(0.05), radius: 4, y: 2)` added in the helper.
-- Per-occurrence row text + timestamp get `.strikethrough(edit.isEnabled)` + `.opacity(edit.isEnabled ? 0.5 : 1.0)`. Play button + checkbox stay full opacity (they remain interactive).
+- Per-occurrence row text + timestamp get `.strikethrough(edit.isEnabled)` + `.opacity(edit.isEnabled ? 0.5 : 1.0)`. Play button + checkbox stay full opacity (they remain interactive). **The existing `.opacity(edit.isEnabled ? 1.0 : 0.4)` lines from clt-t4 must be REMOVED — not stacked.** The new mapping fully replaces the old (the direction is flipped per Q1 = B in §10).
 - Pause row gets the same border + shadow treatment via `groupBackground`.
 - The `Stepper("", value:..., step: 0.5)` is replaced with a SwiftUI `Slider(value: snappedBinding, in: 0.5...3.0)` where `snappedBinding` rounds to 0.1s and fires `UIImpactFeedbackGenerator(style: .soft).impactOccurred()` only when the snap value actually changed (avoids haptic spam during drag jitter).
 - The pause-row "saves X" text uses the same `.contentTransition(.numericText(value: savings)).animation(.snappy(duration: 0.3), value: savings)` pattern as the SavesBadge.
 - `+ Edit filler list` link stays at the bottom as the trailing element of the Filler List Card.
+
+**Closure routing — `onThresholdChange` updates required.** The current `SmartCutCardView` calls `FillerListPanel(..., onThresholdChange: { vm.pauseThreshold = $0 }, ...)`. With this refactor, the closure changes to `onThresholdChange: { vm.setPauseThreshold($0) }` — `setPauseThreshold` itself sets `pauseThreshold` AND triggers the recompute. Do not leave the old `vm.pauseThreshold = $0` direct write in place; that would cause a double write (once via the closure, once inside the new method).
 
 ### 6.3 What's preserved exactly
 
