@@ -20,15 +20,15 @@ The refactor replaces the entire view layer for these surfaces, plus adds two fo
 5. **Pause threshold slider** replacing the `Stepper` — continuous 1.0–3.0s range, snap step 0.25s, rolling-digit readout via `contentTransition(.numericText())`, light haptic on each step change, live "saves 0:31" recomputation via `viewModel.setPauseThreshold(_:)`.
 6. **Edit Filler List → unified tag-capsule pool** — frosted-glass capsules in a wrap layout. Every capsule has a Deep Indigo ✕. **Tapping ✕ on any capsule (default or custom) calls `library.remove(_:)` — same code path as today's "Remove" button.** Library semantics are unchanged: the removed default goes into `removedDefaults` (persisted), the removed custom is permanently deleted. Capsule animates out. A "Restore default words" link below the pool clears `removedDefaults` (one tap brings all defaults back). Add input is a capsule-shaped TextField at the bottom; submitting on Enter calls `library.addCustom(_:)`.
 
-Plus a small color audit: system-blue links ("Reset" inside the summary card; "+ Edit filler list" entry-point) re-tinted to Deep Indigo @ 50% opacity. The "Original/Cleaned" affordance today is two `PillButtonStyle` buttons in an HStack inside `SmartCutCardView`; the new design swaps it for the existing `SegmentedPill` component (created by `clt-t1`) — bound to the existing `viewModel.isPlayingCleaned` toggle.
+Plus a small color audit: system-blue links ("Reset" inside the summary card; "+ Edit filler list" entry-point) re-tinted to Deep Indigo @ 50% opacity. The "Original/Cleaned" affordance today is two `PillButtonStyle` buttons in an HStack inside `SmartCutCardView`; the new design swaps it for the existing `SegmentedPill` component (created by `clt-t1`). To match the user's brief ("selected segment is Deep Indigo"), `SegmentedPill` gains two new **optional** parameters (`selectedTint` / `unselectedTint`, defaulting to `.ai` / `.accent` so existing call-sites unchanged) — and the Studio site passes `.accent` / `.accent` so selected = filled Deep Indigo. A small adapter `enum PlaybackTrack: Hashable, CaseIterable { case original, cleaned }` plus a computed `Binding<PlaybackTrack>` translates `viewModel.isPlayingCleaned: Bool` into the `Hashable & CaseIterable` enum SegmentedPill requires (one-way `get`/`set` projection).
 
 The floating `Apply Cuts` button (`FloatingActionBar` chassis) is **unchanged**.
 
 ## 2. Goals and non-goals
 
 **Goals:**
-- **(Foundational behavior — `Update.completed` payload extension.)** Extend `SmartCutService.Update.completed` from `case completed(EditList)` to `case completed(EditList, segments: [TranscribedSegment], duration: TimeInterval)`. `service.analyze(input:)` already has access to the segments and asset duration internally; just propagate them outward. All call-sites updated.
-- **(Foundational behavior — `SmartCutViewModel.setPauseThreshold(_:)`.)** ViewModel caches `recognizedSegments: [TranscribedSegment]` and `sourceDuration: TimeInterval` on `.completed`. Public method `setPauseThreshold(_ seconds: TimeInterval)` updates `pauseThreshold`, runs `PauseDetector(threshold: seconds).detect(segments: cached, duration: cached)` to produce a fresh `[PauseEdit]` array, replaces `editList.pauses` synchronously while preserving the user's current pause-`isEnabled` flags wherever the new pauses' `id`s match prior pauses' `id`s (id stability strategy: `id` derived from `lowerBound` rounded to 0.001s — same as `scp-t2`'s `uniquingKeysWith` trick to harden against duplicates). No-op when there are no cached segments (i.e., before first `.completed`).
+- **(Foundational behavior — `Update.completed` payload extension.)** Extend `SmartCutService.Update.completed` from `case completed(EditList)` to `case completed(EditList, segments: [TranscriptionState.RecognizedSegment], duration: TimeInterval)`. `service.analyze(input:)` already computes both internally — segments are read from `state.recognizedSegments` (see `SmartCutService.swift:37,42`) and duration is loaded from the input asset; just propagate outward. All call-sites updated (the only consumer today is `SmartCutViewModel.analyze` switch statement at lines 124–134; tests in `SmartCutServiceIntegrationTests.swift` will need a one-line argument-list update).
+- **(Foundational behavior — `SmartCutViewModel.setPauseThreshold(_:)`.)** ViewModel caches `recognizedSegments: [TranscriptionState.RecognizedSegment]` and `sourceDuration: TimeInterval` on `.completed`. Public method `setPauseThreshold(_ seconds: TimeInterval)` clamps to `1.0...3.0`, updates `pauseThreshold`, calls the existing static `PauseDetector.detect(in: cachedSegments, totalDuration: cachedDuration, threshold: seconds) -> [PauseEdit]` to produce a fresh array, replaces `editList.pauses` synchronously while preserving the user's current pause-`isEnabled` flags. **Id-stability strategy:** the existing `PauseEdit` initializer (`PauseEdit.swift:11–15`) derives `id = "pause@\(timeRange.lowerBound)"` directly from the lowerBound — no rounding. Since `PauseDetector` runs deterministically over the same `cachedSegments`, the lowerBound values are bit-identical across recompute calls **for pauses that survive a threshold change**, so id-matching by exact string equality works without any new id logic and without modifying `PauseEdit.init`. Old pauses whose lowerBound no longer survives the new threshold simply drop. New pauses (now-detected because threshold dropped) default to enabled. No-op when `cachedSegments.isEmpty` (i.e., before first `.completed`). No model surface change in `PauseEdit`.
 - Replace `SmartCutCardView`, `FillerListPanel`, and `EditFillerListSheet` with new components living in `SonicMerge/Features/SmartCut/Views/Studio/`. Old files retired in the same commit chunk that ships the replacement.
 - Glassmorphic Summary Card with `ultraThinMaterial` background, 1pt Deep Indigo @ 18% border, 24pt corner radius. Content: ✨ "SMART CUT SUMMARY" eyebrow label · stats line · saves badge · Reset link top-right.
 - Saves badge pulse: scale `1.0 ↔ 1.04` over ~1.6s eased, lime green outer glow shadow synced (alpha `0.40 ↔ 0.65`), driven by a single `TimelineView` (Phase 11 pattern). Pulse only when `enabledSavings > 0`; static otherwise. Suppressed when `accessibilityReduceMotion` is on.
@@ -63,7 +63,7 @@ The floating `Apply Cuts` button (`FloatingActionBar` chassis) is **unchanged**.
 
 1. User runs Smart Cut → recognizer completes → state advances to `.results`. The Smart Cut tab content renders:
    - Top: **Glassmorphic Summary Card** — eyebrow label "✨ SMART CUT SUMMARY", stats line "7 fillers + 2 long pauses", **pulsing lime saves badge** "saves ~31s", "Reset" link top-right in Deep Indigo @ 50%.
-   - Below: **Original/Cleaned `SegmentedPill`** (existing chrome — Deep Indigo selected = Original; Lime "Cleaned" once Apply ships).
+   - Below: **Original/Cleaned `SegmentedPill`** with `selectedTint: .accent, unselectedTint: .accent` — selected segment is filled Deep Indigo, unselected is outline Deep Indigo. Default selection = `.original` (mirrors `viewModel.isPlayingCleaned == false`).
    - Below: **Bento card list** (single-column) — first three cards are filler groups, last card is "⏱ Long Pauses". Each filler card: occurrence-count eyebrow, word label, trailing saves chip + group toggle. Pauses card: slider + saves readout.
    - Bottom: floating **Apply Cuts** action bar (existing).
 
@@ -77,8 +77,9 @@ The floating `Apply Cuts` button (`FloatingActionBar` chassis) is **unchanged**.
 4. User drags the pause slider from 1.5s to 2.0s.
    - Each 0.25s step fires a light haptic.
    - "Threshold: 2.0s" digit rolls smoothly via `.contentTransition(.numericText())`.
-   - "saves 0:18" updates live (model recomputes pause set per current threshold — already supported by `SmartCutViewModel.setPauseThreshold` from `scp-t2`).
-   - Summary card saves badge re-rolls to reflect the change.
+   - "saves 0:18" updates live (the new `viewModel.setPauseThreshold(_:)` introduced in this spec re-runs `PauseDetector.detect(...)` on the cached segments and rebuilds `editList.pauses`).
+   - Summary card saves badge re-rolls to reflect the change (driven by `editList.enabledSavings` recomputing).
+   - **Post-Apply edge case:** if the user is in `.applied(savedDuration:)` state and then drags the slider, `editList.pauses` mutates → `vm.hasDirtyEditsSinceApply` flips to `true` → `CleaningLabView` (`CleaningLabView.swift:272–283`) shows the "Re-apply" floating-bar variant. Intentional behavior (consistent with how a per-occurrence checkbox toggle in the detail sheet would also dirty the snapshot).
 
 5. User taps the "+ Edit filler list" link (Deep Indigo @ 50%) below the bento cards → Edit Filler List sheet opens.
 
@@ -129,13 +130,13 @@ Old files **retired** (moved to `Trash/` not deleted, so `git log --follow` keep
 - "Total filler savings" / "total pause savings" mappings used in the new UI: `editList.enabledSavings` (already exists, sums fillers + pauses combined). For per-cohort totals, the new view layer computes inline: filler savings = `editList.fillers.filter(\.isEnabled).reduce(0) { $0 + ($1.timeRange.upperBound - $1.timeRange.lowerBound) }`; pause savings = `editList.pauses.filter(\.isEnabled).reduce(0) { $0 + $1.duration }`. **No `EditList` derived properties added.** Inline formatting helper in the new `Studio/Formatting.swift` (see §4.1).
 
 **ViewModel additions (new in this spec):**
-- `private(set) var recognizedSegments: [TranscribedSegment] = []` — populated when `Update.completed` fires with the new payload.
-- `private(set) var sourceDuration: TimeInterval = 0` — same.
-- `func setPauseThreshold(_ seconds: TimeInterval)` — clamps to `1.0...3.0`, updates `pauseThreshold`, runs `PauseDetector(threshold: seconds).detect(segments: recognizedSegments, duration: sourceDuration)` to produce a fresh `[PauseEdit]`. **Preserves user toggles**: if a new pause's id matches a pre-existing pause's id (id derived from `lowerBound` rounded to 0.001s), copy the prior `isEnabled`. Otherwise default to enabled. Replaces `editList.pauses` synchronously. No-op when `recognizedSegments.isEmpty`.
+- `private(set) var cachedSegments: [TranscriptionState.RecognizedSegment] = []` — populated when `Update.completed` fires with the new payload.
+- `private(set) var cachedDuration: TimeInterval = 0` — same.
+- `func setPauseThreshold(_ seconds: TimeInterval)` — clamps to `1.0...3.0`, updates `pauseThreshold`, calls `PauseDetector.detect(in: cachedSegments, totalDuration: cachedDuration, threshold: seconds)` (existing static API on the `PauseDetector` enum at `Services/PauseDetector.swift:7`) to produce a fresh `[PauseEdit]`. **Preserves user toggles via exact id-string match** (existing `PauseEdit.id` is `"pause@\(timeRange.lowerBound)"` and `PauseDetector` is deterministic for the same cached segments — surviving pauses keep their identical id). Replaces `editList.pauses` synchronously. No-op when `cachedSegments.isEmpty`. Triggers a `setEdit`-style `.light` haptic via `UIImpactFeedbackGenerator` (haptic responsibility belongs to the caller — `PauseControlRow` — so the VM stays haptic-free; see §4.7).
 
 **`SmartCutService.Update` enum addition (new in this spec):**
 - Today: `case progress(Double)` and `case completed(EditList)`.
-- New: `case completed(EditList, segments: [TranscribedSegment], duration: TimeInterval)`. The service already computes both internally during `analyze`; just propagate. ALL call-sites updated (the only consumer today is `SmartCutViewModel.analyze` switch statement at line 124-134; tests in `SmartCutServiceIntegrationTests.swift` will need a one-line argument-list update).
+- New: `case completed(EditList, segments: [TranscriptionState.RecognizedSegment], duration: TimeInterval)`. The service already computes both internally during `analyze`; just propagate. ALL call-sites updated (the only consumer today is `SmartCutViewModel.analyze` switch statement at line 124-134; tests in `SmartCutServiceIntegrationTests.swift` will need a one-line argument-list update).
 
 **Existing `FillerLibrary` API used as-is — no additions:**
 - Read: `defaultOnWords` (compile-time constant), `defaultOffWords` (compile-time constant), `customWords` (UserDefaults-backed), `removedDefaults` (UserDefaults-backed), `allWords` (computed: `(defaults - removed) + customWords`), `isEnabledByDefault(_:)`.
@@ -143,6 +144,11 @@ Old files **retired** (moved to `Trash/` not deleted, so `git log --follow` keep
 - New "Restore default words" affordance writes directly to `defaults` (clearing `removedKey`) — but to keep this off the call-site, the spec adds **one** small mutating method: `mutating func restoreAllDefaults()` which clears the `removedDefaults` UserDefaults key. Single line; preserves all other library invariants.
 
 **Existing `EditList` / `FillerEdit` / `PauseEdit` — no changes.**
+
+**`SegmentedPill` enhancement (new in this spec, non-breaking):**
+- Today the component hardcodes selected variant to `.filled` + `.ai` and unselected to `.outline` + `.accent` (`SegmentedPill.swift:42–44`). The Studio call-site needs Deep Indigo selected (the brief says "selected segment is Deep Indigo"), which conflicts with the hardcoded `.ai` (Lime).
+- Add two **optional** parameters to `SegmentedPill`: `selectedTint: PillButtonStyle.TintRole = .ai` and `unselectedTint: PillButtonStyle.TintRole = .accent`. Existing call-sites (Cleaning Lab tabs picker, Smart Cut/AI Denoise switcher) pick up the defaults — no behavior change. Studio's Original/Cleaned picker passes `selectedTint: .accent, unselectedTint: .accent` so selected = filled Deep Indigo, unselected = outline Deep Indigo.
+- Adapter at the call-site: `enum PlaybackTrack: Hashable, CaseIterable { case original, cleaned }` + a computed `Binding<PlaybackTrack>` that maps `viewModel.isPlayingCleaned` (`false ↔ .original`, `true ↔ .cleaned`). Setting the binding calls `viewModel.toggleCleaned()` only when the value changes (the existing method is a toggle, not a setter, so the adapter checks current state before calling). Lives inside `SmartCutStudioContainer` since it's a single-call-site adapter.
 
 The new view layer reads these and dispatches actions; nothing else mutates.
 
@@ -212,7 +218,7 @@ Renders an HStack with `leading` left, `Spacer()`, `trailing` right, applies `st
 - Header row: word title (large, bold) + total occurrences + total saves chip on the trailing edge. "Disable all" / "Enable all" link top-right.
 - Body: `ScrollView` of capsule pill rows. Each row: `studioFrostedCapsule()` chrome containing ▶ button (filled.ai when this row is currently being previewed by the `previewPlayer`, outlined otherwise), excerpt `Text` (line-limited 1), timestamp text (secondary), checkbox.
 - Per-occurrence checkbox tap → `viewModel.setEdit(id: edit.id, enabled: !edit.isEnabled)`. (`setEdit` handles both filler ids and pause ids — the only public API for individual toggles on the VM.)
-- The 4-second preview behavior carries over from the existing `playWindow` — including the recently-added "stop in-flight player before starting new" guard. **The helper moves into the new file** (since the spec retires `FillerListPanel`): copied verbatim into a `private func playWindow(around: ClosedRange<TimeInterval>)` on `FillerOccurrenceSheet`. State (`@State previewPlayer: AVAudioPlayer?`, `@State previewingId: String?`) is local to the sheet view. The `previewingId` drives the ▶/■ icon swap.
+- The 4-second preview behavior carries over from the existing `playWindow` — including the recently-added "stop in-flight player before starting new" guard (commit `33162e6`). **The helper moves into the new file** (since the spec retires `FillerListPanel`): copied **verbatim, no refactor during the move** into a `private func playWindow(around: ClosedRange<TimeInterval>)` on `FillerOccurrenceSheet`. The verbatim copy includes the subtle `previewPlayer === player` self-comparison inside the `DispatchQueue.main.asyncAfter` closure — that pattern works because of `@State` value semantics, and "improvements" risk drift. State (`@State previewPlayer: AVAudioPlayer?`, `@State previewingId: String?`) is local to the sheet view. The `previewingId` drives the ▶/■ icon swap.
 - "Disable all" / "Enable all" trailing link: dispatches a single `viewModel.setCategory(category, enabled: false)` (or `true`). Caveat: this clobbers any per-occurrence overrides the user may have made — same behavior the current category checkbox has today (`FillerListPanel.categoryRow`). Acceptable; matches existing model.
 - Footer (within sheet, not detent-pinned): empty.
 - Dismissal: standard sheet dismiss; if a preview is mid-play, `onDisappear` stops it (existing pattern from `FillerListPanel:25-32`).
@@ -226,12 +232,12 @@ struct PauseControlRow: View {
     @Bindable var viewModel: SmartCutViewModel
     @Environment(\.sonicMergeSemantic) private var semantic
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var draftThreshold: TimeInterval
-
-    init(viewModel: SmartCutViewModel) {
-        self._viewModel = Bindable(viewModel)
-        self._draftThreshold = State(initialValue: viewModel.pauseThreshold)
-    }
+    /// Drives the slider locally so the rolling-digit text animates smoothly
+    /// during drag. Synced to viewModel.pauseThreshold on first appear and on
+    /// each step write-back. Default 1.5 matches viewModel.pauseThreshold's
+    /// initialiser; the .onAppear pull below covers the case where a prior
+    /// drag has set it differently.
+    @State private var draftThreshold: TimeInterval = 1.5
 
     private var pauseSavings: TimeInterval {
         viewModel.editList.pauses.filter(\.isEnabled).reduce(0) { $0 + $1.duration }
@@ -260,6 +266,7 @@ struct PauseControlRow: View {
             SavesChip(seconds: pauseSavings)
                 .contentTransition(reduceMotion ? .identity : .numericText())
         }
+        .onAppear { draftThreshold = viewModel.pauseThreshold }
     }
 }
 ```
@@ -378,11 +385,12 @@ Same as Phase 11: **no snapshot harness exists in this repo**, no UI test target
 
 ## 9. Migration & deprecation
 
-- `SmartCutCardView`: replaced by `SmartCutStudioContainer` in `CleaningLabView`'s `.tab(.smartCut)` branch. Old file deleted in the same chunk.
-- `FillerListPanel`: deleted.
-- `EditFillerListSheet`: deleted.
+- `SmartCutCardView`: replaced by `SmartCutStudioContainer` at `CleaningLabView.swift:210-213`. Old file deleted in the same chunk.
+- `FillerListPanel`: deleted (the only call-site is inside `SmartCutCardView`, which is also being deleted).
+- `EditFillerListSheet`: deleted. Today it's presented from `SmartCutCardView` via a `.sheet(isPresented:)`. The new `SmartCutStudioContainer` owns the equivalent sheet presentation, calling `EditFillerListStudioSheet` instead.
 - `SavesBadge` (currently a private struct inside `SmartCutCardView.swift`): replaced by `StudioPulseSavesBadge`.
-- Any call sites currently calling these views (none expected outside `CleaningLabView` and `SmartCutCardView` itself) are audited during plan execution.
+- `SegmentedPill`: NOT retired — gains two optional parameters (see §4.2). Existing call-sites unchanged.
+- Any other call sites currently calling these views (none expected outside `CleaningLabView` and `SmartCutCardView` itself) are audited during plan execution.
 
 ## 10. Risks & mitigations
 
