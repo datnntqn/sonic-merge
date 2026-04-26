@@ -5,7 +5,7 @@ actor SmartCutService {
     /// Streamed updates from `analyze`.
     enum Update: Sendable {
         case progress(Double)        // 0...1
-        case completed(EditList)
+        case completed(EditList, segments: [TranscriptionState.RecognizedSegment], duration: TimeInterval)
     }
 
     private let library: FillerLibrary
@@ -44,7 +44,7 @@ actor SmartCutService {
                         threshold: pauseThreshold
                     )
                     let editList = EditList(fillers: fillers, pauses: pauses)
-                    continuation.yield(.completed(editList))
+                    continuation.yield(.completed(editList, segments: state.recognizedSegments, duration: state.sourceDuration))
                     continuation.finish()
                 } catch {
                     continuation.finish(throwing: error)

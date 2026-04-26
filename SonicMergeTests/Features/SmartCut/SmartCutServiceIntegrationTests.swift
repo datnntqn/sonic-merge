@@ -20,7 +20,7 @@ struct SmartCutServiceIntegrationTests {
 
         var finalEditList: EditList?
         for try await update in service.analyze(input: url) {
-            if case .completed(let list) = update {
+            if case .completed(let list, _, _) = update {
                 finalEditList = list
             }
         }

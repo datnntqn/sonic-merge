@@ -73,3 +73,61 @@ struct SmartCutViewModelTests {
         #expect(vm.hasDirtyEditsSinceApply == true)
     }
 }
+
+@Suite("SmartCutViewModel.setPauseThreshold")
+@MainActor
+struct SmartCutViewModelSetPauseThresholdTests {
+
+    private func makeVM() -> SmartCutViewModel {
+        let coordinator = PlaybackCoordinator()
+        let library = FillerLibrary(defaults: UserDefaults(suiteName: "TestSuite-\(UUID())")!)
+        let vm = SmartCutViewModel(coordinator: coordinator, library: library)
+        let segments: [TranscriptionState.RecognizedSegment] = [
+            .init(text: "hello", startTime: 1.0, endTime: 4.0, confidence: 0.9),
+            .init(text: "world", startTime: 6.0, endTime: 9.0, confidence: 0.9)
+        ]
+        vm._injectCachedTranscriptionForTesting(segments: segments, duration: 10.0)
+        return vm
+    }
+
+    @Test("Returns no-op when cached segments are empty (per spec: full no-op, including threshold)")
+    func setPauseThreshold_noCache_isNoop() {
+        let coordinator = PlaybackCoordinator()
+        let library = FillerLibrary(defaults: UserDefaults(suiteName: "TestSuite-\(UUID())")!)
+        let vm = SmartCutViewModel(coordinator: coordinator, library: library)
+        let priorPauses = vm.editList.pauses
+        let priorThreshold = vm.pauseThreshold
+        vm.setPauseThreshold(2.5)
+        #expect(vm.editList.pauses == priorPauses)
+        #expect(vm.pauseThreshold == priorThreshold)
+    }
+
+    @Test("Updates pauseThreshold and rebuilds editList.pauses from cached segments")
+    func setPauseThreshold_rebuildsPauses() {
+        let vm = makeVM()
+        vm.setPauseThreshold(1.5)
+        #expect(vm.pauseThreshold == 1.5)
+        #expect(vm.editList.pauses.count == 1)
+        #expect(vm.editList.pauses.first?.timeRange == 4.0...6.0)
+    }
+
+    @Test("Rebuild detects more pauses when threshold lowers")
+    func setPauseThreshold_lowerThresholdDetectsMore() {
+        let vm = makeVM()
+        vm.setPauseThreshold(1.5)  // 1 pause: 4.0...6.0
+        vm.setPauseThreshold(0.8)  // Should detect the 1.0s pre + 1.0s post too
+        #expect(vm.editList.pauses.count == 3)
+    }
+
+    @Test("Preserves user's isEnabled flags on surviving pauses across recompute")
+    func setPauseThreshold_preservesUserToggles() {
+        let vm = makeVM()
+        vm.setPauseThreshold(1.5)
+        vm.setEdit(id: vm.editList.pauses[0].id, enabled: false)
+        #expect(vm.editList.pauses[0].isEnabled == false)
+        vm.setPauseThreshold(1.7)
+        #expect(vm.editList.pauses.count == 1)
+        #expect(vm.editList.pauses.first?.timeRange == 4.0...6.0)
+        #expect(vm.editList.pauses.first?.isEnabled == false)
+    }
+}

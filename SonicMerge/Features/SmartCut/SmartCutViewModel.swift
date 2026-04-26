@@ -21,6 +21,8 @@ final class SmartCutViewModel: PlaybackParticipant {
     // MARK: Public observable state
     private(set) var state: State = .idle
     private(set) var editList = EditList()
+    private(set) var cachedSegments: [TranscriptionState.RecognizedSegment] = []
+    private(set) var cachedDuration: TimeInterval = 0
     private(set) var inputURL: URL?
     private(set) var outputURL: URL?
     private(set) var estimatedAnalysisMinutes: Int = 0
@@ -127,8 +129,10 @@ final class SmartCutViewModel: PlaybackParticipant {
                     switch update {
                     case .progress(let p):
                         state = .analyzing(progress: p)
-                    case .completed(let list):
+                    case .completed(let list, let segments, let duration):
                         editList = list
+                        cachedSegments = segments
+                        cachedDuration = duration
                         state = .results
                     }
                 }
@@ -176,6 +180,41 @@ final class SmartCutViewModel: PlaybackParticipant {
         UIImpactFeedbackGenerator(style: .light).impactOccurred()
     }
 
+    /// Phase 12 (Studio): live-recompute the pause set when the user drags the
+    /// threshold slider. Clamps to a defensive sanity range, updates the public
+    /// pauseThreshold, then re-runs PauseDetector against the cached segments
+    /// captured at .completed. Preserves user isEnabled toggles by exact id-string
+    /// match (PauseEdit.id is "pause@\(lowerBound)" and PauseDetector is
+    /// deterministic for the same cached segments — surviving pauses keep the
+    /// identical id). Does NOT fire a haptic itself; haptic responsibility lives
+    /// in the caller (PauseControlRow.onChange).
+    ///
+    /// The slider widget enforces the visible UX range of 1.0...3.0; the
+    /// model-side clamp here is a wider defensive band so the method stays
+    /// total over the ambient TimeInterval domain (and so unit tests can probe
+    /// the boundary behavior at threshold values strictly below 1.0).
+    func setPauseThreshold(_ seconds: TimeInterval) {
+        // Per spec: full no-op when there are no cached segments yet (i.e., before
+        // first .completed). Both threshold AND pauses stay untouched in that case.
+        guard !cachedSegments.isEmpty else { return }
+        let clamped = min(max(seconds, 0.5), 3.0)
+        pauseThreshold = clamped
+        let priorIsEnabledById: [String: Bool] = Dictionary(
+            uniqueKeysWithValues: editList.pauses.map { ($0.id, $0.isEnabled) }
+        )
+        let detected = PauseDetector.detect(
+            in: cachedSegments,
+            totalDuration: cachedDuration,
+            threshold: clamped
+        )
+        editList.pauses = detected.map { p in
+            if let prior = priorIsEnabledById[p.id], prior != p.isEnabled {
+                return PauseEdit(timeRange: p.timeRange, isEnabled: prior)
+            }
+            return p
+        }
+    }
+
     // MARK: Apply
 
     func apply() async {
@@ -213,5 +252,13 @@ final class SmartCutViewModel: PlaybackParticipant {
 
     func _injectAppliedSnapshotForTesting(_ list: EditList) {
         appliedEditListSnapshot = list
+    }
+
+    func _injectCachedTranscriptionForTesting(
+        segments: [TranscriptionState.RecognizedSegment],
+        duration: TimeInterval
+    ) {
+        cachedSegments = segments
+        cachedDuration = duration
     }
 }
