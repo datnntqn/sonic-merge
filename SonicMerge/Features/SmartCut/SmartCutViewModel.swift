@@ -1,7 +1,9 @@
 import Foundation
 import AVFoundation
 import Observation
+import Speech
 import UIKit
+import UserNotifications
 
 @Observable
 @MainActor
@@ -100,6 +102,25 @@ final class SmartCutViewModel: PlaybackParticipant {
         analysisTask?.cancel()
         state = .analyzing(progress: 0)
         analysisTask = Task {
+            // Speech-recognition authorization gate. SFSpeechRecognizer.isAvailable returns
+            // true even before the user has granted permission; on first use, the recognition
+            // task itself fails with kAFAssistantErrorDomain if not authorized. Prompt
+            // explicitly so the OS dialog appears, then handle each branch.
+            let status = await Self.requestSpeechAuthorization()
+            switch status {
+            case .authorized:
+                break
+            case .denied, .restricted:
+                state = .error(message: "Smart Cut needs Speech Recognition access. Enable it in Settings → SonicMerge.")
+                return
+            case .notDetermined:
+                // User dismissed the dialog without choosing — treat as denied for this run.
+                state = .idle
+                return
+            @unknown default:
+                state = .error(message: "Speech Recognition is unavailable.")
+                return
+            }
             do {
                 for try await update in await service.analyze(input: inputURL) {
                     if Task.isCancelled { return }
@@ -120,6 +141,12 @@ final class SmartCutViewModel: PlaybackParticipant {
         }
     }
 
+    private static func requestSpeechAuthorization() async -> SFSpeechRecognizerAuthorizationStatus {
+        await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { continuation.resume(returning: $0) }
+        }
+    }
+
     func cancelAnalyze() {
         analysisTask?.cancel()
         analysisTask = nil
@@ -127,7 +154,14 @@ final class SmartCutViewModel: PlaybackParticipant {
     }
 
     func scheduleBackgroundTranscription() {
-        try? BackgroundTranscriptionTask.schedule()
+        // Request notification authorization the first time the user opts into BG processing,
+        // so the completion notification can actually surface. Permission is asked once
+        // and cached by the OS — calling repeatedly is cheap and idempotent.
+        Task {
+            _ = try? await UNUserNotificationCenter.current()
+                .requestAuthorization(options: [.alert, .sound])
+            try? BackgroundTranscriptionTask.schedule()
+        }
     }
 
     // MARK: User curation
