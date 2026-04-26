@@ -61,5 +61,18 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<!-- Smart Cut: Speech.framework on-device transcription consent (sc-t13) -->
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>SonicMerge uses on-device speech recognition to detect filler words and long silences in your audio. Recognition runs entirely on your device — your audio is never uploaded.</string>
+	<!-- Smart Cut: BGProcessingTask identifier — must match BackgroundTranscriptionTask.identifier (sc-t13) -->
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.dtech.SonicMerge.smartcut.transcribe</string>
+	</array>
+	<!-- Smart Cut: enable processing background mode for BGProcessingTask (sc-t13) -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>processing</string>
+	</array>
 </dict>
 </plist>
