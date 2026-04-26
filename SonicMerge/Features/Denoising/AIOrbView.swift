@@ -142,31 +142,65 @@ struct AIOrbView: View {
         }
     }
 
+    // MARK: - Phase 11 Glass Overlay
+
+    /// Top-anchored radial gradient mimicking a specular highlight from a
+    /// soft light source above the orb. Slight blur softens the edge so it
+    /// reads as glass, not paint. .screen blend mode keeps it additive on
+    /// top of the orb's color blend without hardening the rim.
+    private var glassOverlay: some View {
+        Ellipse()
+            .fill(
+                RadialGradient(
+                    colors: [
+                        Color.white.opacity(reduceTransparency ? 0.10 : 0.20),
+                        Color.white.opacity(0.05),
+                        Color.clear
+                    ],
+                    center: UnitPoint(x: 0.5, y: 0.25),
+                    startRadius: 0,
+                    endRadius: 80
+                )
+            )
+            .frame(width: 168, height: 100)
+            .blendMode(.screen)
+            .offset(y: -50)
+            .blur(radius: reduceTransparency ? 2 : 5)
+            .accessibilityHidden(true)
+    }
+
     // MARK: - Body
 
     var body: some View {
         VStack(spacing: SonicMergeTheme.Spacing.sm) {
 
-            ZStack {
-                // 1. Outer bloom — separate Circle layer, NOT inside Canvas (per D-02)
-                Circle()
-                    .fill(RadialGradient(
-                        colors: [
-                            Color(uiColor: semantic.accentAI).opacity(0.18),
-                            Color.clear
-                        ],
-                        center: .center,
-                        startRadius: 0,
-                        endRadius: 144
-                    ))
-                    .frame(width: 288, height: 288)
-                    .blur(radius: reduceTransparency ? 8 : 24)
-                    .blendMode(.screen)
+            // Phase 11: outer TimelineView wraps the entire orb ZStack so
+            // its `t` drives both the per-blob morph AND the breathing
+            // pulsation on the outer scale. shouldPause halts both motions
+            // together when reduceMotion or !isProcessing.
+            TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: shouldPause)) { timeline in
+                let t = timeline.date.timeIntervalSinceReferenceDate
+                // ±2% over a ~1.7s cycle — gentle "breathing" pulse.
+                let breath = 1.0 + 0.02 * sin(t * 0.6 * 2 * .pi)
 
-                // 2. Canvas orb — TimelineView + Canvas with 4 animated blobs
-                TimelineView(.animation(minimumInterval: 1.0 / 60.0, paused: shouldPause)) { timeline in
+                ZStack {
+                    // 1. Outer bloom — separate Circle layer, NOT inside Canvas (per D-02)
+                    Circle()
+                        .fill(RadialGradient(
+                            colors: [
+                                Color(uiColor: semantic.accentAI).opacity(0.18),
+                                Color.clear
+                            ],
+                            center: .center,
+                            startRadius: 0,
+                            endRadius: 144
+                        ))
+                        .frame(width: 288, height: 288)
+                        .blur(radius: reduceTransparency ? 8 : 24)
+                        .blendMode(.screen)
+
+                    // 2. Canvas orb — 4 animated blobs driven by the outer `t`
                     Canvas { ctx, size in
-                        let t = timeline.date.timeIntervalSinceReferenceDate
                         for blob in makeBlobs() {
                             let r = blob.baseRadius * (1 + 0.08 * sin(t * blob.frequency * 2 * .pi + blob.phaseOffset))
                             let cx = blob.baseCenter.x + cos(t * blob.frequency * 2 * .pi + blob.phaseOffset) * 12
@@ -182,36 +216,40 @@ struct AIOrbView: View {
                             ctx.fill(Ellipse().path(in: rect), with: shading)
                         }
                     }
-                }
-                .frame(width: 240, height: 240)
-                .saturation(1.15)
+                    .frame(width: 240, height: 240)
+                    .saturation(1.15)
 
-                // 3. Progress ring — visible when isProcessing
-                if viewModel.isProcessing {
-                    Circle()
-                        .trim(from: 0, to: CGFloat(viewModel.progress))
-                        .stroke(
-                            Color(uiColor: semantic.accentAI),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                        )
-                        .rotationEffect(.degrees(-90))
-                        .frame(width: 256, height: 256)
-                        .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: viewModel.progress)
-                        .accessibilityHidden(true)
-                }
+                    // 3. Phase 11: glass overlay — top-anchored specular highlight
+                    glassOverlay
 
-                // Full ring when success state
-                if !viewModel.isProcessing && viewModel.hasDenoisedResult {
-                    Circle()
-                        .trim(from: 0, to: 1.0)
-                        .stroke(
-                            Color(uiColor: semantic.accentAI),
-                            style: StrokeStyle(lineWidth: 4, lineCap: .round)
-                        )
-                        .rotationEffect(.degrees(-90))
-                        .frame(width: 256, height: 256)
-                        .accessibilityHidden(true)
+                    // 4. Progress ring — visible when isProcessing
+                    if viewModel.isProcessing {
+                        Circle()
+                            .trim(from: 0, to: CGFloat(viewModel.progress))
+                            .stroke(
+                                Color(uiColor: semantic.accentAI),
+                                style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                            )
+                            .rotationEffect(.degrees(-90))
+                            .frame(width: 256, height: 256)
+                            .animation(reduceMotion ? nil : .easeOut(duration: 0.25), value: viewModel.progress)
+                            .accessibilityHidden(true)
+                    }
+
+                    // 5. Full ring when success state
+                    if !viewModel.isProcessing && viewModel.hasDenoisedResult {
+                        Circle()
+                            .trim(from: 0, to: 1.0)
+                            .stroke(
+                                Color(uiColor: semantic.accentAI),
+                                style: StrokeStyle(lineWidth: 4, lineCap: .round)
+                            )
+                            .rotationEffect(.degrees(-90))
+                            .frame(width: 256, height: 256)
+                            .accessibilityHidden(true)
+                    }
                 }
+                .scaleEffect(reduceMotion ? 1.0 : breath)
             }
 
             // 4. State-dependent label
