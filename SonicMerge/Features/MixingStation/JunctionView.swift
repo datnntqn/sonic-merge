@@ -29,10 +29,18 @@ struct JunctionView: View {
         case gap(Double)
         case crossfade
 
+        /// True when this choice represents the empty / "tap to add" state.
+        /// Used by the capsule to render as an Add affordance rather than a
+        /// state readout.
+        var isEmpty: Bool {
+            if case .gap(let d) = self, d == 0 { return true }
+            return false
+        }
+
         var capsuleLabel: String {
             switch self {
             case .gap(let d):
-                if d == 0 { return "0s" }
+                if d == 0 { return "Add" }
                 if d == 0.5 { return "0.5s" }
                 if d == 1.0 { return "1.0s" }
                 return "2.0s"
@@ -43,15 +51,19 @@ struct JunctionView: View {
 
         var capsuleSymbol: String {
             switch self {
-            case .gap(let d): return d == 0 ? "minus" : "clock"
+            case .gap(let d): return d == 0 ? "plus" : "clock"
             case .crossfade: return "arrow.triangle.merge"
             }
         }
 
         var voiceOverLabel: String {
             switch self {
-            case .gap(let d): return d == 0 ? "no gap" : "\(d) second gap"
-            case .crossfade: return "Crossfade"
+            case .gap(let d):
+                return d == 0
+                    ? "no gap, tap to add a gap or crossfade"
+                    : "\(d) second gap"
+            case .crossfade:
+                return "Crossfade"
             }
         }
     }
@@ -113,7 +125,12 @@ struct JunctionView: View {
                 .lineLimit(1)
         }
         .font(.caption.weight(.semibold))
-        .foregroundStyle(Color(uiColor: semantic.accentAction))
+        // Empty/Add state is dimmed so it reads as an affordance, not a
+        // current-state badge. Set states render at full accentAction.
+        .foregroundStyle(
+            Color(uiColor: semantic.accentAction)
+                .opacity(picked.isEmpty ? 0.55 : 1.0)
+        )
         .padding(.horizontal, 12)
         .frame(height: 28)
         .background(
@@ -121,8 +138,8 @@ struct JunctionView: View {
         )
         .overlay(
             Capsule().stroke(
-                Color(uiColor: semantic.accentGlow).opacity(strokeOpacity),
-                lineWidth: 1
+                Color(uiColor: semantic.accentGlow).opacity(picked.isEmpty ? strokeOpacity * 0.6 : strokeOpacity),
+                style: StrokeStyle(lineWidth: 1, dash: picked.isEmpty ? [3, 3] : [])
             )
         )
         .frame(minWidth: 72, minHeight: 44)

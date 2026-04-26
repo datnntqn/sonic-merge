@@ -35,7 +35,7 @@ final class GapTransition {
     @Relationship(deleteRule: .nullify, inverse: \AudioClip.gapTransition)
     var audioClip: AudioClip?
 
-    init(leadingClipSortOrder: Int, gapDuration: Double = 0.5, isCrossfade: Bool = false) {
+    init(leadingClipSortOrder: Int, gapDuration: Double = 0, isCrossfade: Bool = false) {
         self.leadingClipSortOrder = leadingClipSortOrder
         self.gapDuration = gapDuration
         self.isCrossfade = isCrossfade
