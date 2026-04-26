@@ -197,19 +197,23 @@ Where `SavesBadge` is a small private view:
 ```swift
 private struct SavesBadge: View {
     let savings: TimeInterval
+    @Environment(\.sonicMergeSemantic) private var semantic
     var body: some View {
+        let isActive = savings > 0
         Text("saves ~\(formatDuration(savings))")
             .font(.subheadline.weight(.semibold))
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(
-                Capsule().fill(savings > 0 ? Color.green : Color.gray.opacity(0.3))
+                Capsule().fill(isActive ? semantic.aiAccent : semantic.surfaceMuted)
             )
-            .foregroundStyle(savings > 0 ? .white : .secondary)
-            .shadow(color: .green.opacity(savings > 0 ? 0.4 : 0), radius: 8)
+            .foregroundStyle(isActive ? semantic.onAiAccent : .secondary)
+            .shadow(color: semantic.aiAccent.opacity(isActive ? 0.4 : 0), radius: 8)
     }
 }
 ```
+
+Uses the project's `@Environment(\.sonicMergeSemantic)` tokens (`aiAccent` = lime green, `surfaceMuted` = neutral grey) rather than raw `Color.green`/`Color.gray`. If these specific token names don't exist yet, the implementation pass should use the closest equivalents (or extend the semantic palette by 1-2 tokens — small additive change, document in the plan).
 
 When `savings == 0` the badge dims to grey rather than disappearing — preserves layout stability as the user toggles rows.
 
@@ -304,7 +308,25 @@ private var smartCutPrimaryButton: some View {
 }
 ```
 
-When the floating bar's content is `EmptyView`, the bar itself should not render — `FloatingActionBar` checks for empty content via a layout-driven approach (or callers conditionally wrap the entire bar in an `if` — pick whichever reads cleaner during implementation).
+When the floating bar would have no actionable content, the **caller** wraps the entire `FloatingActionBar` in an `if`. SwiftUI cannot reliably detect "empty content" inside a `@ViewBuilder` (the workarounds rely on fragile `_ConditionalContent` introspection), so empty-state handling lives at the call site, not inside `FloatingActionBar`. Concretely, in `CleaningLabView`:
+
+```swift
+if shouldShowFloatingBar {
+    FloatingActionBar { /* tab-specific button */ }
+}
+
+private var shouldShowFloatingBar: Bool {
+    switch selectedTab {
+    case .denoise: return true  // always show
+    case .smartCut:
+        switch viewModel.smartCutVM.state {
+        case .results: return true
+        case .applied: return viewModel.smartCutVM.hasDirtyEditsSinceApply
+        case .idle, .analyzing, .stale, .error: return false
+        }
+    }
+}
+```
 
 ### 6.7 What stays unchanged on Smart Cut card
 
@@ -345,7 +367,7 @@ struct SegmentedPillTests {
 
 ### 8.3 Manual QA — appended to existing checklist
 
-Add to `docs/superpowers/qa/2026-04-26-smart-cut-manual-qa.md` under a new "Cleaning Lab Tabs" section:
+Append to `docs/superpowers/qa/2026-04-26-smart-cut-manual-qa.md` under a new "Cleaning Lab Tabs" section. The implementer should verify the file exists first (it shipped with sc-t20); if not present, create it with this section as the initial content.
 
 - Default tab on first entry is **AI Denoise**.
 - Tapping the **Smart Cut** pill smoothly switches the visible card; tapping back to **AI Denoise** restores the orb in whatever state it was last in (denoised state preserved).
