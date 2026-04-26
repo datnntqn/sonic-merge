@@ -83,7 +83,7 @@ struct SmartCutViewModelSetPauseThresholdTests {
         let library = FillerLibrary(defaults: UserDefaults(suiteName: "TestSuite-\(UUID())")!)
         let vm = SmartCutViewModel(coordinator: coordinator, library: library)
         let segments: [TranscriptionState.RecognizedSegment] = [
-            .init(text: "hello", startTime: 1.0, endTime: 4.0, confidence: 0.9),
+            .init(text: "hello", startTime: 1.5, endTime: 4.0, confidence: 0.9),
             .init(text: "world", startTime: 6.0, endTime: 9.0, confidence: 0.9)
         ]
         vm._injectCachedTranscriptionForTesting(segments: segments, duration: 10.0)
@@ -115,8 +115,8 @@ struct SmartCutViewModelSetPauseThresholdTests {
     func setPauseThreshold_lowerThresholdDetectsMore() {
         let vm = makeVM()
         vm.setPauseThreshold(1.5)  // 1 pause: 4.0...6.0
-        vm.setPauseThreshold(0.8)  // Should detect the 1.0s pre + 1.0s post too
-        #expect(vm.editList.pauses.count == 3)
+        vm.setPauseThreshold(1.0)  // Now leading 1.5s silence ALSO detected -> 2 pauses
+        #expect(vm.editList.pauses.count == 2)
     }
 
     @Test("Preserves user's isEnabled flags on surviving pauses across recompute")

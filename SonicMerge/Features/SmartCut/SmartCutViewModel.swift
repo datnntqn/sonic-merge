@@ -189,15 +189,12 @@ final class SmartCutViewModel: PlaybackParticipant {
     /// identical id). Does NOT fire a haptic itself; haptic responsibility lives
     /// in the caller (PauseControlRow.onChange).
     ///
-    /// The slider widget enforces the visible UX range of 1.0...3.0; the
-    /// model-side clamp here is a wider defensive band so the method stays
-    /// total over the ambient TimeInterval domain (and so unit tests can probe
-    /// the boundary behavior at threshold values strictly below 1.0).
+    /// Clamps to 1.0...3.0 (the slider's range).
     func setPauseThreshold(_ seconds: TimeInterval) {
         // Per spec: full no-op when there are no cached segments yet (i.e., before
         // first .completed). Both threshold AND pauses stay untouched in that case.
         guard !cachedSegments.isEmpty else { return }
-        let clamped = min(max(seconds, 0.5), 3.0)
+        let clamped = min(max(seconds, 1.0), 3.0)
         pauseThreshold = clamped
         let priorIsEnabledById: [String: Bool] = Dictionary(
             uniqueKeysWithValues: editList.pauses.map { ($0.id, $0.isEnabled) }
