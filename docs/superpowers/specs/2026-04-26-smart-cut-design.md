@@ -92,7 +92,7 @@ All new files live under `/SonicMerge/Features/SmartCut/`, following the project
 
 - **`CleaningLabViewModel`** receives one new property: `let smartCutVM: SmartCutViewModel`. It observes both `denoisedOutputURL` and `smartCutVM.outputURL`, and exposes a computed `exportSource: URL` resolved by the fallback chain `smartCutOutputURL ?? denoisedOutputURL ?? mergedFileURL`. The existing export sheet logic reads `exportSource` instead of `denoisedTempURL`.
 - **`CleaningLabView`** adds one new card render call below the existing Denoise card: `SmartCutCardView(vm: viewModel.smartCutVM)`. No structural changes to the rest of the screen.
-- **No refactor of the Denoise tool, no refactor of `CleaningLabViewModel`'s existing methods.** The existing A/B player pair stays. Smart Cut introduces its own A/B player pair (two more `AVAudioPlayer` instances). When the user toggles A/B on one card, the other card's playback pauses (handled via a shared playback coordinator delegate).
+- **No refactor of the Denoise tool, no refactor of `CleaningLabViewModel`'s existing methods.** The existing A/B player pair stays. Smart Cut introduces its own A/B player pair (two more `AVAudioPlayer` instances). Cross-card playback exclusivity is handled by a new `PlaybackCoordinator` actor exposed as a property of `CleaningLabViewModel`; both `DenoiseViewModel` (lifted into the existing CleaningLab plumbing as a thin wrapper if needed) and `SmartCutViewModel` register their players with the coordinator on appear and notify it on play. The coordinator pauses any other registered player when one starts.
 
 ### 4.4 Composition order (the Q9 = B fallout)
 
@@ -100,7 +100,7 @@ The two tools are presented as independent (each has its own Analyze/A/B/Apply),
 
 - Smart Cut's input source = `denoisedOutputURL ?? mergedFileURL` (resolved by `CleaningLabViewModel` and passed into `SmartCutViewModel.setInput(url:)`).
 - This is shown to the user as a small subtitle on the Smart Cut card: *"Reads from: denoised audio"* (or *"Reads from: original audio"* if Denoise is off). Makes the pipeline-order decision visible without forcing a UI for it.
-- **Staleness rule**: if the user re-blends Denoise after Smart Cut analysis, `SmartCutViewModel` enters the **Stale** state — analysis results dimmed, Apply disabled, banner prompts re-analyze. Triggered by `CleaningLabViewModel` calling `smartCutVM.invalidate()` whenever `denoisedOutputURL` changes after analysis has run.
+- **Staleness rule**: if the user re-blends Denoise after Smart Cut analysis, `SmartCutViewModel` enters the **Stale** state — analysis results dimmed, Apply disabled, banner prompts re-analyze. Triggered by `CleaningLabViewModel` observing `denoisedOutputURL` changes and, in this exact order, calling `smartCutVM.invalidate()` (clears EditList + transcript cache, transitions state machine) followed by `smartCutVM.setInput(url:)` (updates the input source for the next analyze run). `setInput` does *not* implicitly invalidate — the two are deliberately separate so `setInput` can also be called on first appear without side effects.
 
 ## 5. Data flow
 
@@ -237,7 +237,7 @@ The Smart Cut card is a `SquircleCard` (existing primitive, `glassEnabled: false
 ```
 
 - **Stats line** is the macro hook — the visceral "this saves time" beat.
-- **A/B pill**: identical chassis to Denoise's existing pill (same `PillButtonStyle`). Pre-apply, "Cleaned" plays a synthesized preview using the EditList against the input — no rendered WAV yet. (Implementation note: synthesized preview can use `AVAudioPlayerNode` scheduling segments dynamically, or fall back to realtime-rendered chunks; § 9.3 covers approach.)
+- **A/B pill**: identical chassis to Denoise's existing pill (same `PillButtonStyle`). Pre-apply, "Cleaned" plays a synthesized preview using the EditList against the input — no rendered WAV yet. **Implementation: `AVAudioPlayerNode` scheduling segments dynamically** — for each run between cuts, schedule an `AVAudioFile` segment buffer; cuts are simply skipped time ranges between scheduled segments. The 25 ms equal-power crossfade is applied at scheduling time using a small fade-in/fade-out gain envelope per segment edge. No fallback path in v1 — if an episode is so long that segment-scheduling latency becomes audible, we fall back to forcing the user through Apply (acceptable v1 trade-off, deferred refinement to post-launch).
 - **Filler list panel**:
     - One row per filler type, with checkbox + count badge + expand chevron.
     - Checkbox toggles the whole category (light haptic).
@@ -340,7 +340,16 @@ BGTaskScheduler.shared.register(
 - If partial: load progress, show State 2 with "Resumed at 4:23 — continuing in foreground" message and resume processing.
 - If notification was the trigger for app open: jump straight to State 3.
 
-### 7.5 Acknowledged limitations
+**Notification → app open plumbing.** The local notification posted from `BackgroundTranscriptionTask.handle` carries a `userInfo: ["smartCutCompletedFor": <sourceHash>]` payload. A `UNUserNotificationCenterDelegate` (set in `AppDelegate.application(_:didFinishLaunchingWithOptions:)`) receives `userNotificationCenter(_:didReceive:withCompletionHandler:)` when the user taps the notification. The delegate writes the hash to a small `PendingSmartCutOpen` model on `CleaningLabViewModel` (or via `NotificationCenter.default.post`). When `SmartCutViewModel.onAppear` runs, it checks for a pending hash matching the current input source and jumps to State 3 directly, bypassing the "Resumed at…" message.
+
+### 7.5 Source hash function
+
+Used at `Library/Caches/SmartCut/<sourceHash>.transcription-state.json` for resume keying and at staleness detection (§ 8). **`<sourceHash>` is the SHA256 hex digest of the source file's bytes** (computed via `CryptoKit.SHA256.hash(data:)` on the file contents, streamed in 64KB chunks to avoid loading the full file into memory). File-content SHA256 was chosen over file-size+mtime because:
+- Survives file moves (the merged WAV is in a temp location that may be re-created with new mtime by AVFoundation even when the audio bytes are identical).
+- Detects content drift even when AVFoundation reuses an output URL.
+- The cost (~50ms per 30 MB on modern silicon) is paid once per analyze, dwarfed by transcription time.
+
+### 7.6 Acknowledged limitations
 
 - iOS gives no SLA on `BGProcessingTask` execution — it may run minutes, hours, or days later (or never, if the device is rarely on charger). The notification UX is honest about this: no claim of when it will complete.
 - If the user re-merges in Mixing Station while a BG task is pending, the input source hash changes and the pending state is discarded on next foreground (see § 8 stale-state handling).
@@ -394,6 +403,7 @@ Located in `/SonicMergeTests/Features/SmartCut/`. XCTest, no snapshot harness.
     - empty EditList → output is a copy of input (durations equal within 1 frame)
     - all-disabled EditList → same as empty
     - byte equality NOT asserted (encoder nondeterminism)
+    - **content-positioning sanity check**: fixture WAV with a 1 kHz tone in seconds 0-2 and a 2 kHz tone in seconds 3-5 (2-3 silent), apply a cut over seconds 2-3, assert the output's RMS-by-second pattern is `tone1, tone1, tone2, tone2` (within ±5% RMS tolerance). Catches off-by-one and inverted-range bugs that pure-duration tests miss.
 - **`BackgroundTranscriptionTaskTests`**:
     - `TranscriptionState` save/load round-trip
     - resume picks up at correct chunk index
