@@ -56,6 +56,7 @@ struct PillButtonStyle: ButtonStyle {
             .clipShape(Capsule())
             .overlay(borderOverlay)
             .overlay(innerGlowOverlay)
+            .overlay(specularHighlight)
             .scaleEffect(scaleValue(configuration.isPressed))
             .animation(
                 reduceMotion ? nil : .spring(response: 0.25, dampingFraction: 0.6),
@@ -134,6 +135,35 @@ struct PillButtonStyle: ButtonStyle {
                         endPoint: UnitPoint(x: 0.5, y: 0.6)
                     )
                 )
+                .allowsHitTesting(false)
+        }
+    }
+
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+
+    /// Phase 11: thin white line at the top inner edge — a specular
+    /// highlight that reads as light reflecting off a glass surface.
+    /// Layered ON TOP of innerGlowOverlay (the broad soft glow) for a
+    /// premium glass effect: soft glow + sharp top highlight.
+    /// Suppressed for outline variants (no surface to reflect off) and
+    /// when accessibilityReduceTransparency is on.
+    @ViewBuilder
+    private var specularHighlight: some View {
+        if variant == .filled && isEnabled && !reduceTransparency {
+            Capsule()
+                .stroke(
+                    LinearGradient(
+                        colors: [
+                            Color.white.opacity(0.55),
+                            Color.white.opacity(0.10),
+                            Color.clear
+                        ],
+                        startPoint: .top,
+                        endPoint: UnitPoint(x: 0.5, y: 0.45)
+                    ),
+                    lineWidth: 1
+                )
+                .blendMode(.screen)
                 .allowsHitTesting(false)
         }
     }
