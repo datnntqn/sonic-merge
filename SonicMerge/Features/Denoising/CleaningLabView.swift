@@ -107,7 +107,7 @@ struct CleaningLabView: View {
             .padding(.horizontal, SonicMergeTheme.Spacing.md)
             .padding(.vertical, SonicMergeTheme.Spacing.lg)
         }
-        .background(Color(uiColor: semantic.surfaceBase))
+        .background { PremiumBackground() }
         .navigationTitle("Cleaning Lab")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }

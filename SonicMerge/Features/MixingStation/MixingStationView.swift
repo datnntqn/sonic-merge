@@ -39,8 +39,7 @@ struct MixingStationView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(uiColor: semantic.surfaceBase)
-                    .ignoresSafeArea()
+                PremiumBackground()
 
                 if viewModel.clips.isEmpty {
                     emptyState
