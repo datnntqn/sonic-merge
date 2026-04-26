@@ -6,16 +6,20 @@
 // Pure rendering layer over CleaningLabViewModel.
 // All business logic (pipeline, A/B playback, blending, haptics) lives in the ViewModel.
 //
-// Layout order (Phase 8):
-// 1. onDeviceAIHero trust strip (SquircleCard)
-// 2. staleBanner (conditional, SquircleCard)
-// 3. AIOrbView hero (SquircleCard, always visible, renders idle/processing/success states)
-// 4. waveformSection (SquircleCard)
-// 5. intensitySlider with LimeGreenSlider (SquircleCard)
-// 6. abComparisonButton (bare pill on surfaceBase, shown when hasDenoisedResult)
-// 7. denoiseActionButton (bare pill on surfaceBase, shown when !isProcessing)
-// + Export toolbar button → ExportFormatSheet → ExportProgressSheet → ActivityViewController
-// + Error alert
+// Layout (post clt-t5 tab refactor):
+// - SegmentedPill at top (AI Denoise / Smart Cut)
+// - ScrollView with active tab's content:
+//     * .denoise → onDeviceAIHero, staleBanner (conditional), aiWorkstation (orb + intensity + a/b),
+//       waveformSection. The CTA "Denoise Audio" / "Re-denoise" lives in the floating bar (NOT inline).
+//     * .smartCut → SmartCutCardView. Its primary CTA "Apply Cuts" / "Re-apply" lives in the floating
+//       bar in .results / .applied-with-dirty-edits states; .idle's "Analyze" + .stale's "Re-analyze"
+//       remain inline inside the card.
+// - FloatingActionBar overlaid at the bottom with the active tab's primary CTA (always visible
+//   on Denoise tab — disabled when not actionable; conditional on Smart Cut tab per state).
+// - Export toolbar button → ExportFormatSheet → ExportProgressSheet → ActivityViewController.
+// - Error alert.
+// - Deep-link handler `handlePendingSmartCutOpenIfNeeded` runs from outer .onAppear and auto-switches
+//   to the Smart Cut tab when a pending notification hash matches the current input.
 // NOTE: Denoising progress modal sheet REMOVED — progress is shown inline via AIOrbView.
 
 import SwiftUI
@@ -282,16 +286,20 @@ struct CleaningLabView: View {
     /// regardless of which tab is active on first entry. Auto-switches to the
     /// Smart Cut tab when a pending hash matches the current input.
     private func handlePendingSmartCutOpenIfNeeded() {
-        if let pending = PendingSmartCutOpen.shared.hash,
-           let inputURL = viewModel.smartCutVM.inputURL {
-            Task {
-                let currentHash = try? await SourceHasher.sha256Hex(of: inputURL)
-                if currentHash == pending {
-                    await MainActor.run {
-                        selectedTab = .smartCut
-                        viewModel.smartCutVM.analyze()
-                        PendingSmartCutOpen.shared.hash = nil
-                    }
+        // Claim-first pattern: read AND clear the pending hash synchronously so a
+        // re-fire of .onAppear (or any other call site) cannot start a duplicate
+        // analyze Task before the first one finishes.
+        guard let pending = PendingSmartCutOpen.shared.hash,
+              let inputURL = viewModel.smartCutVM.inputURL else {
+            return
+        }
+        PendingSmartCutOpen.shared.hash = nil
+        Task {
+            let currentHash = try? await SourceHasher.sha256Hex(of: inputURL)
+            if currentHash == pending {
+                await MainActor.run {
+                    selectedTab = .smartCut
+                    viewModel.smartCutVM.analyze()
                 }
             }
         }
