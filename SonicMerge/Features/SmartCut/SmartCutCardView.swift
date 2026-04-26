@@ -96,38 +96,26 @@ struct SmartCutCardView: View {
     }
 
     private var resultsContent: some View {
+        // clt-t5: inline "Apply Cuts" CTA removed; the Cleaning Lab's
+        // FloatingActionBar now owns the apply action.
         VStack(alignment: .leading, spacing: 12) {
             statsLine
             abPill
             fillerPanel(dimmed: false)
             Button("+ Edit filler list") { showsEditFillerSheet = true }
                 .buttonStyle(.borderless)
-            Button {
-                Task { await vm.apply() }
-            } label: {
-                Label("Apply Cuts", systemImage: "sparkles")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
         }
     }
 
     private func appliedContent(saved: TimeInterval) -> some View {
+        // clt-t5: inline "Re-apply" CTA removed; the Cleaning Lab's
+        // FloatingActionBar now owns the re-apply action when dirty.
         VStack(alignment: .leading, spacing: 12) {
             statsLine
             Label("Applied · \(formatDuration(saved)) saved", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
             abPill
             fillerPanel(dimmed: false)
-            if vm.hasDirtyEditsSinceApply {
-                Button {
-                    Task { await vm.apply() }
-                } label: {
-                    Label("Re-apply", systemImage: "arrow.clockwise")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
-            }
         }
     }
 
