@@ -215,8 +215,12 @@ struct CleaningLabView: View {
             GeometryReader { _ in
                 ZStack {
                     if !viewModel.waveformPeaks.isEmpty {
-                        WaveformCanvasView(peaks: viewModel.waveformPeaks)
-                            .padding(.horizontal, SonicMergeTheme.Spacing.sm)
+                        WaveformPathView(
+                            peaks: viewModel.waveformPeaks,
+                            verticalInset: 6,
+                            shadowRadius: 8
+                        )
+                        .padding(.horizontal, SonicMergeTheme.Spacing.sm)
                     } else if viewModel.isProcessing {
                         Text("Processing\u{2026}")
                             .font(.caption)
@@ -397,48 +401,3 @@ struct CleaningLabView: View {
     }
 }
 
-// MARK: - WaveformCanvasView
-
-/// Full-width symmetrical waveform drawn from 50 Float peaks.
-/// Mirrors the ClipCardView waveform pattern at full width.
-private struct WaveformCanvasView: View {
-    let peaks: [Float]
-
-    @Environment(\.sonicMergeSemantic) private var semantic
-
-    var body: some View {
-        Canvas { context, size in
-            guard !peaks.isEmpty else { return }
-
-            let barWidth = (size.width / CGFloat(peaks.count)) * 0.7
-            let gap = (size.width / CGFloat(peaks.count)) * 0.3
-            let centerY = size.height / 2
-
-            for (index, peak) in peaks.enumerated() {
-                let normalizedPeak = CGFloat(max(0.01, min(1.0, peak)))
-                let halfHeight = normalizedPeak * centerY * 0.9
-
-                let x = CGFloat(index) * (barWidth + gap) + gap / 2
-                let rect = CGRect(
-                    x: x,
-                    y: centerY - halfHeight,
-                    width: barWidth,
-                    height: halfHeight * 2
-                )
-
-                let path = Path(roundedRect: rect, cornerRadius: barWidth / 2)
-                context.fill(path, with: .color(Color(uiColor: semantic.accentWaveform).opacity(0.88)))
-            }
-
-            // Scrub line (center) — textPrimary@0.3 for visibility in both light and dark mode
-            var scrubPath = Path()
-            scrubPath.move(to: CGPoint(x: size.width / 2, y: 4))
-            scrubPath.addLine(to: CGPoint(x: size.width / 2, y: size.height - 4))
-            context.stroke(
-                scrubPath,
-                with: .color(Color(uiColor: semantic.textPrimary).opacity(0.3)),
-                lineWidth: 1.5
-            )
-        }
-    }
-}
