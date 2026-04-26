@@ -3,29 +3,32 @@
 **Status:** Draft (brainstorming phase complete; awaiting spec review + user read-through)
 **Date:** 2026-04-26
 **Owner:** DATNNT
-**Implements:** Comprehensive UI/UX refactor of the Smart Cut tab in Cleaning Lab and the Edit Filler List sheet to a "Modern Spatial AI Studio" aesthetic — glassmorphic summary card, single-column wide bento cards for filler groups + a pauses card, tap-to-detail-sheet for occurrences, unified tag-capsule pool for the filler library editor, color audit fixing system-blue links to Deep Indigo @ 50% opacity, pulsating saves badge, rolling-digit slider readout. **Visual layer only — no ViewModel, service, or model changes.**
+**Implements:** Comprehensive UI/UX refactor of the Smart Cut tab in Cleaning Lab and the Edit Filler List sheet to a "Modern Spatial AI Studio" aesthetic — glassmorphic summary card, single-column wide bento cards for filler groups + a pauses card, tap-to-detail-sheet for occurrences, unified tag-capsule pool for the filler library editor, color audit fixing system-blue links to Deep Indigo @ 50% opacity, pulsating saves badge, rolling-digit slider readout. **Primarily a view-layer refactor.** Two foundational behavior additions are in scope to support the live-recompute pause slider UX (cached recognized segments + `setPauseThreshold(_:)` on the ViewModel — same shape as the never-merged `scp-t1`/`scp-t2` work on the abandoned `smartcut-premium-ui` branch). Otherwise no model/service surface changes.
 
 ---
 
 ## 1. Overview
 
-The Smart Cut feature shipped its first UI in `fbdf722` and got a partial polish pass in the never-fully-implemented `smartcut-premium-ui` brief. The view layer today is a single `SmartCutCardView` rendering all states (idle, analyzing, results, applied, stale, error) inside one `SquircleCard`, with a sub-component `FillerListPanel` rendering category groups inside gray rounded rectangles using checkbox + chevron-collapse mechanics. The Edit Filler List sheet is a flat `List` with two sections (Default Library, Your Words) and a `TextField` row at the bottom for adding custom words.
+The Smart Cut feature shipped its first UI in `fbdf722`. A separate `smartcut-premium-ui` branch (commits `21dff96` … `4fe50f2`) prototyped a polish pass — split summary/filler cards, segment caching, `setPauseThreshold` re-recompute, snap slider — but never merged to main. The view layer ON MAIN today is therefore still: a single `SmartCutCardView` rendering all states (idle, analyzing, results, applied, stale, error) inside one `SquircleCard`, with sub-component `FillerListPanel` rendering category groups inside gray rounded rectangles using checkbox + chevron-collapse mechanics. The Edit Filler List sheet is a flat `List` with two sections (Default Library, Your Words) and a `TextField` row at the bottom for adding custom words. There is no segment cache, no `setPauseThreshold`, no `Update.completed` segments-or-duration payload. This refactor builds from main, not from the unmerged branch.
 
-The refactor replaces the entire view layer for these surfaces. Five interconnected changes:
+The refactor replaces the entire view layer for these surfaces, plus adds two foundational behavior additions on the model/service side to enable the live-recompute pause slider UX. Six interconnected changes:
 
-1. **Glassmorphic Summary Card** at the top of the Smart Cut tab — frosted glass background, consolidates the section header (title + Reset link) with the stats line ("Found 7 fillers + 2 long pauses") and the saves badge into one focal panel. Saves badge gains a gentle scale-and-glow pulse.
-2. **Single-column wide bento cards** for each filler category and one for "Long Pauses" — 28pt continuous squircle, soft Deep Indigo shadow, white card surface. Tapping the card opens a detail sheet; the card itself shows: word, occurrence count, savings, group toggle. Toggle-off state: bold + strikethrough text in Deep Indigo, card opacity 0.40, shadow softened.
-3. **Detail sheet** (`.sheet` presentation) for occurrence drill-in — glassmorphic background, occurrence rows as wide capsule pills (▶ preview · excerpt · timestamp · checkbox). Per-occurrence enable/disable lives here.
-4. **Pause threshold slider** replacing the `Stepper` — continuous 1.0–3.0s range, rolling-digit readout via `contentTransition(.numericText())`, light haptic at 0.25s snap points while dragging, live "saves 0:31" recomputation.
-5. **Edit Filler List → unified tag-capsule pool** — frosted-glass capsules in a wrap layout, every capsule has a Deep Indigo ✕. ✕ on a default-library word toggles it off (capsule stays in place, dimmed + line-through, ✕ hidden in the off state — tap capsule body to re-enable). ✕ on a custom word permanently deletes it. Add input is a capsule-shaped TextField at the bottom; submitting on Enter creates a new custom-word capsule.
+1. **Service + ViewModel — cached recognized segments and live pause recompute (foundational, behavior-bearing).** Extend `SmartCutService.Update.completed` to carry the recognized speech segments + the source duration alongside the EditList. `SmartCutViewModel` caches them on results, exposes `setPauseThreshold(_:)` that re-runs `PauseDetector` against the cached segments and rebuilds `editList.pauses` synchronously. Without this, the pause slider's live "saves 0:31" rolling-digit readout cannot move while dragging — it would only update at next analyze. Same shape as `scp-t1`/`scp-t2` (never merged); content largely portable from that branch.
+2. **Glassmorphic Summary Card** at the top of the Smart Cut tab — frosted glass background, consolidates the section header (title + Reset link) with the stats line ("Found 7 fillers + 2 long pauses") and the saves badge into one focal panel. Saves badge gains a gentle scale-and-glow pulse.
+3. **Single-column wide bento cards** for each filler category and one for "Long Pauses" — 28pt continuous squircle, soft Deep Indigo shadow, white card surface. Tapping the card opens a detail sheet; the card itself shows: word, occurrence count, savings, group toggle. Toggle-off state: bold + strikethrough text in Deep Indigo, card opacity 0.40, shadow softened.
+4. **Detail sheet** (`.sheet` presentation) for occurrence drill-in — glassmorphic background, occurrence rows as wide capsule pills (▶ preview · excerpt · timestamp · checkbox). Per-occurrence enable/disable lives here, dispatching to `viewModel.setEdit(id:enabled:)`.
+5. **Pause threshold slider** replacing the `Stepper` — continuous 1.0–3.0s range, snap step 0.25s, rolling-digit readout via `contentTransition(.numericText())`, light haptic on each step change, live "saves 0:31" recomputation via `viewModel.setPauseThreshold(_:)`.
+6. **Edit Filler List → unified tag-capsule pool** — frosted-glass capsules in a wrap layout. Every capsule has a Deep Indigo ✕. **Tapping ✕ on any capsule (default or custom) calls `library.remove(_:)` — same code path as today's "Remove" button.** Library semantics are unchanged: the removed default goes into `removedDefaults` (persisted), the removed custom is permanently deleted. Capsule animates out. A "Restore default words" link below the pool clears `removedDefaults` (one tap brings all defaults back). Add input is a capsule-shaped TextField at the bottom; submitting on Enter calls `library.addCustom(_:)`.
 
-Plus a small color audit: system-blue links ("Reset" inside the summary card; "+ Edit filler list" entry-point) re-tinted to Deep Indigo @ 50% opacity. Original/Cleaned `SegmentedPill` is already correct — no change.
+Plus a small color audit: system-blue links ("Reset" inside the summary card; "+ Edit filler list" entry-point) re-tinted to Deep Indigo @ 50% opacity. The "Original/Cleaned" affordance today is two `PillButtonStyle` buttons in an HStack inside `SmartCutCardView`; the new design swaps it for the existing `SegmentedPill` component (created by `clt-t1`) — bound to the existing `viewModel.isPlayingCleaned` toggle.
 
 The floating `Apply Cuts` button (`FloatingActionBar` chassis) is **unchanged**.
 
 ## 2. Goals and non-goals
 
 **Goals:**
+- **(Foundational behavior — `Update.completed` payload extension.)** Extend `SmartCutService.Update.completed` from `case completed(EditList)` to `case completed(EditList, segments: [TranscribedSegment], duration: TimeInterval)`. `service.analyze(input:)` already has access to the segments and asset duration internally; just propagate them outward. All call-sites updated.
+- **(Foundational behavior — `SmartCutViewModel.setPauseThreshold(_:)`.)** ViewModel caches `recognizedSegments: [TranscribedSegment]` and `sourceDuration: TimeInterval` on `.completed`. Public method `setPauseThreshold(_ seconds: TimeInterval)` updates `pauseThreshold`, runs `PauseDetector(threshold: seconds).detect(segments: cached, duration: cached)` to produce a fresh `[PauseEdit]` array, replaces `editList.pauses` synchronously while preserving the user's current pause-`isEnabled` flags wherever the new pauses' `id`s match prior pauses' `id`s (id stability strategy: `id` derived from `lowerBound` rounded to 0.001s — same as `scp-t2`'s `uniquingKeysWith` trick to harden against duplicates). No-op when there are no cached segments (i.e., before first `.completed`).
 - Replace `SmartCutCardView`, `FillerListPanel`, and `EditFillerListSheet` with new components living in `SonicMerge/Features/SmartCut/Views/Studio/`. Old files retired in the same commit chunk that ships the replacement.
 - Glassmorphic Summary Card with `ultraThinMaterial` background, 1pt Deep Indigo @ 18% border, 24pt corner radius. Content: ✨ "SMART CUT SUMMARY" eyebrow label · stats line · saves badge · Reset link top-right.
 - Saves badge pulse: scale `1.0 ↔ 1.04` over ~1.6s eased, lime green outer glow shadow synced (alpha `0.40 ↔ 0.65`), driven by a single `TimelineView` (Phase 11 pattern). Pulse only when `enabledSavings > 0`; static otherwise. Suppressed when `accessibilityReduceMotion` is on.
@@ -35,14 +38,15 @@ The floating `Apply Cuts` button (`FloatingActionBar` chassis) is **unchanged**.
 - Pauses bento card: same chassis. Trailing column has the slider + "saves 0:31" rolling-digit readout. No tap-to-sheet (no occurrences).
 - Detail sheet (`.sheet` presentationDetents `.medium` + `.large`): glassmorphic background. Header: word title + total saves. Each occurrence row is a capsule pill containing ▶ play (filled/outline based on whether currently previewing) · excerpt (line-limited) · timestamp · per-occurrence checkbox. Footer with overall toggle ("Disable all" / "Enable all").
 - Pause slider: SwiftUI `Slider(value:in:step:)` with `in: 1.0...3.0, step: 0.25`, `.tint(semantic.accentAction)`. Live readout uses `Text("\(formatThreshold(pauseThreshold))").contentTransition(.numericText())`. Light haptic (`UIImpactFeedbackGenerator(style: .light)`) fires on each step change via `.onChange(of: pauseThreshold)`.
-- Edit Filler List unified pool: one section, all capsules wrap-flowed via `Layout` or `FlowLayout`-equivalent. Capsule chrome: `ultraThinMaterial` background, 1pt Deep Indigo border @ 20% opacity, 14pt corner radius. Default-on capsule: full opacity. Default-off: opacity 0.55, line-through, ✕ icon hidden — tap capsule body to re-enable. Custom: same chrome as default-on plus a Deep Indigo ✕ icon trailing; tapping ✕ permanently deletes.
-- Add input: capsule-shaped `TextField` matching capsule chrome but with a leading "+" icon and placeholder "Add a word…". Submit on `.onSubmit` creates a new custom capsule with `.spring(response: 0.35, dampingFraction: 0.7)` insertion animation.
+- Edit Filler List unified pool: one section, all capsules wrap-flowed via a small custom `Layout` (`StudioFlowLayout`). Capsule chrome: `ultraThinMaterial` background, 1pt Deep Indigo border @ 20% opacity, 14pt corner radius. Every capsule (default OR custom) shows a trailing Deep Indigo ✕ icon (no tier distinction in the UI). Tapping ✕ calls `library.remove(_:)` — current behavior, unchanged: defaults move into `removedDefaults` (persisted), custom is permanently removed. Animated removal via `.spring(response: 0.30, dampingFraction: 0.8)` scale+opacity transition.
+- "Restore default words" link below the pool, visible only when `library.removedDefaults` is non-empty. Tapping clears `removedDefaults` (UserDefaults set removed) and the wiped defaults animate back into place.
+- Add input: capsule-shaped `TextField` at the bottom matching capsule chrome but with a leading "+" icon and placeholder "Add a word…". Submit on `.onSubmit` calls `library.addCustom(_:)` then clears the field. New capsule slides in with `.spring(response: 0.35, dampingFraction: 0.7)`.
 - Color audit: replace any `Color.blue` / `Color.accentColor` (where the system tint defaults to blue) on Reset / "+ Edit filler list" / link affordances with `Color(uiColor: semantic.accentAction).opacity(0.5)`.
 - iOS 17 baseline preserved; iOS 18 features (e.g., `MeshGradient` if used in a frosted background) behind `#available` guards (Phase 11 pattern).
 - Accessibility: every interactive surface has a clear `accessibilityLabel` + `accessibilityHint`; toggle-off cards announce "disabled, double-tap to enable"; saves badge pulse pauses on `accessibilityReduceMotion`; frosted glass falls back to opaque card on `accessibilityReduceTransparency`.
 
 **Non-goals (deferred):**
-- ViewModel / service / model changes. `SmartCutViewModel`, `SmartCutService`, `FillerLibrary`, `EditList`, `FillerEdit`, `PauseEdit` are untouched.
+- Beyond the two goal items above (`Update.completed` payload extension and `setPauseThreshold(_:)`), no further behavior changes to `SmartCutViewModel`, `SmartCutService`, `FillerLibrary`, `EditList`, `FillerEdit`, `PauseEdit`. In particular: `FillerLibrary.remove(_:)` and `addCustom(_:)` keep their existing semantics; no new "user-disabled defaults" set is added (that would require new persisted state and divergence from current capabilities).
 - A/B player audio cross-feed plumbing (separate work; carryover from Smart Cut original review).
 - Apply Cuts button visual tweak — already shipped via `FloatingActionBar`.
 - Smart Cut tab/AI Denoise tab top selector (the `SegmentedPill` parent in Cleaning Lab) — keep as-is.
@@ -80,15 +84,15 @@ The floating `Apply Cuts` button (`FloatingActionBar` chassis) is **unchanged**.
 
 ### Edit Filler List sheet
 
-1. User sees a single section: "ALL FILLER WORDS" eyebrow, then a wrap-flow grid of capsules. Default-on words appear first (full opacity). Default-off words intermix with default-on (dimmed + line-through, no ✕). Custom words appear at the end with a Deep Indigo ✕ trailing.
+1. User sees a single section: "ALL FILLER WORDS" eyebrow, then a wrap-flow grid of frosted-glass capsules. Order = `library.allWords` (defaults minus removed, plus custom — already the existing computed property). Every capsule has a trailing Deep Indigo ✕.
 
-2. User taps a default-off capsule body → re-enabled, opacity returns to 1.0, line-through removed; spring animation.
+2. User taps the ✕ on the "you know" capsule (a default) → `library.remove("you know")` is called; "you know" is added to `removedDefaults` (persisted in UserDefaults). The capsule animates out via `.spring(response: 0.30, dampingFraction: 0.8)` scale+opacity transition; siblings re-flow.
 
-3. User taps the ✕ on a default-on capsule → toggles off (opacity 0.55, line-through, ✕ hidden); spring animation.
+3. After step 2, a "Restore default words (1)" link appears below the pool (visible whenever `library.removedDefaults` is non-empty). Tapping it clears `removedDefaults`; the previously removed default capsule animates back in.
 
-4. User taps the ✕ on a custom-word capsule → permanent delete; capsule animates out (`.scale + .opacity` transition, 0.25s).
+4. User taps the ✕ on the "literally" capsule (a custom word user added previously) → `library.remove("literally")` is called; permanently deleted from `customWords`. Capsule animates out the same way; "Restore" affordance does NOT bring back custom-removed words (current `remove()` semantics preserved).
 
-5. User taps the add-input field → keyboard rises, types "literally", taps Return → new custom capsule slides in next to existing custom capsules; input clears, ready for next entry.
+5. User taps the add-input field at the bottom → keyboard rises, types "kinda", taps Return → `library.addCustom("kinda")` is called; new capsule slides in at the trailing edge of the pool (`.spring(response: 0.35, dampingFraction: 0.7)`); input clears, ready for next entry.
 
 ## 4. Architecture
 
@@ -106,8 +110,9 @@ All new view files live under `SonicMerge/Features/SmartCut/Views/Studio/`. The 
 | `Studio/PauseControlRow.swift` | Card content for the pauses card: ⏱ icon, slider, rolling-digit threshold readout, saves chip. |
 | `Studio/FillerOccurrenceSheet.swift` | The detail sheet. Header (title + total saves + disable-all link), wrap-list of occurrence rows, capsule-pill row component. |
 | `Studio/StudioGlassChrome.swift` | Reusable view modifiers / chrome views: `glassCardBackground()`, `frostedCapsule()` — keep visual primitives in one place so a tweak propagates. |
-| `Studio/EditFillerListStudioSheet.swift` | The unified-pool tag editor. Wrap layout for capsules; capsule input row; submit/delete logic on the existing `FillerLibrary` API. |
-| `Studio/StudioFlowLayout.swift` | A simple SwiftUI `Layout` that wraps capsules into rows. Pure presentation; no behavior. |
+| `Studio/EditFillerListStudioSheet.swift` | The unified-pool tag editor. Wrap layout for capsules; capsule input row; submit/delete logic on the existing `FillerLibrary` API + the one-line `restoreAllDefaults()` addition. |
+| `Studio/StudioFlowLayout.swift` | SwiftUI `Layout` implementation that wraps capsules into rows. Pure presentation. **Honors `LayoutDirection`**: Layout protocol gets `.environment` injection; the implementation respects RTL by mirroring x-positioning relative to the proposed bounds (~10 extra LoC vs. naive LTR-only implementation). |
+| `Studio/SmartCutFormatting.swift` | Free functions `formatTimestamp(_:)` and `formatThreshold(_:)`. Lifted from the now-retired `FillerListPanel` so they don't get orphaned. Used by detail sheet, summary card, pause control row. |
 
 Old files **retired** (moved to `Trash/` not deleted, so `git log --follow` keeps history; final cleanup commit removes them after a soak period):
 - `SonicMerge/Features/SmartCut/SmartCutCardView.swift`
@@ -116,19 +121,30 @@ Old files **retired** (moved to `Trash/` not deleted, so `git log --follow` keep
 
 (Retirement strategy decided in plan, not spec. Spec just declares intent.)
 
-### 4.2 ViewModel surface — no changes
+### 4.2 ViewModel + Library + Service surface (with explicit additions)
 
-Existing `SmartCutViewModel` API used as-is:
-- `state`, `currentEditList`, `progress`, `enabledSavings`, `pauseThreshold`
-- `analyze()`, `apply()`, `reset()`, `cancel()`
-- `toggleCategory(_:enabled:)`, `toggleIndividual(_:enabled:)`, `togglePause(_:enabled:)`, `setPauseThreshold(_:)`
-- The A/B selection (`abSelection`) and preview playback API.
+**Existing `SmartCutViewModel` API the new view layer reads / calls (verbatim names from `SmartCutViewModel.swift`):**
+- Read: `state` (`State` enum: `.idle | .analyzing(progress:) | .results | .applied(savedDuration:) | .stale | .error(message:)`), `editList`, `inputURL`, `outputURL`, `estimatedAnalysisMinutes`, `hasDirtyEditsSinceApply`, `pauseThreshold`, `isPlayingCleaned`.
+- Write/Action: `setInput(url:)`, `invalidate()`, `markDenoiseChanged()`, `requestReanalyze()`, `analyze()`, `cancelAnalyze()`, `scheduleBackgroundTranscription()`, `setCategory(_:enabled:)`, `setEdit(id:enabled:)` (handles both filler ids and pause ids), `apply()`, `toggleCleaned()`, `pauseAll()`.
+- "Total filler savings" / "total pause savings" mappings used in the new UI: `editList.enabledSavings` (already exists, sums fillers + pauses combined). For per-cohort totals, the new view layer computes inline: filler savings = `editList.fillers.filter(\.isEnabled).reduce(0) { $0 + ($1.timeRange.upperBound - $1.timeRange.lowerBound) }`; pause savings = `editList.pauses.filter(\.isEnabled).reduce(0) { $0 + $1.duration }`. **No `EditList` derived properties added.** Inline formatting helper in the new `Studio/Formatting.swift` (see §4.1).
 
-Existing `FillerLibrary` API used as-is:
-- `defaultOnWords`, `defaultOffWords`, `customWords`
-- `enableDefault(_:)`, `disableDefault(_:)`, `addCustom(_:)`, `removeCustom(_:)`
+**ViewModel additions (new in this spec):**
+- `private(set) var recognizedSegments: [TranscribedSegment] = []` — populated when `Update.completed` fires with the new payload.
+- `private(set) var sourceDuration: TimeInterval = 0` — same.
+- `func setPauseThreshold(_ seconds: TimeInterval)` — clamps to `1.0...3.0`, updates `pauseThreshold`, runs `PauseDetector(threshold: seconds).detect(segments: recognizedSegments, duration: sourceDuration)` to produce a fresh `[PauseEdit]`. **Preserves user toggles**: if a new pause's id matches a pre-existing pause's id (id derived from `lowerBound` rounded to 0.001s), copy the prior `isEnabled`. Otherwise default to enabled. Replaces `editList.pauses` synchronously. No-op when `recognizedSegments.isEmpty`.
 
-The new view layer reads these and dispatches actions; nothing else.
+**`SmartCutService.Update` enum addition (new in this spec):**
+- Today: `case progress(Double)` and `case completed(EditList)`.
+- New: `case completed(EditList, segments: [TranscribedSegment], duration: TimeInterval)`. The service already computes both internally during `analyze`; just propagate. ALL call-sites updated (the only consumer today is `SmartCutViewModel.analyze` switch statement at line 124-134; tests in `SmartCutServiceIntegrationTests.swift` will need a one-line argument-list update).
+
+**Existing `FillerLibrary` API used as-is — no additions:**
+- Read: `defaultOnWords` (compile-time constant), `defaultOffWords` (compile-time constant), `customWords` (UserDefaults-backed), `removedDefaults` (UserDefaults-backed), `allWords` (computed: `(defaults - removed) + customWords`), `isEnabledByDefault(_:)`.
+- Mutating: `addCustom(_:)`, `remove(_:)` (handles both — removing custom permanently deletes; removing a default adds to `removedDefaults`).
+- New "Restore default words" affordance writes directly to `defaults` (clearing `removedKey`) — but to keep this off the call-site, the spec adds **one** small mutating method: `mutating func restoreAllDefaults()` which clears the `removedDefaults` UserDefaults key. Single line; preserves all other library invariants.
+
+**Existing `EditList` / `FillerEdit` / `PauseEdit` — no changes.**
+
+The new view layer reads these and dispatches actions; nothing else mutates.
 
 ### 4.3 Glass chrome primitives
 
@@ -186,7 +202,7 @@ struct StudioBentoCard<Leading: View, Trailing: View>: View {
 
 Renders an HStack with `leading` left, `Spacer()`, `trailing` right, applies `studioGlassCard` (with white opaque surface, not frosted, since the bento sits on the page background not on another glass surface). `isDisabled` triggers the strikethrough/bold/Deep Indigo treatment on text and the opacity dampening at the card level.
 
-`onTap` is hooked to a `.contentShape(Rectangle())` overlay; the **trailing toggle button** intercepts taps before they reach the card. SwiftUI's hit test order honors the inner control; the rest of the card body is a single tap target.
+`onTap` is wired via a `Button` wrapping the card's leading content area + a `.contentShape(Rectangle())` overlay on its frame. The **trailing group toggle** is a separate `Button` with its own action, sized 44×44pt minimum hit area. Both buttons live as siblings inside an `HStack`, so SwiftUI's hit test honors the leaf hit (the toggle), not the parent card-body button. This is the established SwiftUI pattern for nested-tap-targets — explicit `Button` for both, no `.onTapGesture` (gesture-vs-button hit ordering is fragile).
 
 ### 4.6 Detail sheet
 
@@ -195,55 +211,78 @@ Renders an HStack with `leading` left, `Spacer()`, `trailing` right, applies `st
 - Background: `.background(.ultraThinMaterial)` on the sheet root, with a `presentationBackground(.ultraThinMaterial)` modifier (iOS 16.4+).
 - Header row: word title (large, bold) + total occurrences + total saves chip on the trailing edge. "Disable all" / "Enable all" link top-right.
 - Body: `ScrollView` of capsule pill rows. Each row: `studioFrostedCapsule()` chrome containing ▶ button (filled.ai when this row is currently being previewed by the `previewPlayer`, outlined otherwise), excerpt `Text` (line-limited 1), timestamp text (secondary), checkbox.
-- The 4-second preview behavior carries over from the existing `playWindow` — including the recently-added "stop in-flight player before starting new" guard. State (`previewPlayer`, `previewingId: String?`) lives in the sheet view.
+- Per-occurrence checkbox tap → `viewModel.setEdit(id: edit.id, enabled: !edit.isEnabled)`. (`setEdit` handles both filler ids and pause ids — the only public API for individual toggles on the VM.)
+- The 4-second preview behavior carries over from the existing `playWindow` — including the recently-added "stop in-flight player before starting new" guard. **The helper moves into the new file** (since the spec retires `FillerListPanel`): copied verbatim into a `private func playWindow(around: ClosedRange<TimeInterval>)` on `FillerOccurrenceSheet`. State (`@State previewPlayer: AVAudioPlayer?`, `@State previewingId: String?`) is local to the sheet view. The `previewingId` drives the ▶/■ icon swap.
+- "Disable all" / "Enable all" trailing link: dispatches a single `viewModel.setCategory(category, enabled: false)` (or `true`). Caveat: this clobbers any per-occurrence overrides the user may have made — same behavior the current category checkbox has today (`FillerListPanel.categoryRow`). Acceptable; matches existing model.
 - Footer (within sheet, not detent-pinned): empty.
-- Dismissal: standard sheet dismiss; if a preview is mid-play, `onDisappear` stops it (existing pattern).
+- Dismissal: standard sheet dismiss; if a preview is mid-play, `onDisappear` stops it (existing pattern from `FillerListPanel:25-32`).
 
 ### 4.7 Pause slider
 
-`PauseControlRow` content:
+The slider is **bound to a local `@State` variable** in `PauseControlRow` (not directly to `viewModel.pauseThreshold`), so the rolling-digit text can animate smoothly while drag is in progress. On each drag step, the local state writes back to the VM via `viewModel.setPauseThreshold(_:)`, which triggers the recompute. `PauseControlRow` reads `pauseSavings` (computed inline from `viewModel.editList.pauses`) for the trailing chip.
 
 ```swift
-HStack(spacing: 12) {
-    Image(systemName: "clock.badge.exclamationmark")
-        .foregroundStyle(Color(uiColor: semantic.textSecondary))
-    VStack(alignment: .leading, spacing: 6) {
-        HStack {
-            Text("Long Pauses").font(.caption).foregroundStyle(Color(uiColor: semantic.textSecondary))
-            Spacer()
-            Text(formatThreshold(viewModel.pauseThreshold))
-                .font(.headline)
-                .contentTransition(.numericText())
-        }
-        Slider(value: $viewModel.pauseThreshold, in: 1.0...3.0, step: 0.25)
-            .tint(Color(uiColor: semantic.accentAction))
+struct PauseControlRow: View {
+    @Bindable var viewModel: SmartCutViewModel
+    @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var draftThreshold: TimeInterval
+
+    init(viewModel: SmartCutViewModel) {
+        self._viewModel = Bindable(viewModel)
+        self._draftThreshold = State(initialValue: viewModel.pauseThreshold)
     }
-    SavesChip(seconds: viewModel.totalPauseSavings)
-        .contentTransition(.numericText())
-}
-.onChange(of: viewModel.pauseThreshold) { _, _ in
-    UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+    private var pauseSavings: TimeInterval {
+        viewModel.editList.pauses.filter(\.isEnabled).reduce(0) { $0 + $1.duration }
+    }
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text("Long Pauses").font(.caption2).fontWeight(.semibold).textCase(.uppercase)
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                    Spacer()
+                    Text(SmartCutFormatting.formatThreshold(draftThreshold))
+                        .font(.headline.monospacedDigit())
+                        .contentTransition(reduceMotion ? .identity : .numericText())
+                }
+                Slider(value: $draftThreshold, in: 1.0...3.0, step: 0.25)
+                    .tint(Color(uiColor: semantic.accentAction))
+                    .onChange(of: draftThreshold) { _, new in
+                        viewModel.setPauseThreshold(new)
+                        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+                    }
+            }
+            SavesChip(seconds: pauseSavings)
+                .contentTransition(reduceMotion ? .identity : .numericText())
+        }
+    }
 }
 ```
 
-`SmartCutViewModel.setPauseThreshold(_:)` already recomputes `editList.pauses` synchronously (added in `scp-t2`). No service-layer change.
+Notes:
+- `SmartCutFormatting.formatThreshold` and `SmartCutFormatting.formatTimestamp` are extracted into a new `Studio/SmartCutFormatting.swift` (see §4.1). Both helpers already exist as private members of `FillerListPanel` today.
+- The `.onChange` fires on every `step` change of the slider, providing the haptic and the live recompute.
+- The card-level `.contentTransition` modifier on the trailing `SavesChip` produces the rolling-digit animation visible from outside the card (the summary card's saves badge re-rolls in parallel because `editList.enabledSavings` is also re-derived once `setPauseThreshold` mutates `editList.pauses`).
 
 ### 4.8 Edit Filler List unified pool
 
 `EditFillerListStudioSheet`:
 - Wrap layout via `StudioFlowLayout` (SwiftUI `Layout` protocol implementation, ~50 LoC).
-- Iterates `library.allWords` (computed: `defaultOnWords + defaultOffWords + customWords` ordered by category origin). Each word renders as a `WordCapsule(word:)` view.
-- `WordCapsule` chooses chrome based on `library.wordOrigin(_:)`:
-  - `.defaultOn` → full opacity, no ✕, tap body → `library.disableDefault(word)`
-  - `.defaultOff` → opacity 0.55 + line-through, no ✕, tap body → `library.enableDefault(word)`
-  - `.custom` → full opacity, ✕ icon trailing, tap ✕ → `library.removeCustom(word)`; tap body → no-op
-- Add input: a capsule-shaped `TextField` at the bottom.
-  - Leading "+" icon (Deep Indigo).
+- Iterates `library.allWords` (existing computed property: `(defaultOnWords + defaultOffWords - removedDefaults) + customWords`). Each word renders as a `WordCapsule(word:)` view.
+- `WordCapsule`: same frosted-glass chrome for every capsule (default OR custom — no UI tier distinction). Trailing Deep Indigo ✕ icon (subtle, ~10pt SF Symbol "xmark", `accentAction.opacity(0.6)`). Tap on ✕ → `library.remove(word)` (the existing single mutating method handles both default → `removedDefaults` and custom → permanently delete).
+- Capsule animations:
+  - Removal: the affected `WordCapsule` matches a `.transition(.scale.combined(with: .opacity))` and the wrap is wrapped in `withAnimation(.spring(response: 0.30, dampingFraction: 0.8))`.
+  - Insertion: same transition, animated via `.spring(response: 0.35, dampingFraction: 0.7)` on add.
+- "Restore default words (N)" link (where N = `library.removedDefaults.count`): rendered below the wrap pool, left-aligned, Deep Indigo @ 50%. Visible only when N > 0. Tap → `library.restoreAllDefaults()` (new single-line method; see §4.2).
+- Add input: a capsule-shaped `TextField` at the bottom of the sheet, just above the keyboard safe area. Chrome same as `WordCapsule` but with a leading "plus" SF Symbol (Deep Indigo) and placeholder "Add a word…".
   - `.submitLabel(.done)`, `.onSubmit { library.addCustom(text); text = "" }`.
-  - Validation: trim whitespace, dedupe (already enforced by `library.addCustom`).
-- Insertion animation: `withAnimation(.spring(response: 0.35, dampingFraction: 0.7))` around the add and remove operations.
-
-`FillerLibrary` likely needs a small read-only helper: `wordOrigin(_ word: String) -> WordOrigin` returning one of `.defaultOn`, `.defaultOff`, `.custom`. If the existing API doesn't expose this, add it as a pure-read computed property on `FillerLibrary` — single-line, no behavior change. Spec deems this in-scope (presentation-supporting, not behavioral).
+  - Validation already enforced by `library.addCustom` (trim + dedupe).
+- No new `wordOrigin(_:)` helper — the UI doesn't need to distinguish default vs custom (every capsule renders the same way).
 
 ## 5. Visual specifications
 
@@ -353,14 +392,14 @@ Same as Phase 11: **no snapshot harness exists in this repo**, no UI test target
 | Bento card group toggle hit target conflicts with card-tap-opens-sheet | Medium | Medium (mis-tap risk) | Group toggle gets a 44pt minimum hit target via `.frame(minWidth: 44, minHeight: 44)`. Explicit `Button` keeps SwiftUI's hit-test order priority. Field test the gesture clarity. |
 | Detail sheet preview ▶ overlap with multiple sheets stacked | Low | Low | Sheet's `onDisappear` stops the preview player (existing pattern in `FillerListPanel`). Carry over guard. |
 | `StudioFlowLayout` proves too simplistic for RTL or wide-glyph words | Low | Low | Layout protocol implementation supports any direction by design. Validate in a Vietnamese/Arabic text run. |
-| Removing `SmartCutCardView` breaks deep-link `handlePendingSmartCutOpenIfNeeded()` | Medium | Medium (regression) | Preserve the deep-link callsite — `SmartCutStudioContainer` exposes the same external API surface (focus/scroll-to behavior) that the deep-link relies on. Plan step has explicit verification. |
+| Removing `SmartCutCardView` breaks deep-link `handlePendingSmartCutOpenIfNeeded()` | Low | Low | False alarm: that handler is a private method on `CleaningLabView` (`CleaningLabView.swift:294`) that mutates `selectedTab` based on `PendingSmartCutOpen.shared.hash` matching `viewModel.inputURL`. It does NOT call into `SmartCutCardView`. Replacing `SmartCutCardView` with `SmartCutStudioContainer` at the call-site (`CleaningLabView.swift:210-213`) is a one-line view swap; deep-link logic is unaffected. |
 | Pulse animation on saves badge feels distracting | Medium | Low (subjective) | Configurable via single constant in `StudioPulseSavesBadge`. Easy revert. |
 
 ## 11. Open questions / future work
 
-- **Detail sheet "Disable all" semantics:** does it call `viewModel.toggleCategory(_:enabled: false)`, or iterate per-occurrence? Plan decides; behavior is identical.
-- **Does the pauses card need a tap target for opening a "Pauses detail" sheet?** Not in scope; out-of-spec since pauses don't have per-instance enable/disable in the current ViewModel surface.
-- **Should custom word capsules be sortable / reorderable?** No (out of scope). Insertion order = creation order.
+- **Should the pauses card open a detail sheet to per-pause toggle?** The model supports it (`PauseEdit.isEnabled`, `viewModel.setEdit(id:enabled:)`), but the current FillerListPanel ships a single all-pauses checkbox + threshold-only control. **Spec decision:** keep the pauses card behavior limited to threshold + all-on/all-off (not per-pause sheet) for v1; future work item.
+- **Should custom word capsules be sortable / reorderable?** No (out of scope). Insertion order = creation order, as today.
+- **Persist last-used pause threshold across launches?** No (out of scope). The threshold resets to 1.5s on each `analyze()` call, matching today's behavior.
 
 ## 12. Acceptance criteria
 
