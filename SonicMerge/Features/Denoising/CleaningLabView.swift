@@ -103,6 +103,25 @@ struct CleaningLabView: View {
                 if shouldShowWaveformSection {
                     waveformSection
                 }
+
+                // 5. Smart Cut card (sc-t19) — second AI tool wired into the
+                //    same screen. Reads from `denoisedTempURL ?? mergedFileURL`
+                //    via CleaningLabViewModel.setMergedFileURL.
+                SmartCutCardView(vm: viewModel.smartCutVM,
+                                 library: $viewModel.fillerLibrary)
+                    .padding(.horizontal)
+                    .onAppear {
+                        if let pending = PendingSmartCutOpen.shared.hash,
+                           let inputURL = viewModel.smartCutVM.inputURL {
+                            Task {
+                                let currentHash = try? await SourceHasher.sha256Hex(of: inputURL)
+                                if currentHash == pending {
+                                    viewModel.smartCutVM.analyze()
+                                    await MainActor.run { PendingSmartCutOpen.shared.hash = nil }
+                                }
+                            }
+                        }
+                    }
             }
             .padding(.horizontal, SonicMergeTheme.Spacing.md)
             .padding(.vertical, SonicMergeTheme.Spacing.lg)
@@ -111,6 +130,11 @@ struct CleaningLabView: View {
         .navigationTitle("Cleaning Lab")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
+        // sc-t19: hand the merged URL to the VM so Smart Cut has an input
+        // even before the user runs Denoise.
+        .onAppear {
+            viewModel.setMergedFileURL(mergedFileURL)
+        }
         // Export format picker
         .sheet(isPresented: $showExportSheet) {
             ExportFormatSheet(isPresented: $showExportSheet) { options in
@@ -352,19 +376,21 @@ struct CleaningLabView: View {
             } label: {
                 Label("Export", systemImage: "square.and.arrow.up")
             }
-            .disabled(!viewModel.hasDenoisedResult || viewModel.isProcessing)
+            // sc-t19: export resolves to the best available source
+            // (Smart Cut output > denoised blend > raw merged file).
+            .disabled(viewModel.exportSource == nil || viewModel.isProcessing)
         }
     }
 
     // MARK: - Export Logic
 
-    /// Export the intensity-blended denoised audio using AudioMergerService.
+    /// Export the best-available audio source via AudioMergerService.
     ///
-    /// Guards that denoisedTempURL is non-nil (written by CleaningLabViewModel).
+    /// Source resolution (sc-t19): smartCutVM.outputURL > denoisedTempURL > mergedFileURL.
     /// Calls AudioMergerService.exportFile(inputURL:format:destinationURL:) which
     /// handles format conversion (m4a via AVAssetExportSession, wav via AVAssetReader+Writer).
     private func startExport(options: ExportOptions) {
-        guard let sourceURL = viewModel.denoisedTempURL else { return }
+        guard let sourceURL = viewModel.exportSource else { return }
 
         let ext = options.format == .m4a ? "m4a" : "wav"
         let destinationURL = FileManager.default.temporaryDirectory
