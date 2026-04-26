@@ -55,3 +55,44 @@
 - [ ] All 5 episodes meet pass criteria
 - [ ] Edge cases verified
 - [ ] PR description updated with QA results
+
+
+---
+
+## Cleaning Lab Tabs (clt-t1..t5)
+
+Run after the Cleaning Lab tabs refactor lands.
+
+### Default + state preservation
+- [ ] First entry to Cleaning Lab lands on the **AI Denoise** tab.
+- [ ] Tapping the **Smart Cut** pill smoothly switches the visible card.
+- [ ] Tapping back to **AI Denoise** restores the orb in whatever state it was last in (denoised state preserved).
+- [ ] After Apply Cuts in Smart Cut, switching to Denoise tab → changing intensity → re-denoising → switching back to Smart Cut transitions the card to the Stale state on next visit.
+
+### Floating action bar
+- [ ] Bar visible on AI Denoise tab whenever a merged file is loaded; label is "Denoise Audio" before first denoise, "Re-denoise" after.
+- [ ] Bar disabled (visible-but-greyed) on Denoise tab when `mergedFileURL` is nil.
+- [ ] Bar visible on Smart Cut tab in **Results** state with "Apply Cuts" label.
+- [ ] Bar visible on Smart Cut tab in **Applied** state ONLY when `hasDirtyEditsSinceApply` is true ("Re-apply" label).
+- [ ] Bar collapses (no chassis visible) on Smart Cut tab in idle / analyzing / stale / error states.
+- [ ] Bar reads cleanly over scrolled list content (glassmorphic blur, not opaque).
+- [ ] Bar respects safe-area on devices with home indicator (no clipping).
+
+### Smart Cut visual polish
+- [ ] "saves ~Xs" badge has visible lime glow when savings > 0.
+- [ ] Badge dims to grey when all rows are toggled off (savings == 0); does NOT disappear (layout stays stable).
+- [ ] Disabled per-occurrence filler rows visually muted to ~40% opacity but still tappable to re-enable.
+- [ ] Each category-block (header + expanded children) sits on its own rounded surface background.
+- [ ] Pause row also sits on a rounded surface background.
+
+### No regressions
+- [ ] The toolbar share icon remains tappable from either tab.
+- [ ] Export from either tab uses `smartCutOutputURL ?? denoisedTempURL ?? mergedFileURL` (the most-processed audio).
+- [ ] Light haptic still fires on individual filler toggle.
+- [ ] Medium haptic still fires on category toggle.
+- [ ] Heavy haptic still fires on Apply Cuts.
+- [ ] EditFillerListSheet opens and dismisses cleanly; floating bar does NOT visually overlap the sheet.
+- [ ] **Sheet-during-tab-switch**: open EditFillerListSheet → swipe to Denoise tab → sheet dismisses cleanly without console warning; returning to Smart Cut leaves the card in its previous state.
+
+### Smaller-device check
+- [ ] On iPhone SE (smallest supported): SegmentedPill + scroll content + floating bar all fit without clipping.

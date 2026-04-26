@@ -6,21 +6,33 @@
 // Pure rendering layer over CleaningLabViewModel.
 // All business logic (pipeline, A/B playback, blending, haptics) lives in the ViewModel.
 //
-// Layout order (Phase 8):
-// 1. onDeviceAIHero trust strip (SquircleCard)
-// 2. staleBanner (conditional, SquircleCard)
-// 3. AIOrbView hero (SquircleCard, always visible, renders idle/processing/success states)
-// 4. waveformSection (SquircleCard)
-// 5. intensitySlider with LimeGreenSlider (SquircleCard)
-// 6. abComparisonButton (bare pill on surfaceBase, shown when hasDenoisedResult)
-// 7. denoiseActionButton (bare pill on surfaceBase, shown when !isProcessing)
-// + Export toolbar button → ExportFormatSheet → ExportProgressSheet → ActivityViewController
-// + Error alert
+// Layout (post clt-t5 tab refactor):
+// - SegmentedPill at top (AI Denoise / Smart Cut)
+// - ScrollView with active tab's content:
+//     * .denoise → onDeviceAIHero, staleBanner (conditional), aiWorkstation (orb + intensity + a/b),
+//       waveformSection. The CTA "Denoise Audio" / "Re-denoise" lives in the floating bar (NOT inline).
+//     * .smartCut → SmartCutCardView. Its primary CTA "Apply Cuts" / "Re-apply" lives in the floating
+//       bar in .results / .applied-with-dirty-edits states; .idle's "Analyze" + .stale's "Re-analyze"
+//       remain inline inside the card.
+// - FloatingActionBar overlaid at the bottom with the active tab's primary CTA (always visible
+//   on Denoise tab — disabled when not actionable; conditional on Smart Cut tab per state).
+// - Export toolbar button → ExportFormatSheet → ExportProgressSheet → ActivityViewController.
+// - Error alert.
+// - Deep-link handler `handlePendingSmartCutOpenIfNeeded` runs from outer .onAppear and auto-switches
+//   to the Smart Cut tab when a pending notification hash matches the current input.
 // NOTE: Denoising progress modal sheet REMOVED — progress is shown inline via AIOrbView.
 
 import SwiftUI
 import UIKit
 import AVFoundation
+
+// MARK: - CleaningLabTab
+
+/// Tabs for Cleaning Lab's dual AI suite. File-scope enum (not nested) so the generic
+/// SegmentedPill<Tab: Hashable & CaseIterable> can reference it cleanly.
+fileprivate enum CleaningLabTab: Hashable, CaseIterable {
+    case denoise, smartCut
+}
 
 // MARK: - CleaningLabView
 
@@ -47,6 +59,7 @@ struct CleaningLabView: View {
     @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
 
     @State private var viewModel = CleaningLabViewModel()
+    @State private var selectedTab: CleaningLabTab = .denoise
     @State private var showExportSheet = false
     @State private var showExportProgressSheet = false
     @State private var exportProgress: Float = 0.0
@@ -75,65 +88,45 @@ struct CleaningLabView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: SonicMergeTheme.Spacing.md) {
-                // 1. Trust strip — first-launch only, gated on the same
-                //    @AppStorage flag as the Mixing Station banner (D-06).
-                if !hasImportedFirstClip {
-                    onDeviceAIHero
+        ZStack(alignment: .bottom) {
+            VStack(spacing: 0) {
+                SegmentedPill(selection: $selectedTab) { option in
+                    switch option {
+                    case .denoise:  return "AI Denoise"
+                    case .smartCut: return "Smart Cut"
+                    }
                 }
+                .padding(.horizontal, 16)
+                .padding(.top, 16)
+                .padding(.bottom, 12)
 
-                // 2. Stale result banner (conditional)
-                if viewModel.showsStaleResultBanner && viewModel.hasDenoisedResult {
-                    staleBanner
-                }
-
-                // 3. AI Workstation — single cohesive card containing the orb,
-                //    intensity control, A/B compare (when result available),
-                //    and the primary Denoise / Re-process CTA. All controls
-                //    sit on one surface so the screen reads as a single
-                //    workstation rather than four stacked cards. Putting the
-                //    CTA inside the card also removes the prior layout glitch
-                //    where the bare button extended past the card column edges.
-                aiWorkstation
-
-                // 4. Output waveform — separate card below the workstation,
-                //    only visible when there's content to render or while
-                //    processing emits intermediate state.
-                if shouldShowWaveformSection {
-                    waveformSection
-                }
-
-                // 5. Smart Cut card (sc-t19) — second AI tool wired into the
-                //    same screen. Reads from `denoisedTempURL ?? mergedFileURL`
-                //    via CleaningLabViewModel.setMergedFileURL.
-                SmartCutCardView(vm: viewModel.smartCutVM,
-                                 library: $viewModel.fillerLibrary)
-                    .padding(.horizontal)
-                    .onAppear {
-                        if let pending = PendingSmartCutOpen.shared.hash,
-                           let inputURL = viewModel.smartCutVM.inputURL {
-                            Task {
-                                let currentHash = try? await SourceHasher.sha256Hex(of: inputURL)
-                                if currentHash == pending {
-                                    viewModel.smartCutVM.analyze()
-                                    await MainActor.run { PendingSmartCutOpen.shared.hash = nil }
-                                }
-                            }
+                ScrollView {
+                    Group {
+                        switch selectedTab {
+                        case .denoise:  denoiseContent
+                        case .smartCut: smartCutContent
                         }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 96)
+                }
             }
-            .padding(.horizontal, SonicMergeTheme.Spacing.md)
-            .padding(.vertical, SonicMergeTheme.Spacing.lg)
+
+            if shouldShowFloatingBar {
+                FloatingActionBar { floatingBarContent }
+            }
         }
         .background { PremiumBackground() }
         .navigationTitle("Cleaning Lab")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
         // sc-t19: hand the merged URL to the VM so Smart Cut has an input
-        // even before the user runs Denoise.
+        // even before the user runs Denoise. clt-t5: deep-link handler
+        // moved here from SmartCutCardView so it fires regardless of which
+        // tab is active on first entry.
         .onAppear {
             viewModel.setMergedFileURL(mergedFileURL)
+            handlePendingSmartCutOpenIfNeeded()
         }
         // Export format picker
         .sheet(isPresented: $showExportSheet) {
@@ -176,6 +169,146 @@ struct CleaningLabView: View {
         // Haptic triggers
         .sensoryFeedback(.success, trigger: viewModel.hasDenoisedResult)
         .sensoryFeedback(.error, trigger: viewModel.errorMessage != nil)
+    }
+
+    // MARK: - Tab Content
+
+    /// AI Denoise tab — trust strip, stale banner, AI workstation card,
+    /// optional waveform card. The primary "Denoise Audio" CTA lives in
+    /// the floating action bar below (see `denoiseFloatingButton`).
+    @ViewBuilder
+    private var denoiseContent: some View {
+        VStack(spacing: SonicMergeTheme.Spacing.md) {
+            // 1. Trust strip — first-launch only, gated on the same
+            //    @AppStorage flag as the Mixing Station banner (D-06).
+            if !hasImportedFirstClip {
+                onDeviceAIHero
+            }
+
+            // 2. Stale result banner (conditional)
+            if viewModel.showsStaleResultBanner && viewModel.hasDenoisedResult {
+                staleBanner
+            }
+
+            // 3. AI Workstation — orb + intensity + A/B compare. The primary
+            //    CTA is no longer rendered inline (clt-t5); it now lives in
+            //    the persistent FloatingActionBar.
+            aiWorkstation
+
+            // 4. Output waveform — only visible when there's content to
+            //    render or while processing emits intermediate state.
+            if shouldShowWaveformSection {
+                waveformSection
+            }
+        }
+    }
+
+    /// Smart Cut tab — single SmartCutCardView. Deep-link auto-open is
+    /// handled by the outer `.onAppear` on `body` (see
+    /// `handlePendingSmartCutOpenIfNeeded`).
+    @ViewBuilder
+    private var smartCutContent: some View {
+        SmartCutCardView(vm: viewModel.smartCutVM,
+                         library: $viewModel.fillerLibrary)
+    }
+
+    // MARK: - Floating Action Bar
+
+    /// Whether to show the persistent floating CTA. Denoise tab always shows
+    /// the bar (the button itself is `.disabled` when not actionable). Smart
+    /// Cut tab shows the bar only when an Apply or Re-apply action is valid.
+    private var shouldShowFloatingBar: Bool {
+        switch selectedTab {
+        case .denoise:
+            return true  // always-show; button itself is .disabled when not actionable
+        case .smartCut:
+            let s = viewModel.smartCutVM.state
+            switch s {
+            case .results: return true
+            case .applied: return viewModel.smartCutVM.hasDirtyEditsSinceApply
+            case .idle, .analyzing, .stale, .error: return false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var floatingBarContent: some View {
+        switch selectedTab {
+        case .denoise:
+            denoiseFloatingButton
+        case .smartCut:
+            smartCutFloatingButton
+        }
+    }
+
+    @ViewBuilder
+    private var denoiseFloatingButton: some View {
+        Button {
+            guard let url = viewModel.mergedFileURL else { return }
+            viewModel.startDenoising(mergedFileURL: url)
+        } label: {
+            Label(viewModel.hasDenoisedResult ? "Re-denoise" : "Denoise Audio",
+                  systemImage: "wand.and.stars")
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+        .disabled(viewModel.isProcessing || viewModel.mergedFileURL == nil)
+    }
+
+    @ViewBuilder
+    private var smartCutFloatingButton: some View {
+        let vm: SmartCutViewModel = viewModel.smartCutVM
+        switch vm.state {
+        case .results:
+            Button { Task { await vm.apply() } } label: {
+                Label("Apply Cuts", systemImage: "sparkles")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+        case .applied:
+            if vm.hasDirtyEditsSinceApply {
+                Button { Task { await vm.apply() } } label: {
+                    Label("Re-apply", systemImage: "arrow.clockwise")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+            } else {
+                EmptyView()
+            }
+        case .idle, .analyzing, .stale, .error:
+            EmptyView()
+        }
+    }
+
+    // MARK: - Deep-link
+
+    /// Deep-link handler — must live on the OUTER `.onAppear` so it fires
+    /// regardless of which tab is active on first entry. Auto-switches to the
+    /// Smart Cut tab when a pending hash matches the current input.
+    private func handlePendingSmartCutOpenIfNeeded() {
+        // Claim-first pattern: read AND clear the pending hash synchronously so a
+        // re-fire of .onAppear (or any other call site) cannot start a duplicate
+        // analyze Task before the first one finishes.
+        guard let pending = PendingSmartCutOpen.shared.hash,
+              let inputURL = viewModel.smartCutVM.inputURL else {
+            return
+        }
+        PendingSmartCutOpen.shared.hash = nil
+        Task {
+            let currentHash = try? await SourceHasher.sha256Hex(of: inputURL)
+            if currentHash == pending {
+                await MainActor.run {
+                    selectedTab = .smartCut
+                    viewModel.smartCutVM.analyze()
+                }
+            }
+        }
     }
 
     // MARK: - Subviews
@@ -258,9 +391,10 @@ struct CleaningLabView: View {
         .frame(height: 96)
     }
 
-    /// Phase 10 consolidation — single AI Workstation card holding orb,
-    /// intensity row, A/B compare, and primary CTA. Replaces the prior
-    /// stack of four separate SquircleCards/buttons.
+    /// AI Workstation — single cohesive card holding orb, intensity row,
+    /// and A/B compare. The primary Denoise / Re-denoise CTA used to live
+    /// inside this card; clt-t5 moved it to the persistent FloatingActionBar
+    /// so the workstation stays focused on parameter tuning + monitoring.
     private var aiWorkstation: some View {
         SquircleCard(glassEnabled: false, glowEnabled: false) {
             VStack(spacing: SonicMergeTheme.Spacing.lg) {
@@ -274,10 +408,6 @@ struct CleaningLabView: View {
 
                 if viewModel.hasDenoisedResult {
                     abComparisonButton
-                }
-
-                if !viewModel.isProcessing {
-                    denoiseActionButton
                 }
             }
         }
@@ -352,19 +482,6 @@ struct CleaningLabView: View {
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
         }
         .accessibilityLabel("Compare with original. Hold to listen to the original audio. Release to hear the denoised version.")
-    }
-
-    /// Denoise / Re-process primary CTA — Lime Green filled pill
-    private var denoiseActionButton: some View {
-        Button {
-            viewModel.startDenoising(mergedFileURL: mergedFileURL)
-        } label: {
-            Text(viewModel.hasDenoisedResult ? "Re-process" : "Denoise Audio")
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
-        .sensoryFeedback(.success, trigger: viewModel.isProcessing)
-        .accessibilityHint("Starts on-device AI noise reduction")
     }
 
     /// Export toolbar button

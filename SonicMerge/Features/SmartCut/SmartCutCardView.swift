@@ -96,38 +96,26 @@ struct SmartCutCardView: View {
     }
 
     private var resultsContent: some View {
+        // clt-t5: inline "Apply Cuts" CTA removed; the Cleaning Lab's
+        // FloatingActionBar now owns the apply action.
         VStack(alignment: .leading, spacing: 12) {
             statsLine
             abPill
             fillerPanel(dimmed: false)
             Button("+ Edit filler list") { showsEditFillerSheet = true }
                 .buttonStyle(.borderless)
-            Button {
-                Task { await vm.apply() }
-            } label: {
-                Label("Apply Cuts", systemImage: "sparkles")
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
         }
     }
 
     private func appliedContent(saved: TimeInterval) -> some View {
+        // clt-t5: inline "Re-apply" CTA removed; the Cleaning Lab's
+        // FloatingActionBar now owns the re-apply action when dirty.
         VStack(alignment: .leading, spacing: 12) {
             statsLine
             Label("Applied · \(formatDuration(saved)) saved", systemImage: "checkmark.circle.fill")
                 .foregroundStyle(.green)
             abPill
             fillerPanel(dimmed: false)
-            if vm.hasDirtyEditsSinceApply {
-                Button {
-                    Task { await vm.apply() }
-                } label: {
-                    Label("Re-apply", systemImage: "arrow.clockwise")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
-            }
         }
     }
 
@@ -168,8 +156,42 @@ struct SmartCutCardView: View {
     private var statsLine: some View {
         let fillerCount = vm.editList.fillers.count
         let pauseCount = vm.editList.pauses.count
-        return Text("Found \(fillerCount) fillers + \(pauseCount) long pauses · saves ~\(formatDuration(vm.editList.enabledSavings))")
-            .font(.subheadline)
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("Found \(fillerCount) fillers + \(pauseCount) long pauses")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+            HStack {
+                SavesBadge(savings: vm.editList.enabledSavings)
+                Spacer()
+            }
+        }
+    }
+
+    /// Lime-green capsule with a soft glow, dimming to grey when savings == 0
+    /// (preserves layout stability as the user toggles rows).
+    private struct SavesBadge: View {
+        let savings: TimeInterval
+        @Environment(\.sonicMergeSemantic) private var semantic
+
+        var body: some View {
+            let isActive = savings > 0
+            let accent = Color(uiColor: semantic.accentAI)
+            Text("saves ~\(formatDuration(savings))")
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 6)
+                .background(
+                    Capsule().fill(isActive ? accent : Color.secondary.opacity(0.15))
+                )
+                .foregroundStyle(isActive ? Color(uiColor: semantic.textPrimary) : .secondary)
+                .shadow(color: accent.opacity(isActive ? 0.4 : 0), radius: 8)
+        }
+
+        private func formatDuration(_ s: TimeInterval) -> String {
+            let m = Int(s) / 60
+            let sec = Int(s) % 60
+            return m > 0 ? "\(m)m \(sec)s" : "\(sec)s"
+        }
     }
 
     private var abPill: some View {
