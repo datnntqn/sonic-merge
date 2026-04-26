@@ -21,7 +21,8 @@ final class GapTransition {
     /// Used by AudioMergerService to look up which transition follows which clip.
     var leadingClipSortOrder: Int
 
-    /// Silence duration in seconds. One of: 0.5, 1.0, or 2.0.
+    /// Silence duration in seconds. One of: 0, 0.5, 1.0, or 2.0.
+    /// 0 = no gap (clips play back-to-back, hard cut).
     /// Ignored when `isCrossfade` is true.
     var gapDuration: Double
 

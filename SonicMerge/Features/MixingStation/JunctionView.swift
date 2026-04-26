@@ -32,6 +32,7 @@ struct JunctionView: View {
         var capsuleLabel: String {
             switch self {
             case .gap(let d):
+                if d == 0 { return "0s" }
                 if d == 0.5 { return "0.5s" }
                 if d == 1.0 { return "1.0s" }
                 return "2.0s"
@@ -42,14 +43,14 @@ struct JunctionView: View {
 
         var capsuleSymbol: String {
             switch self {
-            case .gap: return "clock"
+            case .gap(let d): return d == 0 ? "minus" : "clock"
             case .crossfade: return "arrow.triangle.merge"
             }
         }
 
         var voiceOverLabel: String {
             switch self {
-            case .gap(let d): return "\(d) second gap"
+            case .gap(let d): return d == 0 ? "no gap" : "\(d) second gap"
             case .crossfade: return "Crossfade"
             }
         }
@@ -72,6 +73,7 @@ struct JunctionView: View {
     var body: some View {
         Menu {
             Picker("Transition", selection: $picked) {
+                Label("No gap", systemImage: "minus").tag(Choice.gap(0))
                 Label("0.5 seconds", systemImage: "clock").tag(Choice.gap(0.5))
                 Label("1.0 seconds", systemImage: "clock").tag(Choice.gap(1.0))
                 Label("2.0 seconds", systemImage: "clock").tag(Choice.gap(2.0))
