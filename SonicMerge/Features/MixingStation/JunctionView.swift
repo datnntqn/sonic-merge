@@ -92,13 +92,20 @@ struct JunctionView: View {
             }
             Divider()
             Button {
+                // Phase 11: medium-weight haptic precedes the state flip so
+                // the impact lands at the moment of choice, not after the
+                // menu dismiss animation completes.
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 picked = .crossfade
             } label: {
                 Label("Crossfade", systemImage: "arrow.triangle.merge")
             }
             if let onInsertClip {
                 Divider()
-                Button(action: onInsertClip) {
+                Button {
+                    UIImpactFeedbackGenerator(style: .medium).impactOccurred()
+                    onInsertClip()
+                } label: {
                     Label("Insert clip here", systemImage: "plus")
                 }
             }
@@ -106,6 +113,19 @@ struct JunctionView: View {
             capsule
         }
         .onChange(of: picked) { _, newValue in
+            // Phase 11 distinct haptics: light for any gap change (incl.
+            // "No gap"), medium for crossfade. Picker selections route
+            // through this single observer; the explicit Crossfade and
+            // Insert buttons fire their own generator before mutating
+            // state so the haptic precedes the menu dismiss.
+            let style: UIImpactFeedbackGenerator.FeedbackStyle = {
+                switch newValue {
+                case .gap:       return .light
+                case .crossfade: return .medium
+                }
+            }()
+            UIImpactFeedbackGenerator(style: style).impactOccurred()
+
             switch newValue {
             case .gap(let d):
                 onTransitionChange(d, false)
@@ -113,7 +133,6 @@ struct JunctionView: View {
                 onTransitionChange(nil, true)
             }
         }
-        .sensoryFeedback(.impact(weight: .light), trigger: triggerKey)
         .accessibilityLabel("Transition: \(picked.voiceOverLabel). Double-tap to change.")
         .accessibilityAddTraits(.isButton)
     }
