@@ -249,6 +249,8 @@ struct CleaningLabView: View {
         } label: {
             Label(viewModel.hasDenoisedResult ? "Re-denoise" : "Denoise Audio",
                   systemImage: "wand.and.stars")
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .frame(maxWidth: .infinity)
         }
         .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
@@ -262,6 +264,8 @@ struct CleaningLabView: View {
         case .results:
             Button { Task { await vm.apply() } } label: {
                 Label("Apply Cuts", systemImage: "sparkles")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
@@ -269,6 +273,8 @@ struct CleaningLabView: View {
             if vm.hasDirtyEditsSinceApply {
                 Button { Task { await vm.apply() } } label: {
                     Label("Re-apply", systemImage: "arrow.clockwise")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))

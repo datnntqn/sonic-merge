@@ -34,6 +34,8 @@ struct SegmentedPill<Option: Hashable & CaseIterable>: View
                     }
                 } label: {
                     Text(label(option))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                         .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PillButtonStyle(

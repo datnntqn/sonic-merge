@@ -22,6 +22,14 @@ struct FillerListPanel: View {
                 groupBackground { pauseRow }
             }
         }
+        .onDisappear {
+            // Stop any in-flight per-occurrence preview so audio doesn't outlive
+            // a tab switch (Smart Cut tab → Denoise tab while a 4s preview window
+            // is still playing). Without this, the captured `player` strong-ref in
+            // playWindow's dispatch-after closure keeps audio alive after dismount.
+            previewPlayer?.stop()
+            previewPlayer = nil
+        }
     }
 
     @ViewBuilder
