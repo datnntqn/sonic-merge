@@ -145,6 +145,12 @@ struct FillerListPanel: View {
 
     private func playWindow(around range: ClosedRange<TimeInterval>) {
         guard let inputURL else { return }
+        // Stop any in-flight preview before starting a new one. AVAudioPlayer
+        // keeps playing even after its @State reference is overwritten, so
+        // without this a rapid re-tap (or different occurrence tap) produces
+        // overlapping playback.
+        previewPlayer?.stop()
+        previewPlayer = nil
         let centerSeconds = range.lowerBound
         let windowStart = max(0, centerSeconds - 2)
         do {
