@@ -11,6 +11,8 @@ import SwiftData
 @main
 struct SonicMergeApp: App {
 
+    @UIApplicationDelegateAdaptor(SmartCutAppDelegate.self) private var smartCutAppDelegate
+
     @Environment(\.scenePhase) private var scenePhase
 
     /// SwiftData ModelContainer configured with the App Group shared container.
