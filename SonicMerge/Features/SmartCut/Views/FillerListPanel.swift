@@ -14,8 +14,20 @@ struct FillerListPanel: View {
     @Binding var pauseThreshold: TimeInterval
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             ForEach(editList.categories, id: \.self) { category in
+                categoryGroup(category: category)
+            }
+            if !editList.pauses.isEmpty {
+                groupBackground { pauseRow }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func categoryGroup(category: String) -> some View {
+        groupBackground {
+            VStack(alignment: .leading, spacing: 8) {
                 categoryRow(category: category)
                 if expandedCategories.contains(category) {
                     ForEach(editList.fillers.filter { $0.matchedText == category }) { edit in
@@ -23,11 +35,17 @@ struct FillerListPanel: View {
                     }
                 }
             }
-            if !editList.pauses.isEmpty {
-                Divider()
-                pauseRow
-            }
         }
+    }
+
+    @ViewBuilder
+    private func groupBackground<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        content()
+            .padding(12)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(Color(.systemGray6))
+            )
     }
 
     private func categoryRow(category: String) -> some View {
@@ -59,9 +77,13 @@ struct FillerListPanel: View {
             } label: {
                 Image(systemName: "play.fill")
             }
-            Text(edit.contextExcerpt).lineLimit(1)
+            Text(edit.contextExcerpt)
+                .lineLimit(1)
+                .opacity(edit.isEnabled ? 1.0 : 0.4)
             Spacer()
-            Text(formatTimestamp(edit.timeRange.lowerBound)).foregroundStyle(.secondary)
+            Text(formatTimestamp(edit.timeRange.lowerBound))
+                .foregroundStyle(.secondary)
+                .opacity(edit.isEnabled ? 1.0 : 0.4)
             Image(systemName: edit.isEnabled ? "checkmark.square.fill" : "square")
                 .onTapGesture {
                     onIndividualToggle(edit.id, !edit.isEnabled)
