@@ -173,7 +173,7 @@ struct MixingStationView: View {
                 denoiseHaptic.toggle()
                 navigateToCleaningLab()
             } label: {
-                Label("Denoise", systemImage: "wand.and.sparkles")
+                Label("Denoise", systemImage: "waveform.badge.minus")
             }
             .disabled(viewModel.clips.isEmpty)
             .sensoryFeedback(.impact(weight: .light), trigger: denoiseHaptic)
