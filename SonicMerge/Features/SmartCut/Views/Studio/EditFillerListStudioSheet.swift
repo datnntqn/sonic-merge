@@ -28,6 +28,11 @@ struct EditFillerListStudioSheet: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 16) {
+                    Text("Smart Cut scans your recording for these filler words and removes them. Tap ✕ to skip a word, or add your own below.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                        .padding(.horizontal, 16)
+                        .fixedSize(horizontal: false, vertical: true)
                     Text("ALL FILLER WORDS")
                         .font(.caption2.weight(.semibold))
                         .foregroundStyle(Color(uiColor: semantic.textSecondary))
@@ -87,9 +92,7 @@ struct EditFillerListStudioSheet: View {
                     .foregroundStyle(Color(uiColor: semantic.textPrimary))
             }
             .tint(Color(uiColor: semantic.accentAction))
-            Text(useCloudRecognition
-                 ? "Audio is sent to Apple's speech servers. Catches more lexical fillers (sort of, actually). Requires internet. Apple's English models still drop short hesitations (um/uh/ah)."
-                 : "On-device recognition. Private and offline. Apple's speech model drops short hesitations (um/uh/ah) — only lexical fillers and pauses are detected.")
+            Text("Better results via Apple's secure cloud. Audio stays private.")
                 .font(.caption)
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 .fixedSize(horizontal: false, vertical: true)
