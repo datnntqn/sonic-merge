@@ -61,4 +61,12 @@ struct FillerLibrary: Equatable {
             defaults.set(Array(removed), forKey: removedKey)
         }
     }
+
+    /// Phase 12: clear the persisted set of removed default words so all
+    /// shipped defaults reappear in `allWords`. Custom words are not
+    /// affected. Called from EditFillerListStudioSheet's "Restore default
+    /// words" link when the user wants to undo prior default-removals.
+    mutating func restoreAllDefaults() {
+        defaults.removeObject(forKey: removedKey)
+    }
 }
