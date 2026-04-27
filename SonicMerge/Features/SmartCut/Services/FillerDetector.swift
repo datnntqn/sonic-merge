@@ -2,6 +2,15 @@ import Foundation
 
 enum FillerDetector {
 
+    /// Symmetric pad applied to each filler timeRange (in seconds).
+    /// SFSpeechRecognizer's per-word timestamps cover the audible "core" of
+    /// a word, often missing the leading consonant or trailing vowel. Cutting
+    /// only the recognized window leaves audible residue of the spoken filler.
+    /// The pad widens each timeRange so the cut fully removes the word; it is
+    /// clamped to neighboring segments' boundaries so it never encroaches on
+    /// adjacent (non-filler) speech.
+    private static let timeRangePaddingSeconds: TimeInterval = 0.1
+
     /// Walk the recognized segments and emit a FillerEdit for every match.
     /// Multi-word phrases (e.g. "you know") match across consecutive segments.
     static func detect(in segments: [TranscriptionState.RecognizedSegment],
@@ -21,7 +30,7 @@ enum FillerDetector {
             if singleWords.contains(cleaned) {
                 edits.append(FillerEdit(
                     matchedText: cleaned,
-                    timeRange: segment.startTime...segment.endTime,
+                    timeRange: paddedRange(spanStart: index, spanEnd: index, in: segments),
                     confidence: segment.confidence,
                     contextExcerpt: contextExcerpt(around: index, in: segments),
                     isEnabled: enabledByDefault(cleaned)
@@ -39,7 +48,9 @@ enum FillerDetector {
                 if words == parts {
                     edits.append(FillerEdit(
                         matchedText: phrase,
-                        timeRange: slice.first!.startTime...slice.last!.endTime,
+                        timeRange: paddedRange(spanStart: start,
+                                               spanEnd: start + parts.count - 1,
+                                               in: segments),
                         confidence: slice.map(\.confidence).reduce(0, +) / Float(parts.count),
                         contextExcerpt: contextExcerpt(around: start, in: segments),
                         isEnabled: enabledByDefault(phrase)
@@ -49,6 +60,24 @@ enum FillerDetector {
         }
 
         return edits.sorted { $0.timeRange.lowerBound < $1.timeRange.lowerBound }
+    }
+
+    /// Build a timeRange covering segments[spanStart...spanEnd], padded by
+    /// `timeRangePaddingSeconds` on each side. The pad is clamped to the
+    /// previous segment's endTime (or 0 if first) and the next segment's
+    /// startTime (or unbounded if last) so it never overlaps adjacent words.
+    private static func paddedRange(spanStart: Int,
+                                    spanEnd: Int,
+                                    in segments: [TranscriptionState.RecognizedSegment]) -> ClosedRange<TimeInterval> {
+        let originalStart = segments[spanStart].startTime
+        let originalEnd = segments[spanEnd].endTime
+        let leftBound: TimeInterval = spanStart > 0 ? segments[spanStart - 1].endTime : 0
+        let rightBound: TimeInterval = spanEnd < segments.count - 1
+            ? segments[spanEnd + 1].startTime
+            : .infinity
+        let paddedStart = max(leftBound, originalStart - timeRangePaddingSeconds)
+        let paddedEnd = min(rightBound, originalEnd + timeRangePaddingSeconds)
+        return paddedStart...paddedEnd
     }
 
     private static func normalize(_ text: String) -> String {
