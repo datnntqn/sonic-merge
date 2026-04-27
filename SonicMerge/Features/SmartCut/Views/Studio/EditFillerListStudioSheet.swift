@@ -88,8 +88,8 @@ struct EditFillerListStudioSheet: View {
             }
             .tint(Color(uiColor: semantic.accentAction))
             Text(useCloudRecognition
-                 ? "Audio is sent to Apple's speech servers. Catches more um/uh/ah. Requires internet."
-                 : "On-device recognition. Private and offline, but may miss short hesitations like um/uh/ah.")
+                 ? "Audio is sent to Apple's speech servers. Catches more lexical fillers (sort of, actually). Requires internet. Apple's English models still drop short hesitations (um/uh/ah)."
+                 : "On-device recognition. Private and offline. Apple's speech model drops short hesitations (um/uh/ah) — only lexical fillers and pauses are detected.")
                 .font(.caption)
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 .fixedSize(horizontal: false, vertical: true)
