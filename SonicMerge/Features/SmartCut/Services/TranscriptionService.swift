@@ -19,6 +19,13 @@ actor TranscriptionService {
         case recognitionFailed(Error)
     }
 
+    /// UserDefaults key for the "use cloud recognition" toggle. When true,
+    /// SFSpeechURLRecognitionRequest.requiresOnDeviceRecognition is flipped
+    /// to false, sending audio to Apple's servers — better at preserving
+    /// disfluencies (um/uh/ah/er/oh) but requires network and audio leaves
+    /// the device. Default false (privacy-preserving on-device path).
+    static let useCloudRecognitionDefaultsKey = "SmartCut.useCloudRecognition"
+
     private let chunkDurationSeconds: TimeInterval
     private let stateStore: TranscriptionStateStore
     private let locale: Locale
@@ -102,7 +109,11 @@ actor TranscriptionService {
         try await exportChunk(asset: asset, startSec: startSec, endSec: endSec, to: chunkURL)
 
         let request = SFSpeechURLRecognitionRequest(url: chunkURL)
-        request.requiresOnDeviceRecognition = true
+        // Read the user's "use cloud recognition" preference at request-build
+        // time so changes take effect on the next analyze without app restart.
+        // bool(forKey:) returns false for unset keys → on-device default.
+        let useCloud = UserDefaults.standard.bool(forKey: Self.useCloudRecognitionDefaultsKey)
+        request.requiresOnDeviceRecognition = !useCloud
         request.shouldReportPartialResults = false
         // .dictation preserves verbal hesitations (um, uh, ah, er) in the
         // transcript. The default .unspecified hint applies aggressive

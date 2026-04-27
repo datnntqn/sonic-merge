@@ -33,23 +33,11 @@ actor SmartCutService {
                         continuation.finish(throwing: NSError(domain: "SmartCutService", code: -1))
                         return
                     }
-                    let lexicalFillers = FillerDetector.detect(
+                    let fillers = FillerDetector.detect(
                         in: state.recognizedSegments,
                         words: library.allWords,
                         enabledByDefault: { library.isEnabledByDefault($0) }
                     )
-                    // Audio-based disfluency detection: catches um/uh/ah/oh
-                    // that SFSpeechRecognizer's on-device model drops. Runs
-                    // on the audio waveform in the gaps between recognized
-                    // segments, so it doesn't double-count anything the
-                    // lexical FillerDetector already found.
-                    let disfluencies = (try? DisfluencyDetector.detect(
-                        audioURL: input,
-                        recognizedSegments: state.recognizedSegments,
-                        totalDuration: state.sourceDuration
-                    )) ?? []
-                    let fillers = (lexicalFillers + disfluencies)
-                        .sorted { $0.timeRange.lowerBound < $1.timeRange.lowerBound }
                     let pauses = PauseDetector.detect(
                         in: state.recognizedSegments,
                         totalDuration: state.sourceDuration,

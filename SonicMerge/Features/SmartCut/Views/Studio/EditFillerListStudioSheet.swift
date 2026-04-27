@@ -16,6 +16,11 @@ struct EditFillerListStudioSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.sonicMergeSemantic) private var semantic
     @State private var newWord: String = ""
+    /// Persisted via UserDefaults under the key TranscriptionService reads.
+    /// Default false (on-device, privacy-preserving). Toggle takes effect on
+    /// the next analyze run.
+    @AppStorage(TranscriptionService.useCloudRecognitionDefaultsKey)
+    private var useCloudRecognition: Bool = false
 
     private var removedCount: Int { library.removedDefaults.count }
 
@@ -53,6 +58,9 @@ struct EditFillerListStudioSheet: View {
                     addInputCapsule
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
+                    cloudRecognitionToggle
+                        .padding(.horizontal, 16)
+                        .padding(.top, 16)
                 }
                 .padding(.vertical, 16)
             }
@@ -65,6 +73,30 @@ struct EditFillerListStudioSheet: View {
             }
             .presentationBackground(.ultraThinMaterial)
         }
+    }
+
+    /// Toggle row sitting below the add-word input. Flips
+    /// SmartCut.useCloudRecognition in UserDefaults; TranscriptionService
+    /// picks it up on the next analyze run. Helper copy explains the
+    /// privacy trade-off in plain language.
+    private var cloudRecognitionToggle: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Toggle(isOn: $useCloudRecognition) {
+                Text("Better filler detection")
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
+            }
+            .tint(Color(uiColor: semantic.accentAction))
+            Text(useCloudRecognition
+                 ? "Audio is sent to Apple's speech servers. Catches more um/uh/ah. Requires internet."
+                 : "On-device recognition. Private and offline, but may miss short hesitations like um/uh/ah.")
+                .font(.caption)
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 12)
+        .studioFrostedCapsule(cornerRadius: 14)
     }
 
     private var addInputCapsule: some View {
