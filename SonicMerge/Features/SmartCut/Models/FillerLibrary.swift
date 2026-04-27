@@ -30,10 +30,15 @@ struct FillerLibrary: Equatable {
     }
 
     /// Combined list (defaults minus removed + custom), preserving order.
+    /// Deduped against the kept-defaults set so a word the user added as
+    /// custom *before* it was promoted to defaults (e.g. "oh") doesn't
+    /// render twice in the UI.
     var allWords: [String] {
         let removed = removedDefaults
         let kept = (defaultOnWords + defaultOffWords).filter { !removed.contains($0) }
-        return kept + customWords
+        let keptSet = Set(kept)
+        let uniqueCustom = customWords.filter { !keptSet.contains($0) }
+        return kept + uniqueCustom
     }
 
     func isEnabledByDefault(_ word: String) -> Bool {

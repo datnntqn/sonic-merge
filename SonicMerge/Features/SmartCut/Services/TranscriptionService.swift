@@ -52,7 +52,13 @@ actor TranscriptionService {
                         throw TranscriptionError.onDeviceUnsupported
                     }
 
-                    let sourceHash = try await SourceHasher.sha256Hex(of: input)
+                    let rawSourceHash = try await SourceHasher.sha256Hex(of: input)
+                    // Scope the cache key by recognition mode so toggling cloud
+                    // on/off doesn't reuse stale segments from a prior on-device
+                    // run (and vice versa). Each mode gets its own persisted
+                    // transcript per source.
+                    let useCloud = UserDefaults.standard.bool(forKey: Self.useCloudRecognitionDefaultsKey)
+                    let sourceHash = "\(rawSourceHash)#\(useCloud ? "cloud" : "local")"
                     let asset = AVURLAsset(url: input)
                     let totalDuration = try await asset.load(.duration).seconds
 
