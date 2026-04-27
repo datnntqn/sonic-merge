@@ -127,6 +127,12 @@ actor TranscriptionService {
         // means FillerDetector never sees them. .dictation is the documented
         // hint for "longer audio with full sentences and verbal hesitations."
         request.taskHint = .dictation
+        // Bias the recognizer toward emitting disfluencies as their canonical
+        // tokens instead of dropping them as noise. Apple's docs describe
+        // contextualStrings as "domain-specific terms" — feeding the
+        // hesitation list nudges the LM scoring to prefer these short tokens
+        // over the filtered alternatives.
+        request.contextualStrings = ["um", "uh", "ah", "er", "oh"]
 
         return try await withCheckedThrowingContinuation { continuation in
             let didResumeBox = DidResumeBox()
