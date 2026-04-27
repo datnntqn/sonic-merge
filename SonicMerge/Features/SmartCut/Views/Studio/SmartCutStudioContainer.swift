@@ -68,6 +68,13 @@ struct SmartCutStudioContainer: View {
                 unselectedTint: .accent
             )
 
+            Text("Tap a card to review occurrences. Toggle ✓ to skip a word.")
+                .font(.caption)
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 4)
+                .padding(.top, 4)
+
             VStack(spacing: 12) {
                 ForEach(vm.editList.categories, id: \.self) { category in
                     let edits = vm.editList.fillers.filter { $0.matchedText == category }
