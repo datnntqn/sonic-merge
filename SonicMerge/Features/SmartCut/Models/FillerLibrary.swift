@@ -9,7 +9,7 @@ struct FillerLibrary: Equatable {
     let defaults: UserDefaults
 
     /// SPEC: tight set, on by default — never false-positives a real word.
-    let defaultOnWords: [String] = ["um", "uh", "ah", "er"]
+    let defaultOnWords: [String] = ["um", "uh", "ah", "er", "oh"]
 
     /// SPEC: standard set, off by default — pulled in when the user opts in.
     let defaultOffWords: [String] = ["like", "you know", "sort of", "basically", "actually", "literally"]
