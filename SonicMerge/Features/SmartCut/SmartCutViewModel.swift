@@ -82,6 +82,8 @@ final class SmartCutViewModel: PlaybackParticipant {
         analysisTask?.cancel()
         analysisTask = nil
         editList = EditList()
+        cachedSegments = []
+        cachedDuration = 0
         outputURL = nil
         inputPlayer = nil
         outputPlayer = nil
