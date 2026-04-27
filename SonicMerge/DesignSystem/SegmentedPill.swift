@@ -22,6 +22,11 @@ struct SegmentedPill<Option: Hashable & CaseIterable>: View
 {
     @Binding var selection: Option
     let label: (Option) -> String
+    /// Tint for the selected segment. Defaults to `.ai` (Lime Green) — matches
+    /// pre-Phase-12 behavior; existing call-sites inherit unchanged.
+    var selectedTint: PillButtonStyle.Tint = .ai
+    /// Tint for unselected segments. Defaults to `.accent` (Deep Indigo).
+    var unselectedTint: PillButtonStyle.Tint = .accent
 
     var body: some View {
         HStack(spacing: 8) {
@@ -41,7 +46,7 @@ struct SegmentedPill<Option: Hashable & CaseIterable>: View
                 .buttonStyle(PillButtonStyle(
                     variant: isSelected ? .filled : .outline,
                     size: .compact,
-                    tint: isSelected ? .ai : .accent
+                    tint: isSelected ? selectedTint : unselectedTint
                 ))
             }
         }
