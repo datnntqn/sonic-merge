@@ -104,6 +104,12 @@ actor TranscriptionService {
         let request = SFSpeechURLRecognitionRequest(url: chunkURL)
         request.requiresOnDeviceRecognition = true
         request.shouldReportPartialResults = false
+        // .dictation preserves verbal hesitations (um, uh, ah, er) in the
+        // transcript. The default .unspecified hint applies aggressive
+        // language-model filtering that drops disfluencies as noise — which
+        // means FillerDetector never sees them. .dictation is the documented
+        // hint for "longer audio with full sentences and verbal hesitations."
+        request.taskHint = .dictation
 
         return try await withCheckedThrowingContinuation { continuation in
             let didResumeBox = DidResumeBox()
