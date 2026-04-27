@@ -11,7 +11,7 @@
 // - ScrollView with active tab's content:
 //     * .denoise → onDeviceAIHero, staleBanner (conditional), aiWorkstation (orb + intensity + a/b),
 //       waveformSection. The CTA "Denoise Audio" / "Re-denoise" lives in the floating bar (NOT inline).
-//     * .smartCut → SmartCutCardView. Its primary CTA "Apply Cuts" / "Re-apply" lives in the floating
+//     * .smartCut → SmartCutStudioContainer. Its primary CTA "Apply Cuts" / "Re-apply" lives in the floating
 //       bar in .results / .applied-with-dirty-edits states; .idle's "Analyze" + .stale's "Re-analyze"
 //       remain inline inside the card.
 // - FloatingActionBar overlaid at the bottom with the active tab's primary CTA (always visible
@@ -203,13 +203,13 @@ struct CleaningLabView: View {
         }
     }
 
-    /// Smart Cut tab — single SmartCutCardView. Deep-link auto-open is
+    /// Smart Cut tab — single SmartCutStudioContainer. Deep-link auto-open is
     /// handled by the outer `.onAppear` on `body` (see
     /// `handlePendingSmartCutOpenIfNeeded`).
     @ViewBuilder
     private var smartCutContent: some View {
-        SmartCutCardView(vm: viewModel.smartCutVM,
-                         library: $viewModel.fillerLibrary)
+        SmartCutStudioContainer(vm: viewModel.smartCutVM,
+                                library: $viewModel.fillerLibrary)
     }
 
     // MARK: - Floating Action Bar
