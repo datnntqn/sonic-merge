@@ -3,7 +3,7 @@ import SwiftData
 @testable import SonicMerge
 
 @MainActor
-final class SmartCutSessionPersistenceTests: XCTestCase {
+final class SessionModelPersistenceTests: XCTestCase {
 
     func test_smartCutSessionRoundTripsThroughInMemoryModelContainer() throws {
         let schema = Schema([SmartCutSession.self])
@@ -62,5 +62,30 @@ final class SmartCutSessionPersistenceTests: XCTestCase {
         XCTAssertNotNil(fetched?.editListJSON)
         let decoded = try JSONDecoder().decode(EditList.self, from: fetched!.editListJSON!)
         XCTAssertEqual(decoded, edits)
+    }
+
+    func test_denoiseSessionRoundTripsThroughInMemoryModelContainer() throws {
+        let schema = Schema([DenoiseSession.self])
+        let config = ModelConfiguration(isStoredInMemoryOnly: true)
+        let container = try ModelContainer(for: schema, configurations: config)
+        let context = container.mainContext
+
+        let id = UUID()
+        let session = DenoiseSession(
+            id: id,
+            name: "Lecture",
+            sourceFilename: "source.wav",
+            durationSeconds: 1800,
+            intensity: 0.5
+        )
+        context.insert(session)
+        try context.save()
+
+        let fetched = try context.fetch(
+            FetchDescriptor<DenoiseSession>(predicate: #Predicate { $0.id == id })
+        ).first
+        XCTAssertEqual(fetched?.name, "Lecture")
+        XCTAssertEqual(fetched?.intensity, 0.5)
+        XCTAssertNil(fetched?.processedFilename)
     }
 }
