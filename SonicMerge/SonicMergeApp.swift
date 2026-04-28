@@ -24,7 +24,12 @@ struct SonicMergeApp: App {
     /// development but will not be shared with the future Share Extension target.
     let modelContainer: ModelContainer = {
         AppConstants.prepareAppGroupPersistentStoreDirectory()
-        let schema = Schema([AudioClip.self, GapTransition.self])
+        let schema = Schema([
+            AudioClip.self,
+            GapTransition.self,
+            SmartCutSession.self,
+            DenoiseSession.self
+        ])
         // Use App Group container when entitlement is available; fall back to the default
         // sandbox container when not (e.g., unit test host process or simulator without
         // App Group capability configured). The Share Extension (Phase 5) requires the
