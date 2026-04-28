@@ -57,17 +57,18 @@ The share extension's default destination becomes the Smart Cut tab. A new App G
 | `SonicMerge/Features/Denoising/Views/Home/DenoiseSessionView.swift` | Push destination from `DenoiseHomeView`. Owns a `DenoiseSessionViewModel` initialized from a `DenoiseSession`. Hosts the denoise content (`onDeviceAIHero`, `staleBanner`, `aiWorkstation`, `waveformSection`, `FloatingActionBar`) currently inside `CleaningLabView`. |
 | `SonicMerge/Models/SmartCutSession.swift` | `@Model` SwiftData entity (see §4.1). |
 | `SonicMerge/Models/DenoiseSession.swift` | `@Model` SwiftData entity (see §4.1). |
-| `SonicMerge/Features/SmartCut/Views/Home/SmartCutHomeViewModel.swift` *(optional, only if logic exceeds what fits in the view)* | Encapsulates upload-and-create-session, copy-to-App-Group, error mapping. May merge into the view if small. |
-| `SonicMerge/Features/Denoising/DenoiseSessionViewModel.swift` | Renamed/stripped `CleaningLabViewModel`. Owns just the denoise pipeline. Init takes a `DenoiseSession`. |
+| `SonicMerge/Features/SmartCut/Views/Home/SmartCutHomeViewModel.swift` *(optional, only if logic exceeds what fits in the view)* | Encapsulates upload-and-create-session, copy-to-App-Group, source-hash computation, error mapping. May merge into the view if small. |
+
+(`DenoiseSessionViewModel` is a **rename** of the existing `CleaningLabViewModel` — see §3.2, not §3.1.)
 
 ### 3.2 Modified files
 
 | Path | Change |
 |---|---|
 | `SonicMerge/SonicMergeApp.swift` | Body's `WindowGroup` content swaps from `MixingStationView`-with-`MixingStationViewModel` to `RootTabView`. Remove the `viewModel` `@State` and the two scene-phase / onOpenURL handlers (those handlers move into `RootTabView`). Schema gains `SmartCutSession` and `DenoiseSession`. |
-| `SonicMerge/Features/SmartCut/SmartCutViewModel.swift` | Add `init(session: SmartCutSession, modelContext: ModelContext)`. Decode `session.editListJSON` → `EditList` if present. Resolve `session.transcriptCacheRef` → cached transcript if present (lands the VM in `.results` directly, not `.idle`). Add `persist()` writing `editListJSON` and `transcriptCacheRef` back debounced ~300ms on mutation, and on view dismiss. Existing init paths (used by tests) remain; the new init is additive. |
-| `SonicMerge/Features/Denoising/CleaningLabViewModel.swift` | Renamed `DenoiseSessionViewModel`. Remove the embedded `smartCutVM` property and the merged-URL Smart Cut wiring (lines that call `smartCutVM.setInputURL` and the `setMergedFileURL` Smart Cut bridging). Init takes a `DenoiseSession`. Persist `intensity` and `processedFilename` back to the session on apply / on dismiss. |
-| `SonicMerge/Features/MixingStation/MixingStationView.swift` | Remove the `Denoise` toolbar button (lines ~170–184), the `showCleaningLab` and `mergedFileURLForCleaning` state, the `navigationDestination(isPresented:)` for Cleaning Lab, the `denoiseHaptic` state, and the `navigateToCleaningLab()` method. Keep everything else (timeline, drag-reorder, import, export, theme menu, drop zone). Title stays "SonicMerge"; it's now hosted under the Merge tab. |
+| `SonicMerge/Features/SmartCut/SmartCutViewModel.swift` | Add `init(session: SmartCutSession, library: FillerLibrary, coordinator: PlaybackCoordinator, modelContext: ModelContext)`. The new init is additive; existing init `(coordinator:, library:, service:, cutter:)` stays for tests. Body: resolve source URL from `session`; call `setInput(url:)` (existing API — note: the method name is `setInput(url:)`, not `setInputURL`); call `SmartCutSourceLocator.register(hash: session.sourceHashHex, url: sourceURL)` so `BackgroundTranscriptionTask` can find the source on resume; decode `session.editListJSON` → `EditList` if present; resolve `session.transcriptCacheRef` → cached transcript if present (lands the VM in `.results` directly, not `.idle`); on missing/corrupt blobs, land in existing `.error(message:)` case (see §5.1). Add `persist(to: SmartCutSession)` writing `editListJSON` and `transcriptCacheRef` back debounced ~300ms on mutation, and an immediate flush on view dismiss. |
+| `SonicMerge/Features/Denoising/CleaningLabViewModel.swift` | Renamed `DenoiseSessionViewModel`. Remove the embedded `smartCutVM` property (currently at line 98), the `setMergedFileURL` method (which today sets `mergedFileURL` and calls `smartCutVM.setInput(url:)`), the `notifySmartCutOfDenoiseChange()` Smart Cut bridging, the Smart-Cut-aware `exportSource` fallback, the `onIntensityChanged` Smart Cut notification, and the `playbackCoordinator` ownership of the Smart Cut half (the renamed VM keeps the coordinator only for its own A/B playback). Move `fillerLibrary` ownership out of this VM (see §4.9). Init takes a `DenoiseSession`. Persist `intensity` and `processedFilename` back to the session on apply / on dismiss. |
+| `SonicMerge/Features/MixingStation/MixingStationView.swift` | Mechanical removal list: `showCleaningLab` `@State` (line 22), `mergedFileURLForCleaning` `@State` (line 23), `denoiseHaptic` `@State` (line 29), the `navigationDestination(isPresented:)` modifier for Cleaning Lab (lines 53–57), the `Denoise` `ToolbarItem` (lines 170–184), the `onChange(of: showCleaningLab)` cleanup hook (lines 107–112), and the entire `navigateToCleaningLab()` method (lines 211–230). Keep everything else (timeline, drag-reorder, import, export, theme menu, drop zone). Title stays "SonicMerge"; it's now hosted under the Merge tab. |
 | `SonicMergeShareExtension/ShareViewController.swift` | Change copy destination from `clips/` to `<AppGroup>/smart-cut/<newId>/source.<ext>`. Generate a session ID; write `pendingImportFilename`, `pendingImportSessionId`, `pendingImportDestination = "smart-cut"` to App Group UserDefaults. (Exact filename-key contract is documented in §4.4.) |
 | `SonicMerge/App/AppConstants.swift` | Add `smartCutSessionDirectory(for: UUID) throws -> URL` and `denoiseSessionDirectory(for: UUID) throws -> URL` next to the existing `clipsDirectory()`. Both create the directory on first call. |
 | `SonicMerge/Features/Denoising/AIOrbView.swift` and the denoise content sub-views | Move from being subviews of `CleaningLabView` to being subviews of `DenoiseSessionView`. No code changes — just a relocation of file ownership / their host view. |
@@ -89,16 +90,20 @@ Two new `@Model` types added to the existing schema. Schema becomes `[AudioClip,
     @Attribute(.unique) var id: UUID
     var name: String                 // editable display name; defaults to source basename
     var sourceFilename: String       // path under <AppGroup>/smart-cut/<id>/, e.g. "source.m4a"
+    var sourceHashHex: String        // SHA-256 of source file bytes (no mode suffix); used to match
+                                     // deep-link notifications from BackgroundTranscriptionTask. Computed
+                                     // on session create via SourceHasher.sha256Hex(of: sourceURL).
     var durationSeconds: Double
     var createdAt: Date
     var lastOpenedAt: Date
     var editListJSON: Data?          // serialized EditList (filler edits + pause edits)
     var transcriptCacheRef: String?  // path under <AppGroup>/smart-cut/<id>/, e.g. "transcript-cache.json"
 
-    init(id: UUID = UUID(), name: String, sourceFilename: String, durationSeconds: Double) {
+    init(id: UUID = UUID(), name: String, sourceFilename: String, sourceHashHex: String, durationSeconds: Double) {
         self.id = id
         self.name = name
         self.sourceFilename = sourceFilename
+        self.sourceHashHex = sourceHashHex
         self.durationSeconds = durationSeconds
         self.createdAt = .now
         self.lastOpenedAt = .now
@@ -169,12 +174,12 @@ struct RootTabView: View {
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
             handlePendingShareExtensionImport()
+            handlePendingSmartCutOpenIfNeeded()  // poll, since PendingSmartCutOpen is a plain class, not an Observable
         }
         .onOpenURL { url in handleDeepLink(url) }
-        .onAppear { handlePendingShareExtensionImport() }
-        .onReceive(PendingSmartCutOpen.shared.$hash) { hash in
-            // Background transcription completion deep-link.
-            // Verify the session exists; switch tab; push.
+        .onAppear {
+            handlePendingShareExtensionImport()
+            handlePendingSmartCutOpenIfNeeded()
         }
     }
 
@@ -201,31 +206,34 @@ struct RootTabView: View {
 struct SmartCutSessionView: View {
     let sessionId: UUID
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.fillerLibrary) private var libraryStore  // see §4.9
     @State private var viewModel: SmartCutViewModel?
 
     var body: some View {
         Group {
             if let viewModel {
-                SmartCutStudioContainer(vm: viewModel, library: $library)
+                SmartCutStudioContainer(vm: viewModel, library: libraryStore.binding)
             } else {
                 ProgressView()
             }
         }
         .toolbar { /* Export, delete-session */ }
         .task {
-            // Fetch session by id; init VM; mark lastOpenedAt = .now.
+            // Fetch session by id; build PlaybackCoordinator; init VM; mark lastOpenedAt = .now.
         }
         .onDisappear {
-            viewModel?.cancelAnalyze() // unless background-mode opted-in
-            viewModel?.persist()
+            viewModel?.cancelAnalyze() // unless background-mode opted-in via Run in BG
+            if let vm = viewModel, let session = currentSession() {
+                vm.persist(to: session)
+            }
         }
     }
 }
 ```
 
-**ViewModel lifecycle.** Each session view instantiates its own `SmartCutViewModel`. Multiple sessions can be open across tabs but only one is rendered at a time per tab; pushing a new session from the recents list creates a new VM and tears down the previous one on disappear. Background analyze opt-in (`Run in BG`) keeps the previous VM's task alive via the existing `BackgroundTranscriptionTask` mechanism — this is unchanged.
+**ViewModel lifecycle.** Each session view instantiates its own `SmartCutViewModel` plus its own `PlaybackCoordinator` (the new init owns the coordinator per-session). Multiple sessions can be open across tabs but only one is rendered at a time per tab; pushing a new session from the recents list creates a new VM and tears down the previous one on disappear. Background analyze opt-in (`Run in BG`) keeps the previous VM's task alive via the existing `BackgroundTranscriptionTask` mechanism — this is unchanged.
 
-**Persistence cadence.** Edit-list mutations on the VM publish via `@Observable`. A debounced subscriber (300ms) calls `persist()` to write `editListJSON` back. On disappear, an immediate `persist()` flushes any pending debounce. `transcriptCacheRef` is set once on `.results` and not re-written. `lastOpenedAt` updates on appear, persisted same time as the first `editListJSON` write or via an explicit `modelContext.save()` on appear.
+**Persistence cadence.** Edit-list mutations on the VM publish via `@Observable`. A debounced subscriber (300ms) calls `persist(to: session)` to write `editListJSON` back. On disappear, an immediate `persist(to:)` flushes any pending debounce. `transcriptCacheRef` is set once on `.results` and not re-written. `lastOpenedAt` updates on appear, persisted same time as the first `editListJSON` write or via an explicit `modelContext.save()` on appear.
 
 ### 4.4 Share extension routing
 
@@ -246,7 +254,8 @@ switch destination {
 case "smart-cut":
     // Verify file exists at <AppGroup>/smart-cut/<id>/source.<ext>.
     // Probe duration via AVURLAsset.
-    // Insert SmartCutSession{id, name=basename, sourceFilename, duration}.
+    // Compute sourceHashHex via SourceHasher.sha256Hex(of: sourceURL).
+    // Insert SmartCutSession{id, name=basename, sourceFilename, sourceHashHex, duration}.
     // selection = .smartCut
     // smartCutPath.append(id)
 case "denoise":
@@ -264,15 +273,53 @@ default:
 
 ### 4.5 Deep-link rerouting (background-transcription completion)
 
-`PendingSmartCutOpen.shared.hash` today is consumed by `CleaningLabView.handlePendingSmartCutOpenIfNeeded()` which switches the inner tab to Smart Cut. With Cleaning Lab gone, the deep-link must reroute through `RootTabView`:
+`PendingSmartCutOpen.shared.hash` today is consumed by `CleaningLabView.handlePendingSmartCutOpenIfNeeded()` which switches the inner tab to Smart Cut. With Cleaning Lab gone, the deep-link must reroute through `RootTabView`.
 
-1. `RootTabView` observes `PendingSmartCutOpen.shared.$hash`.
-2. On a non-nil hash, find the `SmartCutSession` whose `transcriptCacheRef`'s file content matches the hash (or whose source-file hash matches — depends on what `PendingSmartCutOpen` stores; current code stores a hash of the input URL's hash). If no session matches, drop the deep-link.
-3. If a match exists, set `selection = .smartCut`, append `session.id` to `smartCutPath`. Clear `PendingSmartCutOpen.shared.hash`.
+**What's actually stored.** `BackgroundTranscriptionTask.makeCompletionNotificationContent` writes `state.sourceHash` into the notification's `userInfo["smartCutCompletedFor"]`. `TranscriptionService` builds `sourceHash` as `"\(SourceHasher.sha256Hex(of: input))#\(useCloud ? "cloud" : "local")"` — a SHA-256 of the source audio file's bytes, plus a mode suffix (`#cloud` or `#local`). The notification delegate (`SmartCutAppDelegate`) writes that whole string to `PendingSmartCutOpen.shared.hash`.
+
+**Why `SmartCutSession.sourceHashHex` (added in §4.1).** Sessions store the bare SHA-256 (no mode suffix) so a single column can match either mode. Computed on session create from `SourceHasher.sha256Hex(of: sourceURL)`.
+
+**Routing algorithm:**
+
+```
+private func handlePendingSmartCutOpenIfNeeded() {
+    guard let raw = PendingSmartCutOpen.shared.hash else { return }
+    PendingSmartCutOpen.shared.hash = nil
+    // Strip the "#cloud" / "#local" mode suffix if present.
+    let bareHash = raw.split(separator: "#").first.map(String.init) ?? raw
+    let descriptor = FetchDescriptor<SmartCutSession>(
+        predicate: #Predicate { $0.sourceHashHex == bareHash }
+    )
+    guard let session = try? modelContext.fetch(descriptor).first else { return } // session deleted; drop silently
+    selection = .smartCut
+    if smartCutPath.isEmpty || smartCutPath.last as? UUID != session.id {
+        smartCutPath.append(session.id)
+    }
+}
+```
 
 **Why the existence check.** A user can delete a session before the background transcription completes; without the check, we'd push into a session view that immediately errors on missing-source. Better to drop silently.
 
-### 4.6 Empty state vs. recents-loaded state on home views
+**Why poll vs. observe.** `PendingSmartCutOpen` is a plain `@MainActor final class` with a stored `var hash: String?` — no `@Published`/`ObservableObject`. We poll on `scenePhase == .active` and on initial `.onAppear`, which matches the lifecycle of when the user actually returns to the app from a notification tap. Converting `PendingSmartCutOpen` to `@Observable` is an alternative; keeping it polled avoids the wider refactor blast radius.
+
+### 4.6 New session creation — Upload Audio flow
+
+When the user taps Upload Audio in `SmartCutHomeView`:
+
+1. `.fileImporter` presents the system picker filtered to `UTType.audioImportTypes`, single selection.
+2. On a successful pick, the URL has a security-scoped resource — call `startAccessingSecurityScopedResource()` before reading.
+3. Generate `let sessionId = UUID()`.
+4. Create the directory `<AppGroup>/smart-cut/<sessionId>/` (via the new `AppConstants.smartCutSessionDirectory(for:)` helper).
+5. Copy the picked file to `<AppGroup>/smart-cut/<sessionId>/source.<ext>`.
+6. Stop accessing the security-scoped resource.
+7. Probe duration via `AVURLAsset(url:).load(.duration)`.
+8. Compute `sourceHashHex = SourceHasher.sha256Hex(of: copiedURL)`.
+9. Insert `SmartCutSession(id: sessionId, name: originalBasename, sourceFilename: "source.<ext>", sourceHashHex: hex, durationSeconds: duration)` into the model context. `try modelContext.save()`.
+10. Append `sessionId` to `smartCutPath` — this push is wired up via the `navigationDestination(for: UUID.self)` modifier on the NavigationStack root in `RootTabView`.
+
+If any step fails, abort with the alert from §5.4. The directory created in step 4 should be cleaned up on failure to avoid orphans.
+
+### 4.7 Empty state vs. recents-loaded state on home views
 
 Two layout modes on each tab's home view, switched by `@Query` result:
 
@@ -281,14 +328,26 @@ Two layout modes on each tab's home view, switched by `@Query` result:
 
 Both states share the same navigation title ("Smart Cut" or "Denoise") and toolbar.
 
-### 4.7 Toolbar contents per tab
+### 4.8 Toolbar contents per tab
 
 - **Smart Cut tab — Home:** no toolbar items beyond the title. (Upload is the primary CTA in the body.)
 - **Smart Cut tab — Session view:** Export button (presents `ExportFormatSheet` → `ExportProgressSheet` → `ActivityViewController`, identical chain to today's Cleaning Lab toolbar). A `Menu` "more" with **Delete session** (destructive role).
 - **Denoise tab:** mirror of Smart Cut.
 - **Merge tab:** existing Mixing Station toolbar minus the Denoise button. Import (+), Export, Theme menu (`ellipsis.circle`).
 
-### 4.8 Migration of existing user data on upgrade
+### 4.9 FillerLibrary ownership
+
+`FillerLibrary` is a value type today, persisted to UserDefaults, and currently owned by `CleaningLabViewModel` (which threads it as a `@Bindable` into `SmartCutStudioContainer`). With per-session `SmartCutViewModel`s and no shared parent VM, the library needs a process-wide home so that:
+
+- All Smart Cut sessions see the same library (a custom word added in one session is available in the next).
+- The Edit Filler List sheet from any session edits the same store.
+- The library survives session lifecycle.
+
+**Approach.** Introduce a small `@Observable` `FillerLibraryStore` (loads from UserDefaults on init, writes back on mutation) installed at `RootTabView` level via `.environment(\.fillerLibrary, store)`. `SmartCutSessionView` reads it from the environment and passes a `Binding<FillerLibrary>` (via `store.binding`) into `SmartCutStudioContainer`. No file format change to `FillerLibrary` itself; only ownership moves.
+
+This is the smallest change that satisfies the per-session VM constraint without losing the existing UserDefaults persistence path.
+
+### 4.10 Migration of existing user data on upgrade
 
 - Existing `AudioClip` and `GapTransition` records are untouched. The Merge tab opens to the user's existing timeline.
 - Smart Cut and Denoise tabs are empty on first launch post-upgrade — no historical sessions exist.
@@ -299,9 +358,10 @@ Both states share the same navigation title ("Smart Cut" or "Denoise") and toolb
 
 ### 5.1 Session source file missing on resume
 
-`SmartCutViewModel.init(session:)` resolves the source URL from `<AppGroup>/smart-cut/<session.id>/<session.sourceFilename>` and checks `FileManager.fileExists(atPath:)`. If missing (iCloud purge, manual deletion, App Group reentitlement):
+`SmartCutViewModel.init(session:...)` resolves the source URL from `<AppGroup>/smart-cut/<session.id>/<session.sourceFilename>` and checks `FileManager.fileExists(atPath:)`. If missing (iCloud purge, manual deletion, App Group reentitlement):
 
-- VM does not enter `.idle` — it enters a new `.error("Source file missing")` state with two affordances: **Delete session** (calls `modelContext.delete(session)`, pops the view) and **Pop back** (no SwiftData mutation; the user can manually delete from the recents list later).
+- VM lands in the existing `.error(message:)` case (defined on `SmartCutViewModel.State`) with `message = "Source file missing"`. No new state-machine variant is introduced.
+- `SmartCutSessionView` renders this case with two affordances above the existing error UI: **Delete session** (calls `modelContext.delete(session)`, deletes the session directory on disk, pops the view) and **Pop back** (no SwiftData mutation; user can manually delete from the recents list later).
 - Do not auto-delete the SwiftData record. The user owns that decision.
 
 Same applies to `DenoiseSession.sourceFilename` for `DenoiseSessionView`.
@@ -358,7 +418,8 @@ Truncate with `lineLimit(1)` and middle-truncation in row body. Full name render
 - **`SmartCutViewModelSessionInitTests.swift`** — Three cases:
   1. Session with `editListJSON = nil` and `transcriptCacheRef = nil` → VM lands in `.idle`.
   2. Session with valid `editListJSON` and a present transcript-cache file → VM lands in `.results` with the decoded edit list, no analyze run.
-  3. Session whose source file is missing → VM lands in `.error` with the "Source file missing" message.
+  3. Session whose source file is missing → VM lands in `.error(message:)` with `message == "Source file missing"`.
+- **`DeepLinkReroutingTests.swift`** — Given `PendingSmartCutOpen.shared.hash = "<sha>#cloud"` and a `SmartCutSession` with `sourceHashHex = "<sha>"`, `RootTabView`'s router strips the mode suffix, finds the session via FetchDescriptor predicate, sets `selection = .smartCut`, appends the session ID to `smartCutPath`, and clears the pending hash. Negative case: hash with no matching session → no tab switch, hash cleared.
 - **`AppConstantsSessionDirectoryTests.swift`** — `smartCutSessionDirectory(for:)` returns a stable path under App Group when entitled; falls back to sandbox when not. Same for `denoiseSessionDirectory(for:)`.
 - **`SchemaMigrationTests.swift`** — Building a `ModelContainer` with the expanded schema and pre-existing `AudioClip` records loads cleanly. Inserting `SmartCutSession` works without affecting `AudioClip` queries.
 
