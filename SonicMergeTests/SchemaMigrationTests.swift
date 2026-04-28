@@ -5,7 +5,7 @@ import SwiftData
 @MainActor
 final class SchemaMigrationTests: XCTestCase {
 
-    func test_expandedSchemaSupportsAllFourEntityTypes() throws {
+    func test_expandedSchemaSupportsSmartCutAndDenoiseSessionsAlongsideAudioClip() throws {
         let schema = Schema([
             AudioClip.self,
             GapTransition.self,
