@@ -229,6 +229,21 @@ final class SmartCutViewModel: PlaybackParticipant {
         }
     }
 
+    // MARK: - Persistence (Smart Cut tab)
+
+    /// Writes the current edit list (if non-empty) and `lastOpenedAt = .now` back
+    /// onto the supplied SwiftData session record. Caller is responsible for
+    /// `try modelContext.save()` if it wants the change durable immediately;
+    /// SwiftData also auto-saves on context lifecycle. An empty edit list writes
+    /// `editListJSON = nil` so a resumed session lands cleanly in `.idle`.
+    func persist(to session: SmartCutSession) {
+        let isMeaningful = !editList.fillers.isEmpty || !editList.pauses.isEmpty
+        session.editListJSON = isMeaningful
+            ? (try? JSONEncoder().encode(editList))
+            : nil
+        session.lastOpenedAt = .now
+    }
+
     // MARK: Playback (A/B) — STUB; actual audio plumbing deferred to manual integration in sc-t19/sc-t20
 
     func toggleCleaned() {
