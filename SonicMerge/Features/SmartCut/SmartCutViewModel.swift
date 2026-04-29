@@ -2,6 +2,7 @@ import Foundation
 import AVFoundation
 import Observation
 import Speech
+import SwiftData
 import UIKit
 import UserNotifications
 
@@ -56,6 +57,65 @@ final class SmartCutViewModel: PlaybackParticipant {
         self.service = service ?? SmartCutService(library: library)
         self.cutter = cutter
         coordinator.register(self)
+    }
+
+    /// Session-driven init used by SmartCutSessionView. Resolves the source URL
+    /// from the App Group container (or the sandbox fallback when entitlement is
+    /// unavailable — see SonicMergeApp.swift's modelContainer for the same
+    /// pattern), registers the source hash with SmartCutSourceLocator so a
+    /// background-transcription task can find the file on resume, decodes any
+    /// persisted edit list, and lands the VM in the appropriate state.
+    ///
+    /// State landing rules:
+    ///   - source file missing → .error(message: "Source file missing")
+    ///   - source present, no editListJSON → .idle
+    ///   - source present, valid editListJSON → editList loaded; state stays .idle
+    ///     (re-analyze regenerates cachedSegments)
+    convenience init(
+        session: SmartCutSession,
+        library: FillerLibrary,
+        coordinator: PlaybackCoordinator,
+        modelContext: ModelContext
+    ) {
+        self.init(coordinator: coordinator, library: library)
+
+        // Resolve source URL. App Group path first; fall back to a deterministic
+        // tmp directory if the entitlement is missing. The sandbox path is only
+        // useful for unit tests — production always has the entitlement.
+        let sourceURL: URL
+        if let dir = try? AppConstants.smartCutSessionDirectory(for: session.id) {
+            sourceURL = dir.appending(path: session.sourceFilename)
+        } else {
+            let dir = FileManager.default.temporaryDirectory
+                .appending(path: "smart-cut-fallback")
+                .appending(path: session.id.uuidString)
+            try? FileManager.default.createDirectory(
+                at: dir, withIntermediateDirectories: true
+            )
+            sourceURL = dir.appending(path: session.sourceFilename)
+        }
+
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else {
+            state = .error(message: "Source file missing")
+            return
+        }
+
+        // Register the persisted source hash → URL synchronously so a
+        // background-transcription notification arriving immediately can
+        // resolve the source. setInput(url:) below also recomputes the hash
+        // asynchronously; the redundant write is harmless.
+        SmartCutSourceLocator.register(hash: session.sourceHashHex, url: sourceURL)
+
+        setInput(url: sourceURL)
+
+        if let json = session.editListJSON {
+            do {
+                let decoded = try JSONDecoder().decode(EditList.self, from: json)
+                editList = decoded
+            } catch {
+                session.editListJSON = nil
+            }
+        }
     }
 
     // Note: deinit cancel of `analysisTask` was omitted because under
