@@ -18,6 +18,7 @@ struct RootTabView: View {
     /// same key; reading it here lets us inject `\.sonicMergeSemantic` and
     /// `.preferredColorScheme(...)` for the entire app from one place.
     @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.light.rawValue
+    @AppStorage("sonicMerge.hasOnboarded") private var hasOnboarded: Bool = false
 
     @State private var selection: Tab = .smartCut
     @State private var smartCutPath = NavigationPath()
@@ -92,6 +93,20 @@ struct RootTabView: View {
             guard phase == .active else { return }
             handlePendingShareExtensionImport()
             handlePendingSmartCutOpenIfNeeded()
+        }
+        .fullScreenCover(isPresented: Binding(
+            get: { !hasOnboarded },
+            set: { newValue in if !newValue { hasOnboarded = true } }
+        )) {
+            OnboardingFlow()
+        }
+        .onChange(of: hasOnboarded) { _, newValue in
+            // Spec §5 Done flow step 2: explicitly land on Smart Cut tab when
+            // onboarding completes, even if the user navigated tabs in some
+            // edge-case mid-onboarding scenario.
+            if newValue {
+                selection = .smartCut
+            }
         }
         .onOpenURL { url in handleDeepLink(url) }
     }
