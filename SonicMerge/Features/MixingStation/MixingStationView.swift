@@ -19,14 +19,11 @@ struct MixingStationView: View {
 
     @State private var showDocumentPicker = false
     @State private var showExportSheet = false
-    @State private var showCleaningLab = false
-    @State private var mergedFileURLForCleaning: URL?
 
     // POL-01: one trigger @State per toolbar button — prevents cross-firing
     @State private var importHaptic = false
     @State private var appearanceHaptic = false
     @State private var exportHaptic = false
-    @State private var denoiseHaptic = false
 
     private var themePreference: ThemePreference {
         ThemePreference(rawValue: themePreferenceRaw) ?? .system
@@ -50,11 +47,6 @@ struct MixingStationView: View {
             .navigationTitle("SonicMerge")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
-            .navigationDestination(isPresented: $showCleaningLab) {
-                if let url = mergedFileURLForCleaning {
-                    CleaningLabView(mergedFileURL: url)
-                }
-            }
             .sheet(isPresented: $showExportSheet) {
                 ExportFormatSheet(isPresented: $showExportSheet) { options in
                     viewModel.exportMerged(options: options)
@@ -104,12 +96,6 @@ struct MixingStationView: View {
             }
         }
         .environment(\.sonicMergeSemantic, semantic)
-        .onChange(of: showCleaningLab) { _, isShowing in
-            if !isShowing, let url = mergedFileURLForCleaning {
-                try? FileManager.default.removeItem(at: url)
-                mergedFileURLForCleaning = nil
-            }
-        }
         .onChange(of: viewModel.clips.count) { _, newCount in
             // Phase 10 D-06: flip the first-launch trust-banner flag the first
             // time the user has any clips. Persists across launches via @AppStorage.
@@ -164,24 +150,6 @@ struct MixingStationView: View {
             .disabled(viewModel.isImporting || viewModel.isExporting)
             .sensoryFeedback(.impact(weight: .light), trigger: importHaptic)
         }
-        // Phase 10 D-03: source order Denoise → Export → ••• yields visual layout
-        // (left-to-right) Denoise · Export · ••• at the trailing edge, with ••• as
-        // the canonical "more" position at the far-right corner.
-        ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                denoiseHaptic.toggle()
-                navigateToCleaningLab()
-            } label: {
-                Label("Denoise", systemImage: "waveform.badge.minus")
-            }
-            .disabled(viewModel.clips.isEmpty)
-            // Phase 10: tint Lime Green to reinforce the Phase 8 AI identity —
-            // this is the only AI-feature affordance in the toolbar, and the
-            // tint differentiates it from the indigo-default Export / ••• icons.
-            // iOS dims the tint automatically in the disabled state.
-            .tint(Color(uiColor: semantic.accentAI))
-            .sensoryFeedback(.impact(weight: .light), trigger: denoiseHaptic)
-        }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 exportHaptic.toggle()
@@ -206,28 +174,6 @@ struct MixingStationView: View {
         }
     }
 
-    // MARK: - Cleaning Lab Navigation
-
-    private func navigateToCleaningLab() {
-        viewModel.stopClipPreview()
-        let destURL = FileManager.default.temporaryDirectory
-            .appending(path: "SonicMerge-CleaningLab-\(UUID().uuidString).wav")
-
-        Task {
-            let mergerService = AudioMergerService()
-            let stream = await mergerService.export(
-                clips: viewModel.clips.sorted(by: { $0.sortOrder < $1.sortOrder }),
-                transitions: viewModel.transitions,
-                format: .wav,
-                destinationURL: destURL
-            )
-            for await _ in stream {}
-            if FileManager.default.fileExists(atPath: destURL.path) {
-                mergedFileURLForCleaning = destURL
-                showCleaningLab = true
-            }
-        }
-    }
 }
 
 // MARK: - Drag & drop
