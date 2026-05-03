@@ -70,7 +70,7 @@ struct ShareHUDView: View {
 
     private var statusText: String {
         switch model.state {
-        case .copying: return "Adding to SonicMerge..."
+        case .copying: return "Adding to CleanCut..."
         case .success: return "Added!"
         case .error: return "Could not add file"
         }
