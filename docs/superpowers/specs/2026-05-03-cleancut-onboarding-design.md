@@ -27,7 +27,7 @@
 
 ## 3. Architecture overview
 
-A single new file `SonicMerge/Features/Onboarding/OnboardingFlow.swift` (~250 lines) hosts the entire flow as a `View` named `OnboardingFlow` with five private nested step views. `RootTabView` gains a `.fullScreenCover(isPresented:)` that presents `OnboardingFlow` whenever `@AppStorage("sonicMerge.hasOnboarded") == false`. Completion writes `true` to that key and dismisses the cover; tabs become interactive and the user lands on the Smart Cut tab.
+A single new file `SonicMerge/Features/Onboarding/OnboardingFlow.swift` (~280 lines — see §9 for the full file table) hosts the entire flow as a `View` named `OnboardingFlow` with five private nested step views. `RootTabView` gains a `.fullScreenCover(isPresented:)` that presents `OnboardingFlow` whenever `@AppStorage("sonicMerge.hasOnboarded") == false`. Completion writes `true` to that key and dismisses the cover; tabs become interactive and the user lands on the Smart Cut tab.
 
 The flow's internal state is a `@State private var step: Int` driven by Continue / Skip taps. Step 3 (speech-recognition permission) is not a SwiftUI screen but a transient modal — it triggers `SFSpeechRecognizer.requestAuthorization` and immediately advances to step 4 on either response. Step 4 loads a bundled `onboarding-sample.m4a` from the app bundle, renders a card, and lets the user run Smart Cut against it (or skip to home if speech was denied). Step 5 shows the Smart Cut result card with an A/B Original/Cleaned toggle and a TipKit-style nudge toward Denoise.
 
@@ -97,7 +97,7 @@ The progress indicator briefly shows step 3 active during the OS dialog. We do N
 
 **Copy (denied path — speechGranted == false):**
 - Title: `"Sample loaded"`
-- Subtitle: `"Smart Cut needs Speech Recognition to analyze. You can grant it later in Settings."`
+- Subtitle: `"Smart Cut needs Speech Recognition access. Enable it in Settings → CleanCut."` — **identical wording to the existing `SmartCutViewModel.analyze()` error string at line ~178**, so users who hit either path see the same canonical message. If that production string ever changes, this spec's subtitle changes with it.
 - Sample card: same as granted path
 - No TipKit hint (would be misleading)
 - Two buttons:
@@ -225,7 +225,7 @@ NOT prompted during onboarding (CleanCut doesn't currently record — only impor
 
 ### 11.1 Unit tests (Swift Testing)
 
-`SonicMergeTests/OnboardingGateTests.swift`:
+`SonicMergeTests/OnboardingGateTests.swift` — **smoke tests only.** They verify the storage layer behaves as expected; they do **not** verify the `@AppStorage("sonicMerge.hasOnboarded")` SwiftUI integration in `RootTabView` or the `.fullScreenCover` presentation behavior. Both gaps are intentional — full integration coverage lives in the manual QA checklist (§11.3 items 1, 4, 5). The implementer should leave a `// SMOKE TESTS — see QA checklist for full integration coverage` header at the top of the test file so future maintainers don't expand these into a false sense of safety.
 
 ```swift
 @Test func defaultGateIsFalse() {
