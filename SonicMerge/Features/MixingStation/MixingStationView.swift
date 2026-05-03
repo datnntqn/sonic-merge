@@ -106,6 +106,15 @@ struct MixingStationView: View {
         .task {
             await viewModel.fetchAll()
         }
+        .onAppear {
+            let defaults = UserDefaults(suiteName: AppConstants.appGroupID)
+            guard let filename = defaults?.string(forKey: "pendingImportFilename") else { return }
+            defaults?.removeObject(forKey: "pendingImportFilename")
+            guard let clipsDir = try? AppConstants.clipsDirectory() else { return }
+            let fileURL = clipsDir.appending(path: filename)
+            guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
+            viewModel.importFiles([fileURL])
+        }
     }
 
     // MARK: - Subviews
