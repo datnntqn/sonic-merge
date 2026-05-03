@@ -93,6 +93,8 @@ private struct BrandOpenerStep: View {
     let onContinue: () -> Void
     let onSkip: () -> Void
 
+    @State private var bounceTrigger: Bool = false
+
     var body: some View {
         VStack(spacing: 0) {
             HStack {
@@ -119,10 +121,12 @@ private struct BrandOpenerStep: View {
                 Image(systemName: "sparkles")
                     .font(.system(size: 38, weight: .bold))
                     .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                    .symbolEffect(.bounce, value: bounceTrigger)
             }
             .frame(width: 80, height: 80)
             .accessibilityHidden(true)
             .padding(.bottom, 20)
+            .onAppear { if !reduceMotion { bounceTrigger.toggle() } }
 
             Text("Cut. Clean. Merge.")
                 .font(.system(.title, design: .rounded, weight: .bold))
