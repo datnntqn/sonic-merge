@@ -26,6 +26,7 @@ import AVFoundation
 import Accelerate
 import Foundation
 import Observation
+import SwiftData
 import UIKit
 
 // MARK: - DenoiseSessionViewModel
@@ -111,6 +112,52 @@ final class DenoiseSessionViewModel {
         self.noiseReductionService = noiseReductionService
         self.waveformService = waveformService
         playbackCoordinator.register(self)
+    }
+
+    /// Session-driven init used by DenoiseSessionView. Resolves the source URL
+    /// from the App Group container (or sandbox fallback) and primes the VM so
+    /// the existing startDenoising / A/B / blend pipeline works as before.
+    ///
+    /// `processedFilename` is restored to `denoisedTempURL` if the file still
+    /// exists on disk. Intensity is restored from the session.
+    convenience init(session: DenoiseSession, modelContext: ModelContext) {
+        self.init()
+
+        let sourceURL: URL
+        if let dir = try? AppConstants.denoiseSessionDirectory(for: session.id) {
+            sourceURL = dir.appending(path: session.sourceFilename)
+        } else {
+            let dir = FileManager.default.temporaryDirectory
+                .appending(path: "denoise-fallback")
+                .appending(path: session.id.uuidString)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            sourceURL = dir.appending(path: session.sourceFilename)
+        }
+
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else {
+            errorMessage = "Source file missing"
+            return
+        }
+
+        mergedFileURL = sourceURL
+        intensity = Float(session.intensity)
+
+        if let processedFilename = session.processedFilename,
+           let dir = try? AppConstants.denoiseSessionDirectory(for: session.id) {
+            let processedURL = dir.appending(path: processedFilename)
+            if FileManager.default.fileExists(atPath: processedURL.path) {
+                denoisedTempURL = processedURL
+                hasDenoisedResult = true
+            }
+        }
+    }
+
+    /// Persist current intensity and (if present) processed filename back to
+    /// the session record. Caller saves modelContext.
+    func persist(to session: DenoiseSession) {
+        session.intensity = Double(intensity)
+        session.processedFilename = denoisedTempURL?.lastPathComponent
+        session.lastOpenedAt = .now
     }
 
     // MARK: - Pipeline: startDenoising
