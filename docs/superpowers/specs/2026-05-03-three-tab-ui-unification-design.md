@@ -57,7 +57,11 @@ All three tab roots:
 .navigationBarTitleDisplayMode(.inline)
 ```
 
-Titles: `"Smart Cut"`, `"Denoise"`, `"Merge"`. Drop the existing `"SonicMerge"` brand string from the Merge home — it will be replaced by `"Merge"`.
+Titles: `"Smart Cut"`, `"Denoise"`, `"Merge"`.
+
+- `SmartCutHomeView`: change `.large` → `.inline`. Title string `"Smart Cut"` unchanged.
+- `DenoiseHomeView`: change `.large` → `.inline`. Title string `"Denoise"` unchanged.
+- `MixingStationView`: title display mode is **already** `.inline` (line 48 of current file) — only the title string changes from `"SonicMerge"` → `"Merge"`.
 
 ### 4.3 Background
 
@@ -87,9 +91,13 @@ Two variants under one shared chrome (same background, title style, fonts, verti
 - Below it: scrollable recents list (current `SmartCutRecentRow` / `DenoiseRecentRow`), unchanged.
 - Drag-and-drop zone covers the entire `ZStack`.
 
+**Wiring:** Both the empty-state hero button and the loaded-state pinned button trigger the same existing `@State private var showFileImporter` flag (`SmartCutHomeView` line 24, `DenoiseHomeView` line 21). The downstream `.fileImporter(...) { result in handleImport(...) }` modifier and `createSession(from:)` flow are unchanged. The change is purely visual — same state, same behavior, different button shape.
+
 ### 5.2 Workspace variant (Merge)
 
-**Empty state:**
+**The existing `MixingStationView.emptyState` "Import Audio" pill button (current file lines ~141–146, `Label("Import Audio", systemImage: "plus.circle.fill")` + `PillButtonStyle(variant: .filled, size: .regular)`) is removed and replaced with the new circular hero pattern.** Both the existing empty-state pill and the leading-toolbar `+` are deleted in the same diff — this avoids leaving two import affordances.
+
+**Empty state (new):**
 - Same hero pattern as list variant.
 - Hero icon: `rectangle.stack` on a 14% indigo background (uses `accentAction` because Merge is not an AI feature).
 - Hero title: "No clips yet"
@@ -99,6 +107,8 @@ Two variants under one shared chrome (same background, title style, fonts, verti
 **Loaded state** (timeline present):
 - Same 44×44 circular indigo import button pinned top-trailing of the timeline section.
 - Below it: existing `MergeTimelineView`, unchanged.
+
+**Wiring:** Both the empty-state hero button and the loaded-state pinned button toggle the same existing `@State private var showDocumentPicker` flag (`MixingStationView` line 21). The downstream `.fileImporter(...)` and `viewModel.importFiles(urls)` flow are unchanged. Drag-drop (`.onDrop(of: UTType.audioDropTypes, ...)`) is preserved on the same `ZStack`.
 
 The pinned-button-above-content pattern is the unifying gesture across all three loaded states.
 
@@ -129,10 +139,22 @@ Already correct from prior work. Unchanged.
 
 **File:** `SonicMerge/DesignSystem/ThemeToggleButton.swift` (new)
 
+**API surface (caller contract):**
+
+```swift
+struct ThemeToggleButton: View {
+    init() {}   // zero-arg; reads/writes its own @AppStorage internally
+    var body: some View { ... }
+}
+```
+
+The button is fully self-contained — callers in all three home views invoke it identically as `ThemeToggleButton()`. No bindings, no closures, no state passed in. This keeps the call sites trivial and lets us wrap chrome around it (e.g. `.toolbar { ToolbarItem(placement: .topBarTrailing) { ThemeToggleButton() } }`).
+
 **Behavior:**
 - Binary state: `.light` ↔ `.dark`. Reads from `@AppStorage("sonicMergeThemePreference")`.
 - Default value: `.light` (was `.system`).
-- One tap flips state. Animates icon swap with a `.symbolEffect(.bounce, value: themePreference)` for iOS 17+.
+- **Legacy-value tolerance:** if `@AppStorage` returns an unrecognized raw value (e.g. `"system"` from a pre-migration install), `ThemePreference(rawValue:)` returns `nil`; the button treats nil as `.light` for display purposes. The §10 migration will then write `"light"` back on next launch, normalizing storage.
+- One tap flips state. Animates icon swap with `.symbolEffect(.bounce, value: themePreference)` for iOS 17+.
 - Haptic: `.sensoryFeedback(.impact(weight: .light), trigger: themePreference)`.
 
 **Icon mapping:**
@@ -185,18 +207,30 @@ This split lets the user-facing rebrand ship now while the internal rename happe
 
 ## 10. Migration / backward compatibility
 
-**Theme preference:** Existing installs may have `@AppStorage("sonicMergeThemePreference") = "system"`. On first launch after this change, `SonicMergeApp.onAppear` migrates:
+**Theme preference:** Existing installs may have `@AppStorage("sonicMergeThemePreference") = "system"`. On first launch after this change, the migration runs once.
+
+The `@AppStorage` is declared at the `SonicMergeApp` struct scope (the `App` conformer), and the `.onAppear` hook is attached to the root view inside `WindowGroup { RootTabView() }`:
 
 ```swift
-@AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.light.rawValue
+@main
+struct SonicMergeApp: App {
+    @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.light.rawValue
 
-// In .onAppear:
-if themePreferenceRaw == "system" {
-    themePreferenceRaw = ThemePreference.light.rawValue
+    var body: some Scene {
+        WindowGroup {
+            RootTabView()
+                .onAppear {
+                    if themePreferenceRaw == "system" {
+                        themePreferenceRaw = ThemePreference.light.rawValue
+                    }
+                }
+        }
+        .modelContainer(modelContainer)
+    }
 }
 ```
 
-One-line, idempotent, runs once per launch (cost negligible).
+One-line, idempotent, runs once per launch (cost negligible). `ThemeToggleButton`'s legacy-value tolerance (§7) means even if a user's `@AppStorage` still has `"system"` *between* launch and the `.onAppear` firing, the button renders sanely.
 
 **App Group + SwiftData:** Untouched. All existing user sessions / clips / timelines remain accessible.
 
@@ -218,9 +252,12 @@ One-line, idempotent, runs once per launch (cost negligible).
 
 **Total surface:** one new file (~60 lines) plus diffs across ~6 existing files, ~150–200 line changes total. All changes are scoped, no architectural shifts.
 
+**Audit policy for §9.1 strings:** the implementation plan should run `grep -rn "SonicMerge" --include="*.swift"` as its first step in the rebrand task and triage hits into three buckets — (a) user-facing literal → rename to "CleanCut"; (b) internal symbol / type / `@AppStorage` key / module reference → leave alone per §9.2; (c) export-or-temp filename pattern → rename. The plan enumerates the actual hits at planning time so the implementer isn't interpreting matches one at a time during execution.
+
 ## 12. Test strategy
 
-- **`ThemeToggleButton`:** unit-test the toggle state cycle (light → dark → light) and the migration helper (`"system"` → `"light"`).
+- **`ThemeToggleButton`:** unit-test the toggle state cycle (light → dark → light) and the legacy-value tolerance (`ThemePreference(rawValue: "system")` → `nil` → button renders as `.light`).
+- **Migration test:** verify the `.onAppear` migration normalizes a stored `"system"` raw value to `"light"` exactly once.
 - **No new view tests required** — the existing home views' tests don't exercise toolbar chrome; visual changes are manually verified.
 - **Manual QA** (after build):
   - Cold launch → Smart Cut tab opens with new icon-only import button
