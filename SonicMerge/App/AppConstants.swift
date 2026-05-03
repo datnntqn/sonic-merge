@@ -52,6 +52,52 @@ enum AppConstants {
         return dir
     }
 
+    /// Returns the URL for the per-session Smart Cut directory inside the App Group
+    /// container, creating it if it does not already exist. Layout:
+    ///   <AppGroup>/smart-cut/<id.uuidString>/
+    ///
+    /// - Throws: `AppGroupError.containerNotFound` when running without the App
+    ///   Group entitlement.
+    static func smartCutSessionDirectory(for id: UUID) throws -> URL {
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else {
+            throw AppGroupError.containerNotFound
+        }
+        let dir = container
+            .appending(path: "smart-cut", directoryHint: .isDirectory)
+            .appending(path: id.uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(
+            at: dir,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+        return dir
+    }
+
+    /// Returns the URL for the per-session Denoise directory inside the App Group
+    /// container, creating it if it does not already exist. Layout:
+    ///   <AppGroup>/denoise/<id.uuidString>/
+    ///
+    /// - Throws: `AppGroupError.containerNotFound` when running without the App
+    ///   Group entitlement.
+    static func denoiseSessionDirectory(for id: UUID) throws -> URL {
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else {
+            throw AppGroupError.containerNotFound
+        }
+        let dir = container
+            .appending(path: "denoise", directoryHint: .isDirectory)
+            .appending(path: id.uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(
+            at: dir,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+        return dir
+    }
+
     /// Returns the URL for the waveform sidecar file corresponding to a normalized clip.
     ///
     /// Sidecar file name: UUID stem of the clip filename + ".waveform"

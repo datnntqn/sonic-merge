@@ -22,7 +22,7 @@ import SwiftUI
 /// - Success (isProcessing=false, hasDenoisedResult=true): static nebula + full ring + "Denoised" label
 struct AIOrbView: View {
 
-    let viewModel: CleaningLabViewModel
+    let viewModel: DenoiseSessionViewModel
 
     @Environment(\.sonicMergeSemantic) private var semantic
     @Environment(\.accessibilityReduceMotion) private var reduceMotion

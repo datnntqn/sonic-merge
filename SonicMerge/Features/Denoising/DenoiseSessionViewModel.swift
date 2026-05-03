@@ -1,12 +1,12 @@
 //
-//  CleaningLabViewModel.swift
+//  DenoiseSessionViewModel.swift
 //  SonicMerge
 //
-//  @Observable @MainActor coordinator for the Cleaning Lab (Plan 03-03).
+//  @Observable @MainActor coordinator for a single Denoise session.
 //
 //  Wires NoiseReductionService, WaveformService, dual-player A/B playback,
 //  intensity blending, and haptic feedback into a single observable state object
-//  for CleaningLabView (Plan 03-04).
+//  for DenoiseSessionView.
 //
 //  Design decisions (from CONTEXT.md and RESEARCH.md):
 //  - intensity default = 0.75 (locked in CONTEXT.md)
@@ -26,17 +26,18 @@ import AVFoundation
 import Accelerate
 import Foundation
 import Observation
+import SwiftData
 import UIKit
 
-// MARK: - CleaningLabViewModel
+// MARK: - DenoiseSessionViewModel
 
-/// Observable coordinator for the Cleaning Lab denoising workflow.
+/// Observable coordinator for a single Denoise session's workflow.
 ///
-/// CleaningLabView is a pure rendering layer over this ViewModel.
+/// `DenoiseSessionView` is a pure rendering layer over this ViewModel.
 /// All business logic (pipeline orchestration, A/B playback, blending) lives here.
 @Observable
 @MainActor
-final class CleaningLabViewModel {
+final class DenoiseSessionViewModel {
 
     // MARK: - Published State
 
@@ -83,24 +84,17 @@ final class CleaningLabViewModel {
     /// Updated by onIntensityChanged() after each blend write.
     var denoisedTempURL: URL?
 
-    // MARK: - Smart Cut integration (sc-t19)
-
-    /// Stored copy of the most recent merged source URL. Set by setMergedFileURL().
-    private(set) var mergedFileURL: URL?
-
-    /// User's filler library, persisted via UserDefaults.standard.
-    var fillerLibrary = FillerLibrary()
+    /// The session's source audio URL. Set by the session-driven init (Task 4.2)
+    /// or by `startDenoising(mergedFileURL:)` for legacy entry points.
+    var mergedFileURL: URL?
 
     /// Cross-card playback coordinator.
     let playbackCoordinator = PlaybackCoordinator()
 
-    /// Smart Cut tool VM.
-    private(set) var smartCutVM: SmartCutViewModel!
-
     /// Resolves the audio source the export pipeline should use:
-    ///   smartCutOutputURL > denoisedTempURL > mergedFileURL
+    ///   denoisedTempURL > mergedFileURL
     var exportSource: URL? {
-        smartCutVM.outputURL ?? denoisedTempURL ?? mergedFileURL
+        denoisedTempURL ?? mergedFileURL
     }
 
     /// Raw Float32 samples from the original merged file (for blend()).
@@ -117,26 +111,53 @@ final class CleaningLabViewModel {
     ) {
         self.noiseReductionService = noiseReductionService
         self.waveformService = waveformService
-        self.smartCutVM = SmartCutViewModel(coordinator: playbackCoordinator,
-                                            library: fillerLibrary)
         playbackCoordinator.register(self)
     }
 
-    // MARK: - Smart Cut handoff
+    /// Session-driven init used by DenoiseSessionView. Resolves the source URL
+    /// from the App Group container (or sandbox fallback) and primes the VM so
+    /// the existing startDenoising / A/B / blend pipeline works as before.
+    ///
+    /// `processedFilename` is restored to `denoisedTempURL` if the file still
+    /// exists on disk. Intensity is restored from the session.
+    convenience init(session: DenoiseSession, modelContext: ModelContext) {
+        self.init()
 
-    /// Called by CleaningLabView when the merged audio file becomes available.
-    func setMergedFileURL(_ url: URL) {
-        mergedFileURL = url
-        smartCutVM.setInput(url: denoisedTempURL ?? url)
+        let sourceURL: URL
+        if let dir = try? AppConstants.denoiseSessionDirectory(for: session.id) {
+            sourceURL = dir.appending(path: session.sourceFilename)
+        } else {
+            let dir = FileManager.default.temporaryDirectory
+                .appending(path: "denoise-fallback")
+                .appending(path: session.id.uuidString)
+            try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+            sourceURL = dir.appending(path: session.sourceFilename)
+        }
+
+        guard FileManager.default.fileExists(atPath: sourceURL.path) else {
+            errorMessage = "Source file missing"
+            return
+        }
+
+        mergedFileURL = sourceURL
+        intensity = Float(session.intensity)
+
+        if let processedFilename = session.processedFilename,
+           let dir = try? AppConstants.denoiseSessionDirectory(for: session.id) {
+            let processedURL = dir.appending(path: processedFilename)
+            if FileManager.default.fileExists(atPath: processedURL.path) {
+                denoisedTempURL = processedURL
+                hasDenoisedResult = true
+            }
+        }
     }
 
-    /// Called whenever denoise has produced a new output.
-    private func notifySmartCutOfDenoiseChange() {
-        smartCutVM.markDenoiseChanged()
-        let newInput = denoisedTempURL ?? mergedFileURL
-        if let newInput {
-            smartCutVM.setInput(url: newInput)
-        }
+    /// Persist current intensity and (if present) processed filename back to
+    /// the session record. Caller saves modelContext.
+    func persist(to session: DenoiseSession) {
+        session.intensity = Double(intensity)
+        session.processedFilename = denoisedTempURL?.lastPathComponent
+        session.lastOpenedAt = .now
     }
 
     // MARK: - Pipeline: startDenoising
@@ -228,9 +249,6 @@ final class CleaningLabViewModel {
                 // Step 8: Autoplay denoised result
                 denoisedPlayer?.play()
 
-                // sc-t19: Notify Smart Cut that fresh denoised audio is ready.
-                notifySmartCutOfDenoiseChange()
-
             } catch {
                 errorMessage = error.localizedDescription
                 isProcessing = false
@@ -304,10 +322,6 @@ final class CleaningLabViewModel {
 
                 denoisedPlayer = newPlayer
                 denoisedTempURL = blendedURL
-
-                // sc-t19: Smart Cut sees the freshly-blended denoised audio
-                // as its input — keeps the two tools in sync.
-                notifySmartCutOfDenoiseChange()
             } catch {
                 // Non-fatal: blend write failure is recoverable — continue with prior player
             }
@@ -404,9 +418,9 @@ final class CleaningLabViewModel {
     }
 }
 
-// MARK: - PlaybackParticipant (sc-t19)
+// MARK: - PlaybackParticipant
 
-extension CleaningLabViewModel: PlaybackParticipant {
+extension DenoiseSessionViewModel: PlaybackParticipant {
     func pauseAll() {
         originalPlayer?.pause()
         denoisedPlayer?.pause()

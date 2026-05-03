@@ -7,6 +7,12 @@ import UIKit
 import SwiftUI
 import UniformTypeIdentifiers
 
+private struct ShareImportPayload {
+    let filename: String
+    let sessionId: UUID
+    let originalBasename: String
+}
+
 @objc(ShareExtensionViewController)
 final class ShareExtensionViewController: UIViewController {
 
@@ -55,7 +61,7 @@ final class ShareExtensionViewController: UIViewController {
 
         // Bridge callback-based API to async/await
         do {
-            let filename = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<String, Error>) in
+            let payload = try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ShareImportPayload, Error>) in
                 itemProvider.loadFileRepresentation(forTypeIdentifier: typeIdentifier) { tempURL, error in
                     if let error {
                         continuation.resume(throwing: error)
@@ -73,32 +79,37 @@ final class ShareExtensionViewController: UIViewController {
                     // CRITICAL: tempURL is invalidated when this handler returns.
                     // All file operations must complete synchronously here.
                     do {
-                        let clipsDir = try AppConstants.clipsDirectory()
-                        let originalFilename = tempURL.lastPathComponent
-                        let dest = clipsDir.appending(path: originalFilename)
-
-                        // Overwrite if exists (dedup by displayName happens in main app per D-10)
+                        let sessionId = UUID()
+                        let dir = try AppConstants.smartCutSessionDirectory(for: sessionId)
+                        let ext = tempURL.pathExtension.isEmpty ? "m4a" : tempURL.pathExtension.lowercased()
+                        let dest = dir.appending(path: "source.\(ext)")
                         if FileManager.default.fileExists(atPath: dest.path) {
                             try FileManager.default.removeItem(at: dest)
                         }
                         try FileManager.default.copyItem(at: tempURL, to: dest)
 
-                        continuation.resume(returning: originalFilename)
+                        continuation.resume(returning: ShareImportPayload(
+                            filename: "source.\(ext)",
+                            sessionId: sessionId,
+                            originalBasename: tempURL.deletingPathExtension().lastPathComponent
+                        ))
                     } catch {
                         continuation.resume(throwing: error)
                     }
                 }
             }
 
-            // Update HUD with filename
+            // Update HUD with the user-friendly basename.
             await MainActor.run {
-                hudModel.filename = URL(fileURLWithPath: filename)
-                    .deletingPathExtension().lastPathComponent
+                hudModel.filename = payload.originalBasename
             }
 
-            // Write pending-file key so main app picks up on next scenePhase .active
+            // Write routing keys so the main app picks up on next scenePhase .active.
             let defaults = UserDefaults(suiteName: AppConstants.appGroupID)
-            defaults?.set(filename, forKey: "pendingImportFilename")
+            defaults?.set(payload.filename, forKey: "pendingImportFilename")
+            defaults?.set(payload.sessionId.uuidString, forKey: "pendingImportSessionId")
+            defaults?.set("smart-cut", forKey: "pendingImportDestination")
+            defaults?.set(payload.originalBasename, forKey: "pendingImportBasename")
             defaults?.synchronize() // flush before extension process suspends
 
             // Show success briefly, then auto-dismiss

@@ -31,6 +31,25 @@ enum AppConstants {
         )
         return dir
     }
+
+    /// Mirror of the main app's `smartCutSessionDirectory(for:)`. Layout must
+    /// match: `<AppGroup>/smart-cut/<id.uuidString>/`.
+    static func smartCutSessionDirectory(for id: UUID) throws -> URL {
+        guard let container = FileManager.default.containerURL(
+            forSecurityApplicationGroupIdentifier: appGroupID
+        ) else {
+            throw AppGroupError.containerNotFound
+        }
+        let dir = container
+            .appending(path: "smart-cut", directoryHint: .isDirectory)
+            .appending(path: id.uuidString, directoryHint: .isDirectory)
+        try FileManager.default.createDirectory(
+            at: dir,
+            withIntermediateDirectories: true,
+            attributes: nil
+        )
+        return dir
+    }
 }
 
 /// Errors thrown by App Group container operations.
