@@ -487,9 +487,12 @@ private struct SampleStep: View {
         }
     }
 
+    private static let maxAttempts = 3   // spec §5 step 4: initial + 2 retries
+
     private func bumpError(_ message: String) {
-        if attemptCount >= 2 {
-            // Spec §5 step 4: after 2 retries, force-skip to avoid a trapped user.
+        if attemptCount >= Self.maxAttempts {
+            // After maxAttempts (initial + 2 retries), force-skip so the user
+            // is never trapped on a stuck analyze.
             onSkipToHome()
         } else {
             phase = .error(message)
@@ -509,20 +512,20 @@ private struct SampleCard: View {
                 .font(.caption.weight(.bold))
                 .tracking(0.5)
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
-            Text("podcast-snippet.m4a")
+            Text("Podcast snippet")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color(uiColor: semantic.textPrimary))
             RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(LinearGradient(
                     colors: [
-                        Color(uiColor: semantic.accentAction),
-                        Color(uiColor: semantic.accentAI)
+                        Color(uiColor: semantic.accentAction).opacity(0.35),
+                        Color(uiColor: semantic.accentAction).opacity(0.55)
                     ],
                     startPoint: .leading,
                     endPoint: .trailing
                 ))
                 .frame(height: 24)
-                .opacity(phase.busy ? 0.6 : 0.4)
+                .opacity(phase.busy ? 1.0 : 0.85)
             Text("0:00 — 0:32")
                 .font(.caption)
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
