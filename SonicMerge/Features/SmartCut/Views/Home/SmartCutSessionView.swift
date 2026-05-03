@@ -19,16 +19,33 @@ struct SmartCutSessionView: View {
     @State private var session: SmartCutSession?
     @State private var showDeleteConfirm = false
 
+    @State private var showExportSheet = false
+    @State private var showExportProgressSheet = false
+    @State private var exportProgress: Float = 0.0
+    @State private var exportTask: Task<Void, Never>?
+    @State private var showShareSheet = false
+    @State private var exportedFileURL: URL? = nil
+    @State private var isNormalizingExport = false
+
     var body: some View {
-        Group {
-            if let viewModel, let session {
-                SmartCutStudioContainer(vm: viewModel, library: libraryStore.binding)
+        ZStack(alignment: .bottom) {
+            Group {
+                if let viewModel, let session {
+                    ScrollView {
+                        SmartCutStudioContainer(vm: viewModel, library: libraryStore.binding)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 96)
+                    }
                     .navigationTitle(session.name)
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar { toolbarContent }
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                } else {
+                    ProgressView()
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+            }
+            if let viewModel, shouldShowFloatingBar(for: viewModel) {
+                FloatingActionBar { applyCutsButton(for: viewModel) }
             }
         }
         .task { await load() }
@@ -49,10 +66,47 @@ struct SmartCutSessionView: View {
         } message: {
             Text("The source audio and any saved edits will be removed.")
         }
+        .sheet(isPresented: $showExportSheet) {
+            ExportFormatSheet(isPresented: $showExportSheet) { options in
+                startExport(options: options)
+            }
+        }
+        .sheet(isPresented: $showExportProgressSheet) {
+            ExportProgressSheet(
+                isNormalizing: isNormalizingExport,
+                progress: exportProgress,
+                onCancel: {
+                    exportTask?.cancel()
+                    exportTask = nil
+                    showExportProgressSheet = false
+                    exportProgress = 0
+                    isNormalizingExport = false
+                }
+            )
+            .interactiveDismissDisabled(true)
+        }
+        .sheet(isPresented: $showShareSheet) {
+            if let url = exportedFileURL {
+                ActivityViewController(activityItems: [url], onDismiss: {
+                    exportedFileURL = nil
+                    exportProgress = 0
+                    isNormalizingExport = false
+                    showShareSheet = false
+                })
+            }
+        }
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                showExportSheet = true
+            } label: {
+                Label("Export", systemImage: "square.and.arrow.up")
+            }
+            .disabled(viewModel?.outputURL == nil)
+        }
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Button(role: .destructive) {
@@ -63,6 +117,42 @@ struct SmartCutSessionView: View {
             } label: {
                 Label("More", systemImage: "ellipsis.circle")
             }
+        }
+    }
+
+    private func shouldShowFloatingBar(for vm: SmartCutViewModel) -> Bool {
+        switch vm.state {
+        case .results: return true
+        case .applied: return vm.hasDirtyEditsSinceApply
+        case .idle, .analyzing, .stale, .error: return false
+        }
+    }
+
+    @ViewBuilder
+    private func applyCutsButton(for vm: SmartCutViewModel) -> some View {
+        switch vm.state {
+        case .results:
+            Button { Task { await vm.apply() } } label: {
+                Label("Apply Cuts", systemImage: "sparkles")
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+        case .applied:
+            if vm.hasDirtyEditsSinceApply {
+                Button { Task { await vm.apply() } } label: {
+                    Label("Re-apply", systemImage: "arrow.clockwise")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+            } else {
+                EmptyView()
+            }
+        case .idle, .analyzing, .stale, .error:
+            EmptyView()
         }
     }
 
@@ -91,12 +181,46 @@ struct SmartCutSessionView: View {
 
     private func performDelete() {
         guard let session else { return }
-        // Best-effort filesystem cleanup; SwiftData delete is the source of truth.
         if let dir = try? AppConstants.smartCutSessionDirectory(for: session.id) {
             try? FileManager.default.removeItem(at: dir)
         }
         modelContext.delete(session)
         try? modelContext.save()
         dismiss()
+    }
+
+    private func startExport(options: ExportOptions) {
+        guard let viewModel, let sourceURL = viewModel.outputURL else { return }
+
+        let ext = options.format == .m4a ? "m4a" : "wav"
+        let destinationURL = FileManager.default.temporaryDirectory
+            .appending(path: "SonicMerge-SmartCutExport-\(UUID().uuidString).\(ext)")
+
+        showExportProgressSheet = true
+        exportProgress = 0.0
+        isNormalizingExport = options.lufsNormalize
+
+        let mergerService = AudioMergerService()
+        exportTask = Task {
+            let stream = await mergerService.exportFile(
+                inputURL: sourceURL,
+                format: options.format,
+                destinationURL: destinationURL,
+                lufsNormalize: options.lufsNormalize
+            )
+            for await p in stream {
+                guard !Task.isCancelled else { break }
+                exportProgress = p
+            }
+            if !Task.isCancelled {
+                exportProgress = 1.0
+                try? await Task.sleep(nanoseconds: 300_000_000)
+                showExportProgressSheet = false
+                if FileManager.default.fileExists(atPath: destinationURL.path) {
+                    exportedFileURL = destinationURL
+                    showShareSheet = true
+                }
+            }
+        }
     }
 }
