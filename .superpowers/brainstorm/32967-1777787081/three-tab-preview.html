@@ -1,0 +1,321 @@
+<h2>Unified Three-Tab Design — Preview</h2>
+<p class="subtitle">All three home screens with inline titles, shared template, and Light/Dark theme toggle on every tab. Default = Light. Indigo for navigation/CTAs, lime green reserved for AI moments.</p>
+
+<style>
+  .phone-row { display: flex; gap: 24px; flex-wrap: wrap; justify-content: center; margin-top: 24px; }
+  .phone {
+    width: 300px;
+    background: #f6f6f7;
+    border: 1px solid #d1d1d6;
+    border-radius: 28px;
+    overflow: hidden;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.08);
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    color: #1c1c1e;
+  }
+  .phone-status {
+    height: 40px;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .phone-status .dot {
+    width: 80px;
+    height: 22px;
+    background: #000;
+    border-radius: 16px;
+    margin: 0 auto;
+  }
+  .phone-nav {
+    height: 44px;
+    background: #ffffff;
+    border-bottom: 0.5px solid #e5e5ea;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+  }
+  .phone-nav .title {
+    font-size: 17px;
+    font-weight: 600;
+    flex: 1;
+    text-align: center;
+  }
+  .phone-nav .left, .phone-nav .right { display: flex; gap: 14px; min-width: 56px; align-items: center; }
+  .phone-nav .right { justify-content: flex-end; }
+  .phone-nav .iconbtn {
+    color: #5856D6;
+    font-size: 16px;
+    cursor: default;
+  }
+  .phone-body {
+    height: 460px;
+    background: linear-gradient(180deg, #fafaff 0%, #f0eefb 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 24px 20px;
+    text-align: center;
+  }
+  .hero-icon {
+    width: 72px; height: 72px;
+    border-radius: 22px;
+    background: rgba(167, 201, 87, 0.16);
+    color: #6f9234;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    font-size: 38px;
+  }
+  .hero-title {
+    font-size: 18px; font-weight: 600; margin-bottom: 6px;
+  }
+  .hero-sub {
+    font-size: 14px; color: #6e6e73; margin-bottom: 24px; line-height: 1.4; max-width: 240px;
+  }
+  .pill-cta {
+    background: #5856D6;
+    color: white;
+    font-size: 15px;
+    font-weight: 600;
+    border-radius: 22px;
+    padding: 12px 28px;
+    display: inline-flex; align-items: center; gap: 8px;
+    border: none;
+  }
+  .phone-tabbar {
+    height: 70px;
+    background: rgba(255,255,255,0.92);
+    border-top: 0.5px solid #e5e5ea;
+    display: flex;
+    backdrop-filter: blur(12px);
+  }
+  .tab-item {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 4px;
+    color: #8e8e93;
+    font-size: 10px;
+    font-weight: 500;
+  }
+  .tab-item.active { color: #5856D6; }
+  .tab-icon { font-size: 22px; line-height: 1; }
+  .tab-label { font-size: 10px; }
+  .label-tag {
+    text-align: center;
+    font-size: 12px;
+    color: #6e6e73;
+    margin-top: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 600;
+  }
+  .legend {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px 28px;
+    max-width: 720px;
+    margin: 32px auto 0;
+    padding: 16px 20px;
+    background: #fff;
+    border: 1px solid #e5e5ea;
+    border-radius: 14px;
+    font-size: 14px;
+  }
+  .swatch { display: inline-block; width: 14px; height: 14px; border-radius: 4px; vertical-align: middle; margin-right: 8px; }
+  .table-compare {
+    margin: 28px auto 0;
+    max-width: 720px;
+    background: #fff;
+    border: 1px solid #e5e5ea;
+    border-radius: 14px;
+    overflow: hidden;
+    font-size: 13px;
+  }
+  .table-compare table { width: 100%; border-collapse: collapse; }
+  .table-compare th, .table-compare td {
+    text-align: left;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f0f0f3;
+  }
+  .table-compare th { background: #fafafa; font-weight: 600; }
+  .table-compare tr:last-child td { border-bottom: none; }
+  .check { color: #34c759; font-weight: 700; }
+  .dash { color: #c7c7cc; }
+</style>
+
+<!-- ================ THREE PHONES ================ -->
+<div class="phone-row">
+
+  <!-- ========== SMART CUT ========== -->
+  <div class="phone">
+    <div class="phone-status">
+      <span>9:41</span>
+      <span class="dot"></span>
+      <span>● ▾ ▮</span>
+    </div>
+    <div class="phone-nav">
+      <div class="left"></div>
+      <div class="title">Smart Cut</div>
+      <div class="right">
+        <span class="iconbtn" title="Light theme — tap to switch to Dark">☀︎</span>
+      </div>
+    </div>
+    <div class="phone-body">
+      <div class="hero-icon">✨</div>
+      <div class="hero-title">Cut fillers in seconds</div>
+      <div class="hero-sub">Upload a recording and we'll find every "um," "uh," and long pause.</div>
+      <button class="pill-cta">＋ Upload Audio</button>
+    </div>
+    <div class="phone-tabbar">
+      <div class="tab-item active">
+        <div class="tab-icon">✨</div>
+        <div class="tab-label">Smart Cut</div>
+      </div>
+      <div class="tab-item">
+        <div class="tab-icon">≋</div>
+        <div class="tab-label">Denoise</div>
+      </div>
+      <div class="tab-item">
+        <div class="tab-icon">▤</div>
+        <div class="tab-label">Merge</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== DENOISE ========== -->
+  <div class="phone">
+    <div class="phone-status">
+      <span>9:41</span>
+      <span class="dot"></span>
+      <span>● ▾ ▮</span>
+    </div>
+    <div class="phone-nav">
+      <div class="left"></div>
+      <div class="title">Denoise</div>
+      <div class="right">
+        <span class="iconbtn" title="Light theme — tap to switch to Dark">☀︎</span>
+      </div>
+    </div>
+    <div class="phone-body">
+      <div class="hero-icon">≋</div>
+      <div class="hero-title">Clean noisy recordings</div>
+      <div class="hero-sub">Upload audio and remove background noise on-device.</div>
+      <button class="pill-cta">＋ Upload Audio</button>
+    </div>
+    <div class="phone-tabbar">
+      <div class="tab-item">
+        <div class="tab-icon">✨</div>
+        <div class="tab-label">Smart Cut</div>
+      </div>
+      <div class="tab-item active">
+        <div class="tab-icon">≋</div>
+        <div class="tab-label">Denoise</div>
+      </div>
+      <div class="tab-item">
+        <div class="tab-icon">▤</div>
+        <div class="tab-label">Merge</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========== MERGE ========== -->
+  <div class="phone">
+    <div class="phone-status">
+      <span>9:41</span>
+      <span class="dot"></span>
+      <span>● ▾ ▮</span>
+    </div>
+    <div class="phone-nav">
+      <div class="left"></div>
+      <div class="title">Merge</div>
+      <div class="right">
+        <span class="iconbtn" title="Light theme — tap to switch to Dark">☀︎</span>
+        <span class="iconbtn" title="Export">⬆</span>
+      </div>
+    </div>
+    <div class="phone-body">
+      <div class="hero-icon" style="background:rgba(88,86,214,0.12); color:#5856D6;">▤</div>
+      <div class="hero-title">No clips yet</div>
+      <div class="hero-sub">Tap below to add audio files,<br/>or drop them here.</div>
+      <button class="pill-cta">＋ Import Audio</button>
+    </div>
+    <div class="phone-tabbar">
+      <div class="tab-item">
+        <div class="tab-icon">✨</div>
+        <div class="tab-label">Smart Cut</div>
+      </div>
+      <div class="tab-item">
+        <div class="tab-icon">≋</div>
+        <div class="tab-label">Denoise</div>
+      </div>
+      <div class="tab-item active">
+        <div class="tab-icon">▤</div>
+        <div class="tab-label">Merge</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================ LEGEND ================ -->
+<div class="legend">
+  <div><span class="swatch" style="background:#5856D6"></span><strong>Indigo #5856D6</strong> — tab selection, primary CTAs, Export, theme toggle</div>
+  <div><span class="swatch" style="background:#A7C957"></span><strong>Lime green #A7C957</strong> — AI hero icons, AI moments only</div>
+  <div><span class="swatch" style="background:#1c1c1e"></span><strong>Text primary</strong> — titles, body</div>
+  <div><span class="swatch" style="background:#6e6e73"></span><strong>Text secondary</strong> — taglines, captions</div>
+</div>
+
+<!-- ================ TOOLBAR COMPARISON TABLE ================ -->
+<div class="table-compare">
+  <table>
+    <thead>
+      <tr><th>Tab</th><th>Leading</th><th>Trailing</th><th>Title</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Smart Cut</strong></td>
+        <td><span class="dash">—</span></td>
+        <td>Theme toggle (☀︎ / 🌙)</td>
+        <td>Inline · "Smart Cut"</td>
+      </tr>
+      <tr>
+        <td><strong>Denoise</strong></td>
+        <td><span class="dash">—</span></td>
+        <td>Theme toggle (☀︎ / 🌙)</td>
+        <td>Inline · "Denoise"</td>
+      </tr>
+      <tr>
+        <td><strong>Merge</strong></td>
+        <td><span class="dash">—</span> <em>(— icon removed —)</em></td>
+        <td>Theme toggle · Export</td>
+        <td>Inline · "Merge"</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<p class="subtitle" style="text-align:center; margin-top:32px;">
+  <strong>Theme toggle:</strong> binary Light ↔ Dark, default Light, no System option. ☀︎ icon when Light, 🌙 when Dark. One tap flips, with a light haptic.
+</p>
+
+<div class="options" style="margin-top:32px;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Looks good — write the spec</h3>
+      <p>Lock the design and proceed to the spec doc + implementation plan.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="revise" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Revise something</h3>
+      <p>Reply in terminal with what to change.</p>
+    </div>
+  </div>
+</div>

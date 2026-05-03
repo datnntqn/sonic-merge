@@ -1,0 +1,281 @@
+<h2>App name + plus-only CTA</h2>
+<p class="subtitle">Top of the page: 5 wordmark options to compare visual weight. Bottom: how the new <strong>icon-only plus CTA</strong> looks across the three home screens.</p>
+
+<style>
+  .wordmark-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 16px;
+    margin: 24px 0 36px;
+  }
+  .wordmark {
+    background: white;
+    border: 1px solid #e5e5ea;
+    border-radius: 16px;
+    padding: 28px 16px 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .wordmark:hover { border-color: #5856D6; transform: translateY(-2px); }
+  .wordmark .name {
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", system-ui, sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: #1c1c1e;
+    margin-bottom: 6px;
+  }
+  .wordmark .name .ai-dot {
+    color: #A7C957;
+  }
+  .wordmark .tagline {
+    font-size: 11px;
+    color: #6e6e73;
+    line-height: 1.4;
+    min-height: 30px;
+  }
+  .wordmark .verdict {
+    font-size: 10px;
+    color: #5856D6;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    margin-top: 10px;
+  }
+  .wordmark.recommended {
+    border-color: #5856D6;
+    background: linear-gradient(180deg, #fafaff, #ffffff);
+    box-shadow: 0 4px 16px rgba(88, 86, 214, 0.12);
+  }
+  .icon-app {
+    width: 52px; height: 52px;
+    border-radius: 14px;
+    margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    color: white;
+    font-size: 22px; font-weight: 700;
+  }
+  .phone-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .col-label {
+    font-size: 11px; color: #6e6e73;
+    text-transform: uppercase; letter-spacing: 0.06em;
+    font-weight: 700; text-align: center;
+  }
+  .phone {
+    width: 280px;
+    background: #f6f6f7;
+    border: 1px solid #d1d1d6;
+    border-radius: 26px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    color: #1c1c1e;
+  }
+  .phone-status {
+    height: 36px; background: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 16px; font-size: 12px; font-weight: 600;
+  }
+  .phone-status .dot { width: 70px; height: 20px; background: #000; border-radius: 16px; }
+  .phone-nav {
+    height: 44px; background: #fff;
+    border-bottom: 0.5px solid #e5e5ea;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 12px;
+  }
+  .phone-nav .title { font-size: 16px; font-weight: 600; flex: 1; text-align: center; }
+  .phone-nav .left, .phone-nav .right { display: flex; gap: 14px; min-width: 56px; align-items: center; }
+  .phone-nav .right { justify-content: flex-end; }
+  .phone-nav .iconbtn { color: #5856D6; font-size: 15px; }
+  .phone-body {
+    height: 420px;
+    background: linear-gradient(180deg, #fafaff 0%, #f0eefb 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 22px 18px; text-align: center;
+  }
+  .hero-icon-big {
+    width: 76px; height: 76px;
+    border-radius: 24px;
+    background: rgba(167, 201, 87, 0.18);
+    color: #6f9234;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 18px;
+    font-size: 38px;
+  }
+  .hero-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .hero-sub { font-size: 12px; color: #6e6e73; margin-bottom: 24px; line-height: 1.4; max-width: 230px; }
+  .plus-btn {
+    width: 56px; height: 56px;
+    border-radius: 50%;
+    background: #5856D6;
+    color: white;
+    border: none;
+    font-size: 28px; font-weight: 300;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(88,86,214,0.32);
+    cursor: pointer;
+  }
+  .phone-tabbar {
+    height: 64px;
+    background: rgba(255,255,255,0.92);
+    border-top: 0.5px solid #e5e5ea;
+    display: flex;
+  }
+  .tab-item {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 3px; color: #8e8e93;
+    font-size: 9px; font-weight: 500;
+  }
+  .tab-item.active { color: #5856D6; }
+  .tab-icon { font-size: 20px; line-height: 1; }
+  .options { margin-top: 32px; }
+</style>
+
+<!-- ================ WORDMARKS ================ -->
+<h3>App name candidates</h3>
+<div class="wordmark-grid">
+
+  <div class="wordmark recommended" data-choice="crisp" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #5856D6, #A7C957);">C</div>
+    <div class="name">Crisp</div>
+    <div class="tagline">Cut fillers. Make it crisp.</div>
+    <div class="verdict">★ Recommended</div>
+  </div>
+
+  <div class="wordmark" data-choice="polish" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #5856D6, #7B79E5);">P</div>
+    <div class="name">Polish</div>
+    <div class="tagline">Clean up your audio in seconds.</div>
+    <div class="verdict">Premium / craft</div>
+  </div>
+
+  <div class="wordmark" data-choice="refine" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #4A4B7C, #5856D6);">R</div>
+    <div class="name">Refine</div>
+    <div class="tagline">Studio-grade audio cleanup.</div>
+    <div class="verdict">Pro / elevated</div>
+  </div>
+
+  <div class="wordmark" data-choice="sonic" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #5856D6, #8B89E8);">S</div>
+    <div class="name">Sonic</div>
+    <div class="tagline">Brand continuity (drops "Merge").</div>
+    <div class="verdict">Familiar</div>
+  </div>
+
+  <div class="wordmark" data-choice="voxen" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #A7C957, #6f9234);">V</div>
+    <div class="name">Voxen</div>
+    <div class="tagline">Coined — unique, brandable.</div>
+    <div class="verdict">Made-up</div>
+  </div>
+</div>
+
+<!-- ================ PLUS-ONLY CTA PREVIEW ================ -->
+<h3>New plus-only CTA — empty states</h3>
+<div class="phone-row">
+
+  <!-- Smart Cut -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Smart Cut</div>
+        <div class="right"><span class="iconbtn">☀︎</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon-big">✨</div>
+        <div class="hero-title">Cut fillers in seconds</div>
+        <div class="hero-sub">Upload a recording — we'll find every "um," "uh," and long pause.</div>
+        <button class="plus-btn">+</button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item active"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Denoise -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Denoise</div>
+        <div class="right"><span class="iconbtn">☀︎</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon-big">≋</div>
+        <div class="hero-title">Clean noisy recordings</div>
+        <div class="hero-sub">Upload audio and remove background noise on-device.</div>
+        <button class="plus-btn">+</button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item active"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Merge -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Merge</div>
+        <div class="right"><span class="iconbtn">☀︎</span><span class="iconbtn" style="font-weight:bold;">⬆</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon-big" style="background:rgba(88,86,214,0.14); color:#5856D6;">▤</div>
+        <div class="hero-title">No clips yet</div>
+        <div class="hero-sub">Tap below to add audio files,<br/>or drop them here.</div>
+        <button class="plus-btn">+</button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item active"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<p class="subtitle" style="text-align:center; margin-top:28px; max-width:600px; margin-left:auto; margin-right:auto;">
+  <strong>Loaded states</strong> (with recents/timeline): the same indigo plus button shrinks to ~36pt and pins above the list/timeline as a small floating circle. Spec will detail both states.
+</p>
+
+<div class="options">
+  <div class="option" data-choice="crisp" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content"><h3>Use Crisp</h3><p>Pick "Crisp" as the new app name and write the spec.</p></div>
+  </div>
+  <div class="option" data-choice="polish" onclick="toggleSelect(this)">
+    <div class="letter">P</div>
+    <div class="content"><h3>Use Polish</h3><p>Pick "Polish" instead.</p></div>
+  </div>
+  <div class="option" data-choice="refine" onclick="toggleSelect(this)">
+    <div class="letter">R</div>
+    <div class="content"><h3>Use Refine</h3><p>Pick "Refine" instead.</p></div>
+  </div>
+  <div class="option" data-choice="sonic" onclick="toggleSelect(this)">
+    <div class="letter">S</div>
+    <div class="content"><h3>Keep Sonic</h3><p>Drop "Merge", just go with "Sonic".</p></div>
+  </div>
+  <div class="option" data-choice="voxen" onclick="toggleSelect(this)">
+    <div class="letter">V</div>
+    <div class="content"><h3>Use Voxen</h3><p>Made-up brand. Unique.</p></div>
+  </div>
+  <div class="option" data-choice="other" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content"><h3>None of those</h3><p>Reply in terminal with a different name or direction.</p></div>
+  </div>
+</div>

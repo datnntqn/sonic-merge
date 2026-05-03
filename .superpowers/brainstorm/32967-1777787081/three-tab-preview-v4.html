@@ -1,0 +1,242 @@
+<h2>SEO-focused name + better import icon</h2>
+<p class="subtitle">Top: 5 names that contain "Cut" for App Store search weight. Middle: 4 icon options for the import button. Bottom: full preview with the recommended choices applied.</p>
+
+<style>
+  .wordmark-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 14px; margin: 20px 0 32px; }
+  .wordmark { background: white; border: 1px solid #e5e5ea; border-radius: 16px; padding: 24px 14px 18px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .wordmark:hover { border-color: #5856D6; transform: translateY(-2px); }
+  .wordmark .name { font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; font-size: 26px; font-weight: 700; letter-spacing: -0.02em; color: #1c1c1e; margin-bottom: 4px; }
+  .wordmark .name .accent { color: #A7C957; }
+  .wordmark .tagline { font-size: 10px; color: #6e6e73; line-height: 1.4; min-height: 28px; }
+  .wordmark .verdict { font-size: 9px; color: #5856D6; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-top: 8px; }
+  .wordmark.recommended { border-color: #5856D6; background: linear-gradient(180deg, #fafaff, #fff); box-shadow: 0 4px 16px rgba(88,86,214,0.12); }
+  .icon-app { width: 48px; height: 48px; border-radius: 12px; margin: 0 auto 8px; display: flex; align-items: center; justify-content: center; color: white; font-weight: 700; font-size: 18px; font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+
+  .icon-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin: 20px 0 32px; }
+  .icon-card { background: white; border: 1px solid #e5e5ea; border-radius: 16px; padding: 24px 16px; text-align: center; cursor: pointer; transition: all 0.15s; }
+  .icon-card:hover { border-color: #5856D6; transform: translateY(-2px); }
+  .icon-card.recommended { border-color: #5856D6; background: linear-gradient(180deg, #fafaff, #fff); box-shadow: 0 4px 16px rgba(88,86,214,0.12); }
+  .icon-card .demo {
+    width: 64px; height: 64px;
+    border-radius: 50%;
+    background: #5856D6;
+    color: white;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 14px;
+    box-shadow: 0 6px 16px rgba(88,86,214,0.32);
+  }
+  .icon-card .demo svg { width: 28px; height: 28px; fill: white; }
+  .icon-card h4 { font-size: 14px; font-weight: 600; margin: 0 0 4px; }
+  .icon-card p { font-size: 11px; color: #6e6e73; margin: 0; line-height: 1.4; }
+  .icon-card .verdict { font-size: 9px; color: #5856D6; text-transform: uppercase; letter-spacing: 0.06em; font-weight: 700; margin-top: 8px; }
+
+  .phone-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+  .col { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+  .phone { width: 280px; background: #f6f6f7; border: 1px solid #d1d1d6; border-radius: 26px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.08); font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif; color: #1c1c1e; }
+  .phone-status { height: 36px; background: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 12px; font-weight: 600; }
+  .phone-status .dot { width: 70px; height: 20px; background: #000; border-radius: 16px; }
+  .phone-nav { height: 44px; background: #fff; border-bottom: 0.5px solid #e5e5ea; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; }
+  .phone-nav .title { font-size: 16px; font-weight: 600; flex: 1; text-align: center; }
+  .phone-nav .left, .phone-nav .right { display: flex; gap: 14px; min-width: 56px; align-items: center; }
+  .phone-nav .right { justify-content: flex-end; }
+  .phone-nav .iconbtn { color: #5856D6; font-size: 15px; }
+  .phone-body { height: 420px; background: linear-gradient(180deg, #fafaff 0%, #f0eefb 100%); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 22px 18px; text-align: center; }
+  .hero-icon-big { width: 76px; height: 76px; border-radius: 24px; background: rgba(167, 201, 87, 0.18); color: #6f9234; display: flex; align-items: center; justify-content: center; margin-bottom: 18px; font-size: 38px; }
+  .hero-title { font-size: 17px; font-weight: 600; margin-bottom: 6px; }
+  .hero-sub { font-size: 12px; color: #6e6e73; margin-bottom: 24px; line-height: 1.4; max-width: 230px; }
+  .import-btn {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: #5856D6;
+    color: white;
+    border: none;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 6px 16px rgba(88,86,214,0.32);
+    cursor: pointer;
+  }
+  .import-btn svg { width: 26px; height: 26px; fill: white; }
+  .phone-tabbar { height: 64px; background: rgba(255,255,255,0.92); border-top: 0.5px solid #e5e5ea; display: flex; }
+  .tab-item { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; color: #8e8e93; font-size: 9px; font-weight: 500; }
+  .tab-item.active { color: #5856D6; }
+  .tab-icon { font-size: 20px; line-height: 1; }
+</style>
+
+<!-- ================ NAMES ================ -->
+<h3>Name candidates (SEO-focused, contains "Cut")</h3>
+<div class="wordmark-grid">
+
+  <div class="wordmark recommended" data-choice="cleancut" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #5856D6, #A7C957);">CC</div>
+    <div class="name">Clean<span class="accent">Cut</span></div>
+    <div class="tagline">Clean up your audio.</div>
+    <div class="verdict">★ Recommended</div>
+  </div>
+
+  <div class="wordmark" data-choice="crispcut" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #5856D6, #7B79E5);">CR</div>
+    <div class="name">Crisp<span class="accent">Cut</span></div>
+    <div class="tagline">Fresh, sharp audio.</div>
+    <div class="verdict">Distinctive</div>
+  </div>
+
+  <div class="wordmark" data-choice="autocut" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #4A4B7C, #5856D6);">AC</div>
+    <div class="name">Auto<span class="accent">Cut</span></div>
+    <div class="tagline">AI cuts the fluff.</div>
+    <div class="verdict">Most literal</div>
+  </div>
+
+  <div class="wordmark" data-choice="snapcut" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #6f9234, #A7C957);">SC</div>
+    <div class="name">Snap<span class="accent">Cut</span></div>
+    <div class="tagline">Cut audio in a snap.</div>
+    <div class="verdict">Speed-focused</div>
+  </div>
+
+  <div class="wordmark" data-choice="smartcut" onclick="toggleSelect(this)">
+    <div class="icon-app" style="background: linear-gradient(135deg, #5856D6, #8B89E8);">SM</div>
+    <div class="name">Smart<span class="accent">Cut</span></div>
+    <div class="tagline">Exact keyword match.</div>
+    <div class="verdict">Generic</div>
+  </div>
+</div>
+
+<!-- ================ IMPORT ICONS ================ -->
+<h3>Import button — what icon replaces the bare plus?</h3>
+<div class="icon-grid">
+
+  <div class="icon-card recommended" data-choice="waveform-plus" onclick="toggleSelect(this)">
+    <div class="demo">
+      <svg viewBox="0 0 24 24"><path d="M3 12h2v-3h2v6h2v-9h2v12h2v-9h2v6h2v-3h2v3h-1v-2h-1v3h-1v-2h-1v3h-1v-3h-1v3h-1v-3h-1v3h-1v-2h-1v2H3v-1z M19 5h2v2h2v2h-2v2h-2V9h-2V7h2V5z"/></svg>
+    </div>
+    <h4>waveform.badge.plus</h4>
+    <p>Audio-native — reads as "add audio file" instantly.</p>
+    <div class="verdict">★ Recommended</div>
+  </div>
+
+  <div class="icon-card" data-choice="square-arrow-down" onclick="toggleSelect(this)">
+    <div class="demo">
+      <svg viewBox="0 0 24 24"><path d="M5 20h14v-2H5v2zM19 9h-4V3H9v6H5l7 7 7-7z"/></svg>
+    </div>
+    <h4>square.and.arrow.down</h4>
+    <p>Standard iOS "import" metaphor.</p>
+    <div class="verdict">Generic but clear</div>
+  </div>
+
+  <div class="icon-card" data-choice="folder-plus" onclick="toggleSelect(this)">
+    <div class="demo">
+      <svg viewBox="0 0 24 24"><path d="M20 6h-8l-2-2H4c-1.1 0-2 .9-2 2v12c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2zm-3 9h-3v3h-2v-3h-3v-2h3v-3h2v3h3v2z"/></svg>
+    </div>
+    <h4>folder.badge.plus</h4>
+    <p>"Add to library" — better fit for Merge.</p>
+    <div class="verdict">Library vibe</div>
+  </div>
+
+  <div class="icon-card" data-choice="tray-arrow-down" onclick="toggleSelect(this)">
+    <div class="demo">
+      <svg viewBox="0 0 24 24"><path d="M19 9h-4V3H9v6H5l7 7 7-7zM5 18v2h14v-2H5z"/></svg>
+    </div>
+    <h4>tray.and.arrow.down</h4>
+    <p>Studio / DAW "load into project" feel.</p>
+    <div class="verdict">DAW-flavored</div>
+  </div>
+</div>
+
+<!-- ================ COMBINED PREVIEW ================ -->
+<h3>Recommended combo applied</h3>
+<p class="subtitle" style="margin-top:4px;"><strong>CleanCut</strong> as the app name + <strong>waveform.badge.plus</strong> as the universal import icon.</p>
+
+<div class="phone-row">
+
+  <!-- Smart Cut -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Smart Cut</div>
+        <div class="right"><span class="iconbtn">☀︎</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon-big">✨</div>
+        <div class="hero-title">Cut fillers in seconds</div>
+        <div class="hero-sub">Upload a recording — we'll find every "um," "uh," and long pause.</div>
+        <button class="import-btn">
+          <svg viewBox="0 0 24 24"><path d="M3 12h2v-3h2v6h2v-9h2v12h2v-9h2v6h2v-3h2v3h-1v-2h-1v3h-1v-2h-1v3h-1v-3h-1v3h-1v-3h-1v3h-1v-2h-1v2H3v-1z M19 5h2v2h2v2h-2v2h-2V9h-2V7h2V5z"/></svg>
+        </button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item active"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Denoise -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Denoise</div>
+        <div class="right"><span class="iconbtn">☀︎</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon-big">≋</div>
+        <div class="hero-title">Clean noisy recordings</div>
+        <div class="hero-sub">Upload audio and remove background noise on-device.</div>
+        <button class="import-btn">
+          <svg viewBox="0 0 24 24"><path d="M3 12h2v-3h2v6h2v-9h2v12h2v-9h2v6h2v-3h2v3h-1v-2h-1v3h-1v-2h-1v3h-1v-3h-1v3h-1v-3h-1v3h-1v-2h-1v2H3v-1z M19 5h2v2h2v2h-2v2h-2V9h-2V7h2V5z"/></svg>
+        </button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item active"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Merge -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Merge</div>
+        <div class="right"><span class="iconbtn">☀︎</span><span class="iconbtn" style="font-weight:bold;">⬆</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon-big" style="background:rgba(88,86,214,0.14); color:#5856D6;">▤</div>
+        <div class="hero-title">No clips yet</div>
+        <div class="hero-sub">Tap below to add audio files,<br/>or drop them here.</div>
+        <button class="import-btn">
+          <svg viewBox="0 0 24 24"><path d="M3 12h2v-3h2v6h2v-9h2v12h2v-9h2v6h2v-3h2v3h-1v-2h-1v3h-1v-2h-1v3h-1v-3h-1v3h-1v-3h-1v3h-1v-2h-1v2H3v-1z M19 5h2v2h2v2h-2v2h-2V9h-2V7h2V5z"/></svg>
+        </button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item active"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top: 32px;">
+  <div class="option" data-choice="cleancut-waveform" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>CleanCut + waveform.badge.plus</h3>
+      <p>Lock both recommendations and write the spec.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="other" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Different combination</h3>
+      <p>Reply with the name + icon you want.</p>
+    </div>
+  </div>
+</div>

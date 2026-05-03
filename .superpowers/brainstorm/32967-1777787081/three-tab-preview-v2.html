@@ -1,0 +1,375 @@
+<h2>Where Export lives — full navigation picture</h2>
+<p class="subtitle">Smart Cut + Denoise <strong>homes</strong> are recents lists (nothing concrete to export from a list). Their Export button lives on the <strong>session-detail screen</strong> after Apply/Denoise produces an output file. Merge home is the editor itself, so Export sits in its home toolbar.</p>
+
+<style>
+  .phone-row { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-top: 20px; }
+  .col {
+    display: flex; flex-direction: column; align-items: center; gap: 14px;
+  }
+  .col-label {
+    font-size: 12px;
+    color: #6e6e73;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-weight: 700;
+    text-align: center;
+    margin-top: -4px;
+  }
+  .arrow {
+    color: #5856D6; font-size: 22px; line-height: 1; margin: -2px 0;
+  }
+  .phone {
+    width: 250px;
+    background: #f6f6f7;
+    border: 1px solid #d1d1d6;
+    border-radius: 24px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    font-family: -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+    color: #1c1c1e;
+  }
+  .phone-status {
+    height: 32px; background: #fff;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 14px; font-size: 11px; font-weight: 600;
+  }
+  .phone-status .dot {
+    width: 60px; height: 18px; background: #000; border-radius: 14px;
+  }
+  .phone-nav {
+    height: 40px; background: #fff;
+    border-bottom: 0.5px solid #e5e5ea;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 10px;
+  }
+  .phone-nav .title {
+    font-size: 15px; font-weight: 600; flex: 1; text-align: center;
+  }
+  .phone-nav .left, .phone-nav .right { display: flex; gap: 12px; min-width: 50px; align-items: center; }
+  .phone-nav .right { justify-content: flex-end; }
+  .phone-nav .iconbtn {
+    color: #5856D6; font-size: 14px;
+  }
+  .phone-nav .backbtn { color: #5856D6; font-size: 18px; font-weight: 400; }
+  .phone-body {
+    height: 360px;
+    background: linear-gradient(180deg, #fafaff 0%, #f0eefb 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 18px 16px; text-align: center;
+  }
+  .hero-icon {
+    width: 56px; height: 56px;
+    border-radius: 18px;
+    background: rgba(167, 201, 87, 0.16);
+    color: #6f9234;
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 14px;
+    font-size: 30px;
+  }
+  .hero-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .hero-sub { font-size: 11px; color: #6e6e73; margin-bottom: 18px; line-height: 1.4; max-width: 200px; }
+  .pill-cta {
+    background: #5856D6; color: white;
+    font-size: 13px; font-weight: 600;
+    border-radius: 18px; padding: 9px 20px;
+    display: inline-flex; align-items: center; gap: 6px;
+    border: none;
+  }
+  .phone-tabbar {
+    height: 56px;
+    background: rgba(255,255,255,0.92);
+    border-top: 0.5px solid #e5e5ea;
+    display: flex;
+  }
+  .tab-item {
+    flex: 1;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    gap: 2px; color: #8e8e93;
+    font-size: 9px; font-weight: 500;
+  }
+  .tab-item.active { color: #5856D6; }
+  .tab-icon { font-size: 18px; line-height: 1; }
+  .session-content {
+    padding: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    height: 360px;
+  }
+  .session-card {
+    background: white;
+    border-radius: 14px;
+    padding: 12px;
+    border: 0.5px solid #e5e5ea;
+  }
+  .summary-card {
+    background: rgba(245, 244, 255, 0.6);
+    border: 0.5px solid #d8d6f0;
+  }
+  .pill-tag {
+    display: inline-block;
+    background: #A7C957; color: white;
+    border-radius: 14px;
+    padding: 4px 11px;
+    font-size: 11px; font-weight: 600;
+    margin-top: 6px;
+  }
+  .floating-cta {
+    position: relative;
+    margin-top: auto;
+  }
+  .floating-cta .pill-cta {
+    width: 100%;
+    background: #A7C957;
+    color: white;
+    padding: 11px 0;
+    border-radius: 22px;
+    font-size: 13px;
+  }
+  .row {
+    display: flex; align-items: center; gap: 10px;
+    font-size: 12px;
+  }
+  .row .dot {
+    width: 30px; height: 30px; border-radius: 8px;
+    background: linear-gradient(135deg, #A7C957, #5856D6);
+    display: flex; align-items: center; justify-content: center;
+    color: white; font-size: 12px;
+  }
+  .row-text { flex: 1; }
+  .row-text .name { font-weight: 600; font-size: 12px; }
+  .row-text .meta { font-size: 10px; color: #6e6e73; }
+  .legend {
+    margin: 28px auto 0;
+    max-width: 760px;
+    padding: 16px 20px;
+    background: #fff;
+    border: 1px solid #e5e5ea;
+    border-radius: 14px;
+    font-size: 13px;
+    line-height: 1.7;
+  }
+  .legend strong { color: #1c1c1e; }
+  .swatch { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: middle; margin-right: 6px; }
+  .nav-arrow {
+    width: 100%;
+    height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: #5856D6; font-size: 22px;
+    margin: 4px 0;
+  }
+</style>
+
+<!-- ================ ROW 1: HOMES ================ -->
+<h3 style="text-align:center; margin-top:32px;">Homes (where you start)</h3>
+<div class="phone-row">
+
+  <!-- Smart Cut HOME -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Smart Cut</div>
+        <div class="right"><span class="iconbtn">☀︎</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon">✨</div>
+        <div class="hero-title">Cut fillers in seconds</div>
+        <div class="hero-sub">Upload a recording — we'll find every "um," "uh," and long pause.</div>
+        <button class="pill-cta">＋ Upload Audio</button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item active"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+    <div class="col-label">Smart Cut Home<br/>(recents list — no Export here)</div>
+  </div>
+
+  <!-- Denoise HOME -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Denoise</div>
+        <div class="right"><span class="iconbtn">☀︎</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon">≋</div>
+        <div class="hero-title">Clean noisy recordings</div>
+        <div class="hero-sub">Upload audio and remove background noise on-device.</div>
+        <button class="pill-cta">＋ Upload Audio</button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item active"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+    <div class="col-label">Denoise Home<br/>(recents list — no Export here)</div>
+  </div>
+
+  <!-- Merge HOME (editor — Export lives here) -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title">Merge</div>
+        <div class="right"><span class="iconbtn">☀︎</span><span class="iconbtn" style="font-weight:bold;">⬆</span></div>
+      </div>
+      <div class="phone-body">
+        <div class="hero-icon" style="background:rgba(88,86,214,0.12); color:#5856D6;">▤</div>
+        <div class="hero-title">No clips yet</div>
+        <div class="hero-sub">Tap below to add audio files,<br/>or drop them here.</div>
+        <button class="pill-cta">＋ Import Audio</button>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item active"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+    <div class="col-label">Merge Home<br/>(IS the editor — Export lives here ✓)</div>
+  </div>
+</div>
+
+<!-- ================ ARROW DOWN ================ -->
+<div style="text-align:center; margin: 24px 0; color: #5856D6;">
+  <div style="font-size: 14px; color: #6e6e73; margin-bottom: 4px;">Tap a recent or finish Apply/Denoise →</div>
+  <div style="font-size: 32px; line-height: 1;">▼</div>
+</div>
+
+<!-- ================ ROW 2: SESSION DETAIL SCREENS ================ -->
+<h3 style="text-align:center;">Session detail (where Export earns its place)</h3>
+<div class="phone-row">
+
+  <!-- Smart Cut SESSION DETAIL -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"><span class="backbtn">‹</span></div>
+        <div class="title">Episode 14</div>
+        <div class="right">
+          <span class="iconbtn" style="font-weight:bold;">⬆</span>
+          <span class="iconbtn">⋯</span>
+        </div>
+      </div>
+      <div class="session-content" style="background:linear-gradient(180deg,#fafaff,#f0eefb);">
+        <div class="session-card summary-card">
+          <div style="font-size:10px; letter-spacing:0.05em; color:#5856D6; font-weight:700;">✨ SMART CUT SUMMARY</div>
+          <div style="font-size:13px; margin-top:4px;">7 fillers + 2 long pauses</div>
+          <div class="pill-tag">saves ~12s</div>
+        </div>
+        <div class="session-card" style="text-align:center; flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:6px;">
+          <div style="font-size:11px; color:#6e6e73;">Filler categories…</div>
+          <div style="font-size:10px; color:#a8a8af;">(you know · basically · like)</div>
+        </div>
+        <div class="floating-cta">
+          <button class="pill-cta">✨ Apply Cuts</button>
+        </div>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item active"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+    <div class="col-label">Smart Cut Session<br/>Export ⬆ in toolbar (after Apply)</div>
+  </div>
+
+  <!-- Denoise SESSION DETAIL -->
+  <div class="col">
+    <div class="phone">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"><span class="backbtn">‹</span></div>
+        <div class="title">Lecture</div>
+        <div class="right">
+          <span class="iconbtn" style="font-weight:bold;">⬆</span>
+          <span class="iconbtn">⋯</span>
+        </div>
+      </div>
+      <div class="session-content" style="background:linear-gradient(180deg,#fafaff,#f0eefb);">
+        <div class="session-card" style="text-align:center; flex:1; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:8px;">
+          <div style="width:60px; height:60px; border-radius:50%; background:radial-gradient(#A7C957,#6f9234); box-shadow:0 0 20px rgba(167,201,87,0.6);"></div>
+          <div style="font-size:11px; color:#6e6e73;">Noise Reduction</div>
+          <div style="font-size:18px; color:#6f9234; font-weight:700;">75%</div>
+          <div style="height:4px; background:#A7C957; width:70%; border-radius:2px;"></div>
+        </div>
+        <div class="floating-cta">
+          <button class="pill-cta">≋ Re-denoise</button>
+        </div>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item active"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+    <div class="col-label">Denoise Session<br/>Export ⬆ in toolbar (after Denoise)</div>
+  </div>
+
+  <!-- Merge has no separate detail — IS the home -->
+  <div class="col">
+    <div class="phone" style="opacity:0.4;">
+      <div class="phone-status"><span>9:41</span><span class="dot"></span><span>● ▾ ▮</span></div>
+      <div class="phone-nav">
+        <div class="left"></div>
+        <div class="title" style="color:#a8a8af;">— no separate detail —</div>
+        <div class="right"></div>
+      </div>
+      <div class="phone-body" style="background:#f5f5f8;">
+        <div style="font-size:13px; color:#8e8e93; text-align:center; line-height:1.5; padding:0 20px;">
+          Merge has no push detail.<br/>
+          The home <em>is</em> the editor.<br/>
+          Export lives at the home toolbar.
+        </div>
+      </div>
+      <div class="phone-tabbar">
+        <div class="tab-item"><div class="tab-icon">✨</div><div>Smart Cut</div></div>
+        <div class="tab-item"><div class="tab-icon">≋</div><div>Denoise</div></div>
+        <div class="tab-item active"><div class="tab-icon">▤</div><div>Merge</div></div>
+      </div>
+    </div>
+    <div class="col-label">(Merge has no detail screen)</div>
+  </div>
+</div>
+
+<!-- ================ EXPLANATION ================ -->
+<div class="legend">
+  <p><strong>Why Export isn't on Smart Cut / Denoise homes:</strong></p>
+  <p>Those screens are <strong>recents lists</strong>. There's no single concrete file to export from a list — you'd have to pick one first. Export becomes meaningful only after you tap a session and run Apply Cuts (Smart Cut) or finish denoising (Denoise) — that's when an output file actually exists.</p>
+  <p style="margin-top:12px;"><strong>Why Merge home has Export:</strong></p>
+  <p>Merge home <em>is</em> the editor. There's no list, no push navigation, the timeline you build IS the workspace. So Export earns its toolbar slot there in a way it doesn't on Smart Cut/Denoise homes.</p>
+  <p style="margin-top:12px;"><strong>Pattern reference:</strong> Voice Memos puts Share on the playback screen (after you tap a recording), not on the recordings list. Photos puts Export on a selected photo. Same logic.</p>
+</div>
+
+<div class="options" style="margin-top:24px;">
+  <div class="option" data-choice="approve" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Got it — Export placement makes sense, write the spec</h3>
+      <p>Lock the design and proceed to spec doc.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="add-export-everywhere" onclick="toggleSelect(this)">
+    <div class="letter">+</div>
+    <div class="content">
+      <h3>Actually, put Export on all 3 homes anyway</h3>
+      <p>Even if it requires picking a session first on Smart Cut / Denoise homes.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="other" onclick="toggleSelect(this)">
+    <div class="letter">✎</div>
+    <div class="content">
+      <h3>Something else</h3>
+      <p>Reply in terminal.</p>
+    </div>
+  </div>
+</div>
