@@ -123,7 +123,7 @@ struct SonicMergeThemeTests {
 
     @Test func lightSemantic_hasNewTokenSlots() {
         // Resolves light palette and checks new slots exist and are non-nil
-        let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .system)
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentAI.getRed(&r, green: &g, blue: &b, alpha: &a))
         #expect(semantic.accentGlow.getRed(&r, green: &g, blue: &b, alpha: &a))
@@ -132,7 +132,7 @@ struct SonicMergeThemeTests {
     }
 
     @Test func lightSemantic_accentAI_isLimeGreen() {
-        let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .system)
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentAI.getRed(&r, green: &g, blue: &b, alpha: &a))
         #expect(abs(Double(r) - (167.0 / 255.0)) < 0.01)
@@ -141,7 +141,7 @@ struct SonicMergeThemeTests {
     }
 
     @Test func lightSemantic_accentGradientEnd_isSystemPurple() {
-        let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .system)
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentGradientEnd.getRed(&r, green: &g, blue: &b, alpha: &a))
         #expect(abs(Double(r) - (175.0 / 255.0)) < 0.01)
@@ -150,7 +150,7 @@ struct SonicMergeThemeTests {
     }
 
     @Test func darkSemantic_accentGradientEnd_isSystemPurple() {
-        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .system)
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentGradientEnd.getRed(&r, green: &g, blue: &b, alpha: &a))
         #expect(abs(Double(r) - (175.0 / 255.0)) < 0.01)
@@ -159,7 +159,7 @@ struct SonicMergeThemeTests {
     }
 
     @Test func darkSemantic_hasPureBlackBase() {
-        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .system)
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.surfaceBase.getRed(&r, green: &g, blue: &b, alpha: &a))
         #expect(Double(r) == 0.0)
@@ -168,7 +168,7 @@ struct SonicMergeThemeTests {
     }
 
     @Test func darkSemantic_hasDeepIndigoAccent() {
-        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .system)
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentAction.getRed(&r, green: &g, blue: &b, alpha: &a))
         #expect(abs(Double(r) - (88.0 / 255.0)) < 0.01)
@@ -177,7 +177,7 @@ struct SonicMergeThemeTests {
     }
 
     @Test func darkSemantic_surfaceCardIsNearBlack() {
-        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .system)
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.surfaceCard.getRed(&r, green: &g, blue: &b, alpha: &a))
         #expect(abs(Double(r) - (15.0 / 255.0)) < 0.01)
@@ -186,7 +186,7 @@ struct SonicMergeThemeTests {
     }
 
     @Test func darkSemantic_accentAI_isLimeGreen() {
-        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .system)
+        let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentAI.getRed(&r, green: &g, blue: &b, alpha: &a))
         #expect(abs(Double(r) - (167.0 / 255.0)) < 0.01)
@@ -196,7 +196,7 @@ struct SonicMergeThemeTests {
 
     @Test func fallbackLight_matchesLightClassicValues() {
         let fallback = SonicMergeSemantic.fallbackLight
-        let light = SonicMergeSemantic.resolved(colorScheme: .light, preference: .system)
+        let light = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
         var fr: CGFloat = 0, fg: CGFloat = 0, fb: CGFloat = 0, fa: CGFloat = 0
         var lr: CGFloat = 0, lg: CGFloat = 0, lb: CGFloat = 0, la: CGFloat = 0
         #expect(fallback.surfaceBase.getRed(&fr, green: &fg, blue: &fb, alpha: &fa))

@@ -11,7 +11,7 @@ struct MixingStationView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
     @Environment(\.colorScheme) private var colorScheme
 
-    @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.system.rawValue
+    @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.light.rawValue
 
     /// Phase 10 (D-06): persists across launches once the user has ever imported a clip.
     /// Gates the LocalFirstTrustStrip render in MergeTimelineView.
@@ -26,7 +26,7 @@ struct MixingStationView: View {
     @State private var exportHaptic = false
 
     private var themePreference: ThemePreference {
-        ThemePreference(rawValue: themePreferenceRaw) ?? .system
+        ThemePreference(rawValue: themePreferenceRaw) ?? .light
     }
 
     private var semantic: SonicMergeSemantic {
@@ -172,7 +172,6 @@ struct MixingStationView: View {
         ToolbarItem(placement: .topBarTrailing) {
             Menu {
                 Picker("Appearance", selection: $themePreferenceRaw) {
-                    Text("System").tag(ThemePreference.system.rawValue)
                     Text("Light").tag(ThemePreference.light.rawValue)
                     Text("Dark conveyor").tag(ThemePreference.dark.rawValue)
                 }

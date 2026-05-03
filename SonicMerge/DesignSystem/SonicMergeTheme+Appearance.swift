@@ -8,9 +8,13 @@ import UIKit
 
 /// Stored in UserDefaults via `@AppStorage("sonicMergeThemePreference")`.
 enum ThemePreference: String, CaseIterable, Sendable {
-    case system
     case light
     case dark
+
+    /// The next state in the binary toggle cycle. Pure — easily unit-testable.
+    static func next(after current: ThemePreference) -> ThemePreference {
+        current == .light ? .dark : .light
+    }
 }
 
 /// Resolved semantic palette for the current screen (light conveyor vs dark "Merge" style).
@@ -54,7 +58,6 @@ struct SonicMergeSemantic {
     ) -> SonicMergeSemantic {
         let useDark: Bool = {
             switch preference {
-            case .system: return colorScheme == .dark
             case .light: return false
             case .dark: return true
             }
