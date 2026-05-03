@@ -194,7 +194,7 @@ struct SmartCutSessionView: View {
 
         let ext = options.format == .m4a ? "m4a" : "wav"
         let destinationURL = FileManager.default.temporaryDirectory
-            .appending(path: "SonicMerge-SmartCutExport-\(UUID().uuidString).\(ext)")
+            .appending(path: "CleanCut-SmartCutExport-\(UUID().uuidString).\(ext)")
 
         showExportProgressSheet = true
         exportProgress = 0.0

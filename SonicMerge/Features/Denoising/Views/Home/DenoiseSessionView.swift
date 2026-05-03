@@ -189,7 +189,7 @@ struct DenoiseSessionView: View {
 
         let ext = options.format == .m4a ? "m4a" : "wav"
         let destinationURL = FileManager.default.temporaryDirectory
-            .appending(path: "SonicMerge-DenoisedExport-\(UUID().uuidString).\(ext)")
+            .appending(path: "CleanCut-DenoisedExport-\(UUID().uuidString).\(ext)")
 
         showExportProgressSheet = true
         exportProgress = 0.0
