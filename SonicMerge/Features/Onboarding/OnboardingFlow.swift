@@ -6,6 +6,7 @@
 // sample → result + Denoise reveal. Gated by @AppStorage flag in
 // RootTabView. Spec: docs/superpowers/specs/2026-05-03-cleancut-onboarding-design.md
 
+import AVFoundation
 import SwiftUI
 import Speech
 import UIKit
@@ -76,13 +77,16 @@ struct OnboardingFlow: View {
                             onSkipToHome: { hasOnboarded = true }
                         )
                     case .result:
-                        // TODO Chunk 5
-                        VStack {
-                            Text("Step 5 — not yet implemented")
-                            Button("Done · Open Smart Cut") { hasOnboarded = true }
-                                .buttonStyle(.borderedProminent)
-                        }
-                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        ResultStep(
+                            semantic: semantic,
+                            editList: sampleEditList,
+                            originalURL: sampleOriginalURL,
+                            cleanedURL: sampleCleanedURL,
+                            onDone: {
+                                hasOnboarded = true
+                                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                            }
+                        )
                     }
                 }
                 .frame(maxHeight: .infinity)
@@ -571,5 +575,213 @@ private struct TipKitHint: View {
                 alignment: .leading
             )
             .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
+    }
+}
+
+// MARK: - Step 5: Result + soft Denoise reveal
+
+private struct ResultStep: View {
+    let semantic: SonicMergeSemantic
+    let editList: EditList?
+    let originalURL: URL?
+    let cleanedURL: URL?
+    let onDone: () -> Void
+
+    enum Track { case original, cleaned }
+
+    @State private var selectedTrack: Track = .cleaned
+    @State private var originalPlayer: AVAudioPlayer?
+    @State private var cleanedPlayer: AVAudioPlayer?
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 32)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(headline)
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                if hasResult {
+                    Text("Tap Cleaned or Original to compare.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                } else {
+                    Text("Open the Smart Cut tab anytime to start.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 12)
+            .padding(.bottom, 16)
+
+            if hasResult, let editList {
+                ResultCard(semantic: semantic, editList: editList)
+                    .padding(.bottom, 12)
+
+                ABToggle(semantic: semantic,
+                         selected: $selectedTrack,
+                         onChange: handleTrackChange)
+                    .padding(.bottom, 12)
+
+                TipKitHint(
+                    text: "💡 Try Denoise on this clip — the AI orb removes background hiss.",
+                    semantic: semantic
+                )
+            }
+
+            Spacer()
+
+            Button(action: {
+                stopAllPlayback()
+                onDone()
+            }) {
+                Label("Done · Open Smart Cut", systemImage: "checkmark.circle.fill")
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Capsule().fill(Color(uiColor: semantic.accentAction)))
+            }
+        }
+        .task { preparePlayers() }
+        .onDisappear { stopAllPlayback() }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Step 5 of 5: \(headline)")
+    }
+
+    private var hasResult: Bool { editList != nil && cleanedURL != nil }
+
+    private var headline: String {
+        guard let editList else { return "You're all set" }
+        let n = editList.fillers.filter(\.isEnabled).count
+        return n > 0 ? "\(n) fillers found" : "Smart Cut applied"
+    }
+
+    private func preparePlayers() {
+        // Activate the shared audio session before the first AVAudioPlayer
+        // call. Without this, prepareToPlay() succeeds silently but play()
+        // produces no audible output on real devices.
+        PlaybackAudioSession.activateIfNeeded()
+        if let url = originalURL {
+            originalPlayer = try? AVAudioPlayer(contentsOf: url)
+            originalPlayer?.prepareToPlay()
+        }
+        if let url = cleanedURL {
+            cleanedPlayer = try? AVAudioPlayer(contentsOf: url)
+            cleanedPlayer?.prepareToPlay()
+        }
+    }
+
+    private func handleTrackChange(_ track: Track) {
+        switch track {
+        case .original:
+            cleanedPlayer?.pause()
+            originalPlayer?.currentTime = 0
+            originalPlayer?.play()
+        case .cleaned:
+            originalPlayer?.pause()
+            cleanedPlayer?.currentTime = 0
+            cleanedPlayer?.play()
+        }
+    }
+
+    private func stopAllPlayback() {
+        originalPlayer?.stop()
+        cleanedPlayer?.stop()
+    }
+}
+
+// MARK: - Result card
+
+private struct ResultCard: View {
+    let semantic: SonicMergeSemantic
+    let editList: EditList
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SMART CUT SUMMARY")
+                .font(.caption.weight(.bold))
+                .tracking(0.5)
+                .foregroundStyle(Color(uiColor: semantic.accentAction))
+            Text("Podcast snippet")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color(uiColor: semantic.textPrimary))
+            HStack(spacing: 8) {
+                if !editList.fillers.isEmpty {
+                    Text("\(editList.fillers.count) fillers")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Capsule().fill(Color(uiColor: semantic.accentAction).opacity(0.14)))
+                        .foregroundStyle(Color(uiColor: semantic.accentAction))
+                }
+                if !editList.pauses.isEmpty {
+                    Text("\(editList.pauses.count) pauses")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Capsule().fill(Color(uiColor: semantic.accentAction).opacity(0.14)))
+                        .foregroundStyle(Color(uiColor: semantic.accentAction))
+                }
+                Spacer()
+                Text("saves ~\(Int(editList.enabledSavings.rounded()))s")
+                    .font(.subheadline.weight(.bold))
+                    .padding(.horizontal, 12).padding(.vertical, 5)
+                    .background(Capsule().fill(Color(uiColor: semantic.accentAI)))
+                    .foregroundStyle(.white)
+            }
+            .padding(.top, 4)
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(uiColor: semantic.surfaceCard))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color(uiColor: .systemGray5), lineWidth: 0.5)
+                )
+        )
+    }
+}
+
+// MARK: - A/B toggle
+
+private struct ABToggle: View {
+    let semantic: SonicMergeSemantic
+    @Binding var selected: ResultStep.Track
+    let onChange: (ResultStep.Track) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            segment(track: .original, label: "Original")
+            segment(track: .cleaned, label: "Cleaned")
+        }
+    }
+
+    @ViewBuilder
+    private func segment(track: ResultStep.Track, label: String) -> some View {
+        let isSelected = selected == track
+        Button {
+            selected = track
+            onChange(track)
+        } label: {
+            Text(label)
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(isSelected ? .white : Color(uiColor: semantic.textPrimary))
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule().fill(isSelected
+                                   ? Color(uiColor: semantic.accentAction)
+                                   : Color(uiColor: semantic.surfaceCard))
+                )
+                .overlay(
+                    Capsule().strokeBorder(
+                        isSelected ? Color.clear : Color(uiColor: .systemGray5),
+                        lineWidth: 1
+                    )
+                )
+        }
+        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
+        .accessibilityLabel("\(label) audio\(isSelected ? ", selected" : "")")
     }
 }
