@@ -75,12 +75,13 @@ struct DenoiseHomeView: View {
                 .font(.system(.body, design: .rounded))
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
             Button {
                 showFileImporter = true
             } label: {
                 Image(systemName: "waveform.badge.plus")
-                    .font(.system(size: 24, weight: .semibold))
+                    .font(.system(size: 26, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(width: 60, height: 60)
                     .background(Circle().fill(Color(uiColor: semantic.accentAction)))

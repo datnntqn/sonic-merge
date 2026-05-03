@@ -82,7 +82,7 @@ Two variants under one shared chrome (same background, title style, fonts, verti
     - Smart Cut: "Cut fillers in seconds"
     - Denoise: "Clean noisy recordings"
   - Tagline (`.body` rounded, `textSecondary`, multiline-centered, max 240pt)
-    - Smart Cut: "Upload a recording — we'll find every \"um,\" \"uh,\" and long pause."
+    - Smart Cut: "Upload a recording and we'll find every invalid word and long pause."
     - Denoise: "Upload audio and remove background noise on-device."
   - **Import button** — circular indigo `accentAction` background, 60×60, single SF Symbol `waveform.badge.plus` (white, 26pt), shadow `0 6pt 16pt rgba(88,86,214,0.32)`. No text label.
 
