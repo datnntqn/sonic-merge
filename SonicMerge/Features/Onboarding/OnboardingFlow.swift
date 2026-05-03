@@ -644,7 +644,7 @@ private struct ResultStep: View {
                     .background(Capsule().fill(Color(uiColor: semantic.accentAction)))
             }
         }
-        .task { preparePlayers() }
+        .onAppear { preparePlayers() }
         .onDisappear { stopAllPlayback() }
         .accessibilityElement(children: .contain)
         .accessibilityLabel("Step 5 of 5: \(headline)")
@@ -768,7 +768,7 @@ private struct ABToggle: View {
                 .font(.system(.body, design: .rounded, weight: .semibold))
                 .foregroundStyle(isSelected ? .white : Color(uiColor: semantic.textPrimary))
                 .frame(maxWidth: .infinity)
-                .padding(.vertical, 10)
+                .padding(.vertical, 12)
                 .background(
                     Capsule().fill(isSelected
                                    ? Color(uiColor: semantic.accentAction)
