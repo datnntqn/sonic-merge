@@ -1,0 +1,312 @@
+<h2>Smart Cut tab — empty state</h2>
+<p class="subtitle">First impression when the app launches and no audio is loaded yet. Tab bar at the bottom shows Smart Cut · Denoise · Merge. Pick the variant that fits the vibe you want.</p>
+
+<style>
+  .iphone {
+    width: 280px;
+    height: 560px;
+    border-radius: 36px;
+    background: linear-gradient(180deg, #fafbfc 0%, #f1f3f6 100%);
+    border: 1px solid rgba(0,0,0,0.08);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.08);
+    margin: 0 auto;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro", system-ui, sans-serif;
+    color: #1c1c1e;
+  }
+  .nav-bar {
+    padding: 14px 16px 8px;
+    border-bottom: 0.5px solid rgba(0,0,0,0.06);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 13px;
+  }
+  .nav-title {
+    font-weight: 600;
+    font-size: 17px;
+  }
+  .nav-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    background: rgba(0,122,255,0.08);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+  .body {
+    flex: 1;
+    padding: 24px 18px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+  }
+  .tab-bar {
+    height: 64px;
+    border-top: 0.5px solid rgba(0,0,0,0.06);
+    display: flex;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(20px);
+  }
+  .tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    font-size: 10px;
+    color: #8e8e93;
+  }
+  .tab.active { color: #007aff; }
+  .tab-icon {
+    width: 22px;
+    height: 22px;
+    background: currentColor;
+    -webkit-mask-size: contain;
+            mask-size: contain;
+    border-radius: 4px;
+    opacity: 0.85;
+  }
+  .orb {
+    width: 84px;
+    height: 84px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #34C759, #00b34a);
+    box-shadow: 0 8px 28px rgba(52,199,89,0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 32px;
+    margin-bottom: 18px;
+  }
+  .upload-cta {
+    background: #007aff;
+    color: white;
+    padding: 13px 22px;
+    border-radius: 14px;
+    font-weight: 600;
+    font-size: 15px;
+    width: 80%;
+    text-align: center;
+    box-shadow: 0 4px 14px rgba(0,122,255,0.28);
+  }
+  .upload-cta.ghost {
+    background: rgba(0,122,255,0.08);
+    color: #007aff;
+    box-shadow: none;
+  }
+  .secondary-link {
+    color: #007aff;
+    font-size: 13px;
+    margin-top: 12px;
+    font-weight: 500;
+  }
+  .recent-card {
+    background: white;
+    border: 0.5px solid rgba(0,0,0,0.08);
+    border-radius: 14px;
+    padding: 12px 14px;
+    margin-top: 18px;
+    width: 90%;
+    text-align: left;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  }
+  .recent-thumb {
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #5856d6, #007aff);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+  .recent-meta {
+    flex: 1;
+    overflow: hidden;
+  }
+  .recent-name {
+    font-size: 13px;
+    font-weight: 600;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .recent-sub {
+    font-size: 11px;
+    color: #8e8e93;
+    margin-top: 2px;
+  }
+  .value-rows {
+    margin-top: 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
+    align-items: flex-start;
+    text-align: left;
+    padding: 0 12px;
+  }
+  .value-row {
+    display: flex;
+    gap: 10px;
+    font-size: 12px;
+    color: #3c3c43;
+    align-items: center;
+  }
+  .value-icon {
+    width: 22px;
+    height: 22px;
+    border-radius: 6px;
+    background: rgba(88,86,214,0.12);
+    color: #5856d6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    flex-shrink: 0;
+  }
+  .copy-title {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: 4px;
+  }
+  .copy-sub {
+    font-size: 12px;
+    color: #8e8e93;
+    line-height: 1.45;
+    margin-bottom: 14px;
+  }
+  .drop-zone {
+    width: 90%;
+    height: 180px;
+    border: 1.5px dashed rgba(0,122,255,0.4);
+    border-radius: 18px;
+    background: rgba(0,122,255,0.04);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+</style>
+
+<div class="cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px;">
+
+  <div class="card" data-choice="minimal" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;justify-content:center;padding:16px 0;">
+      <div class="iphone">
+        <div class="nav-bar">
+          <div></div>
+          <div class="nav-title">Smart Cut</div>
+          <div class="nav-icon">⋯</div>
+        </div>
+        <div class="body">
+          <div class="orb">✨</div>
+          <div class="copy-title">Cut fillers in seconds</div>
+          <div class="copy-sub">Upload a recording and we'll find every "um," "uh," and long pause.</div>
+          <div class="upload-cta">Upload Audio</div>
+          <div class="secondary-link">or import from Voice Memos</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab active">✨<div>Smart Cut</div></div>
+          <div class="tab">🌊<div>Denoise</div></div>
+          <div class="tab">⚞<div>Merge</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Hero CTA</h3>
+      <p>Single focused upload button. Minimal copy. Cleanest first impression — assumes user already gets what Smart Cut does.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="with-recents" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;justify-content:center;padding:16px 0;">
+      <div class="iphone">
+        <div class="nav-bar">
+          <div></div>
+          <div class="nav-title">Smart Cut</div>
+          <div class="nav-icon">⋯</div>
+        </div>
+        <div class="body" style="justify-content:flex-start;padding-top:36px;">
+          <div class="orb" style="width:64px;height:64px;font-size:24px;margin-bottom:12px;">✨</div>
+          <div class="copy-title">Smart Cut</div>
+          <div class="copy-sub">Upload a recording to remove fillers and silences.</div>
+          <div class="upload-cta">Upload Audio</div>
+          <div class="recent-card">
+            <div class="recent-thumb">⏵</div>
+            <div class="recent-meta">
+              <div class="recent-name">Podcast-ep14.m4a</div>
+              <div class="recent-sub">42 min · last opened yesterday</div>
+            </div>
+          </div>
+          <div class="recent-card" style="margin-top:8px;">
+            <div class="recent-thumb">⏵</div>
+            <div class="recent-meta">
+              <div class="recent-name">Lecture-mar-12.m4a</div>
+              <div class="recent-sub">28 min · 3 days ago</div>
+            </div>
+          </div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab active">✨<div>Smart Cut</div></div>
+          <div class="tab">🌊<div>Denoise</div></div>
+          <div class="tab">⚞<div>Merge</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Hero CTA + Recents</h3>
+      <p>Same upload primary action, plus a list of recent Smart Cut sessions to resume. Implies persistence — last session reopens with edits intact. Good if users will work on the same recording across sessions.</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="value-prop" onclick="toggleSelect(this)">
+    <div class="card-image" style="display:flex;justify-content:center;padding:16px 0;">
+      <div class="iphone">
+        <div class="nav-bar">
+          <div></div>
+          <div class="nav-title">Smart Cut</div>
+          <div class="nav-icon">⋯</div>
+        </div>
+        <div class="body">
+          <div class="orb">✨</div>
+          <div class="copy-title">Cut the awkward bits</div>
+          <div class="value-rows">
+            <div class="value-row"><div class="value-icon">⌫</div>Remove "um," "uh," "like," "so"</div>
+            <div class="value-row"><div class="value-icon">⏸</div>Trim long silences (1.0–3.0 s)</div>
+            <div class="value-row"><div class="value-icon">↩︎</div>Review every cut before applying</div>
+          </div>
+          <div style="height:18px;"></div>
+          <div class="upload-cta">Upload Audio</div>
+          <div class="secondary-link">or share from Voice Memos</div>
+        </div>
+        <div class="tab-bar">
+          <div class="tab active">✨<div>Smart Cut</div></div>
+          <div class="tab">🌊<div>Denoise</div></div>
+          <div class="tab">⚞<div>Merge</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Value Prop + CTA</h3>
+      <p>Three-line value pitch above the upload button. Better for first-time users / App Store discovery flow — explains the feature before asking for input.</p>
+    </div>
+  </div>
+
+</div>

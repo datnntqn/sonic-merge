@@ -1,0 +1,60 @@
+<h2>Bento card + detail sheet — what does the user control?</h2>
+<p class="subtitle">You picked C: tap card → detail sheet for occurrences. Two structural choices remain.</p>
+
+<div class="section">
+  <span class="label">The bento card itself</span>
+  <div class="mockup">
+    <div class="mockup-header">"you know" filler card (resting + toggled-off)</div>
+    <div class="mockup-body" style="display:flex;gap:24px;justify-content:center;padding:24px">
+      <div style="background:#fff;border:1px solid rgba(88,86,214,0.15);border-radius:28px;padding:18px 20px;min-width:200px;box-shadow:0 8px 24px rgba(88,86,214,0.18)">
+        <div style="font-size:14px;color:#555">3 occurrences</div>
+        <div style="font-size:22px;font-weight:600;color:#1c1c1e;margin-top:4px">you know</div>
+        <div style="margin-top:12px;font-size:13px;color:#A7C957;font-weight:600">saves ~6s</div>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end">
+          <div style="width:38px;height:22px;background:#A7C957;border-radius:11px;position:relative">
+            <div style="position:absolute;right:2px;top:2px;width:18px;height:18px;background:#fff;border-radius:50%"></div>
+          </div>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.4);border:1px solid rgba(88,86,214,0.10);border-radius:28px;padding:18px 20px;min-width:200px;box-shadow:0 4px 12px rgba(88,86,214,0.08);opacity:0.4">
+        <div style="font-size:14px;color:#555">3 occurrences</div>
+        <div style="font-size:22px;font-weight:700;color:#5856D6;margin-top:4px;text-decoration:line-through">you know</div>
+        <div style="margin-top:12px;font-size:13px;color:#5856D6;font-weight:600;opacity:0.5">saves ~6s</div>
+        <div style="margin-top:14px;display:flex;justify-content:flex-end">
+          <div style="width:38px;height:22px;background:#e5e5ea;border-radius:11px;position:relative">
+            <div style="position:absolute;left:2px;top:2px;width:18px;height:18px;background:#fff;border-radius:50%"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <span class="label">Detail sheet — per-occurrence controls</span>
+  <p>Currently the user can disable individual occurrences (each row has its own checkbox). Should we keep that, or drop to a card-level-only toggle?</p>
+
+  <div class="options">
+    <div class="option" data-choice="full" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Keep per-occurrence checkboxes</h3>
+        <p>Detail sheet rows: ▶ preview · excerpt · 0:20 · ☐ checkbox. User can fine-tune which "you know" instances to cut. More power, more complexity.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="readonly" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>Detail sheet is read-only previews</h3>
+        <p>Detail sheet rows: ▶ preview · excerpt · 0:20 (no checkbox). Only the bento card's group toggle controls cuts. Simpler mental model — "I disable a word, I disable all its occurrences." Match the Premium Studio aesthetic better.</p>
+      </div>
+    </div>
+    <div class="option" data-choice="hybrid" onclick="toggleSelect(this)">
+      <div class="letter">C</div>
+      <div class="content">
+        <h3>Hybrid — group toggle + "Edit instances" link</h3>
+        <p>Detail sheet shows previews read-only by default. A small "Edit individual instances" link reveals checkboxes. Hides complexity by default but keeps power available.</p>
+      </div>
+    </div>
+  </div>
+</div>

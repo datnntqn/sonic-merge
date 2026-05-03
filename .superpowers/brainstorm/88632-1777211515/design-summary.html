@@ -1,0 +1,108 @@
+<h2>Design summary — recommended approach</h2>
+<p class="subtitle">Five decisions locked + defaults for the remaining details. Object to anything; otherwise I'll write the spec.</p>
+
+<div class="section">
+  <span class="label">Approach</span>
+  <p><strong>Visual-only refactor.</strong> Reuse existing ViewModels and services unchanged (<code>SmartCutViewModel</code>, <code>FillerLibrary</code>, <code>EditList</code>). Replace the view layer with new presentation components in <code>SonicMerge/Features/SmartCut/Views/Studio/</code>. Old <code>SmartCutCardView</code>, <code>FillerListPanel</code>, <code>EditFillerListSheet</code> get retired. New components are split for clarity (one file per surface). iOS 17 baseline preserved; iOS 18 features behind <code>#available</code> guards (matches Phase 11 pattern).</p>
+</div>
+
+<div class="section">
+  <span class="label">Locked decisions (your answers)</span>
+  <ul style="line-height:1.7">
+    <li>Filler word card → tap → opens <strong>detail sheet</strong>. Per-occurrence ▶/checkbox controls live there.</li>
+    <li>Smart Cut main: <strong>single-column wide bento cards</strong> for fillers + 1 pauses card. Glass summary card at top, A/B picker, floating Apply Cuts.</li>
+    <li>Edit Filler List: <strong>unified pool</strong>, every capsule has ✕. Default = ✕ toggles off (dimmed inline). Custom = ✕ permanent delete.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <span class="label">Remaining defaults — flag any to change</span>
+
+  <div class="pros-cons" style="grid-template-columns:1fr;gap:12px">
+    <div style="border:1px solid #ddd;border-radius:10px;padding:12px">
+      <h4 style="margin-top:0">1. Pause slider</h4>
+      <ul style="margin:0">
+        <li>Continuous 1.0–3.0s (no fixed steps)</li>
+        <li>Rolling-digit readout via <code>contentTransition(.numericText())</code></li>
+        <li>Light haptic at 0.25s snap points while dragging</li>
+        <li>Live "saves 0:31" updates as user drags</li>
+        <li>reduceMotion → no rolling-digit animation, just snap</li>
+      </ul>
+    </div>
+
+    <div style="border:1px solid #ddd;border-radius:10px;padding:12px">
+      <h4 style="margin-top:0">2. Pulsating saves badge</h4>
+      <ul style="margin:0">
+        <li>Scale 1.0 ↔ 1.04, ~1.6s ease-in-out, infinite</li>
+        <li>Lime green outer glow shadow synced (0.40 ↔ 0.65 alpha)</li>
+        <li>reduceMotion → static, no pulse</li>
+        <li>Driven by single TimelineView (Phase 11 pattern)</li>
+      </ul>
+    </div>
+
+    <div style="border:1px solid #ddd;border-radius:10px;padding:12px">
+      <h4 style="margin-top:0">3. Bento card visual</h4>
+      <ul style="margin:0">
+        <li>28pt continuous squircle, white card surface (semantic.surfaceCard)</li>
+        <li>Soft Deep Indigo shadow: 16pt radius, 6pt y, opacity 0.10–0.15</li>
+        <li>Group toggle: tap-and-hold on card body (or dedicated capsule trailing)</li>
+        <li>Toggle-off state: text strikethrough, weight bold, color Deep Indigo, card opacity 0.40, shadow softened</li>
+      </ul>
+    </div>
+
+    <div style="border:1px solid #ddd;border-radius:10px;padding:12px">
+      <h4 style="margin-top:0">4. Detail sheet (occurrence drill-in)</h4>
+      <ul style="margin:0">
+        <li><code>.sheet</code> presentation, medium detent first, large detent available</li>
+        <li>Glassmorphic background (ultraThinMaterial)</li>
+        <li>Occurrence rows: capsule pill containing ▶ · excerpt · 0:20 · ☐</li>
+        <li>Footer: total occurrences + total saves time</li>
+      </ul>
+    </div>
+
+    <div style="border:1px solid #ddd;border-radius:10px;padding:12px">
+      <h4 style="margin-top:0">5. Color audit</h4>
+      <ul style="margin:0">
+        <li>"Reset" link top-right of summary card → Deep Indigo @ 50% opacity (replaces system blue)</li>
+        <li>"Edit filler list" entry-point link → Deep Indigo @ 50% opacity</li>
+        <li>Original/Cleaned picker: Deep Indigo selected (already correct in current SegmentedPill — confirmed)</li>
+        <li>"saves" labels stay Lime Green; never Deep Indigo</li>
+      </ul>
+    </div>
+
+    <div style="border:1px solid #ddd;border-radius:10px;padding:12px">
+      <h4 style="margin-top:0">6. Edit Filler List details</h4>
+      <ul style="margin:0">
+        <li>Tag capsule: <code>ultraThinMaterial</code> background, 1pt Deep Indigo border @ 20% opacity, 14pt corner radius</li>
+        <li>Default-off state: opacity 0.55 + line-through; ✕ replaced with no icon (tap capsule body to re-enable)</li>
+        <li>Add input: native TextField wrapped in same capsule chrome; submit on Enter</li>
+        <li>Empty state for custom words: subtle hint "Type to add a word…"</li>
+      </ul>
+    </div>
+
+    <div style="border:1px solid #ddd;border-radius:10px;padding:12px">
+      <h4 style="margin-top:0">7. Apply Cuts CTA</h4>
+      <ul style="margin:0">
+        <li>Keep existing <code>FloatingActionBar</code> at bottom of <code>CleaningLabView</code> — no changes</li>
+        <li>Already shows "Apply Cuts" with sparkle icon when Smart Cut tab is active</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<div class="options" style="margin-top:24px">
+  <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Looks good — write the spec</h3>
+      <p>I'll save the design to <code>docs/superpowers/specs/2026-04-26-smartcut-studio-refactor-design.md</code>, then run the spec review loop, then hand it back for your read-through.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="changes" onclick="toggleSelect(this)">
+    <div class="letter">✕</div>
+    <div class="content">
+      <h3>Some defaults need to change</h3>
+      <p>Tell me which numbered item(s), in the terminal.</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,121 @@
+<h2>Smart Cut — proposed full screen layout</h2>
+<p class="subtitle">Combining decisions so far. Tell me what's wrong / what to change.</p>
+
+<div class="split">
+
+  <!-- Mockup: 2-column grid -->
+  <div class="mockup">
+    <div class="mockup-header">A · 2-column bento grid</div>
+    <div class="mockup-body" style="background:#f4f4f7;padding:14px">
+      <!-- AI Denoise / Smart Cut tabs -->
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="flex:1;text-align:center;padding:8px;border-radius:18px;border:1px solid #5856D6;color:#5856D6;font-size:11px">AI Denoise</div>
+        <div style="flex:1;text-align:center;padding:8px;border-radius:18px;background:#A7C957;color:#000;font-size:11px;font-weight:600">Smart Cut</div>
+      </div>
+      <!-- Glass Summary Card -->
+      <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(10px);border:1px solid rgba(88,86,214,0.18);border-radius:24px;padding:16px;box-shadow:0 8px 24px rgba(88,86,214,0.10);margin-bottom:12px">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:11px;color:#5856D6;font-weight:600">✨ SMART CUT SUMMARY</div>
+            <div style="font-size:13px;margin-top:6px;color:#1c1c1e">7 fillers + 2 long pauses</div>
+          </div>
+          <div style="font-size:11px;color:#5856D6;opacity:0.5">Reset</div>
+        </div>
+        <div style="display:inline-block;background:#A7C957;padding:6px 12px;border-radius:12px;font-weight:700;font-size:14px;margin-top:10px;box-shadow:0 0 12px rgba(167,201,87,0.6)">saves ~31s</div>
+      </div>
+      <!-- A/B picker -->
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <div style="flex:1;text-align:center;padding:7px;border-radius:14px;background:#5856D6;color:#fff;font-size:11px;font-weight:600">Original</div>
+        <div style="flex:1;text-align:center;padding:7px;border-radius:14px;border:1px solid #5856D6;color:#5856D6;font-size:11px">Cleaned</div>
+      </div>
+      <!-- Bento 2x2 -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div style="background:#fff;border-radius:22px;padding:14px;box-shadow:0 6px 16px rgba(88,86,214,0.12)">
+          <div style="font-size:9px;color:#888">3 OCCURRENCES</div>
+          <div style="font-size:15px;font-weight:600;margin-top:3px">you know</div>
+          <div style="font-size:10px;color:#A7C957;font-weight:600;margin-top:8px">saves ~6s</div>
+        </div>
+        <div style="background:#fff;border-radius:22px;padding:14px;box-shadow:0 6px 16px rgba(88,86,214,0.12)">
+          <div style="font-size:9px;color:#888">2 OCCURRENCES</div>
+          <div style="font-size:15px;font-weight:600;margin-top:3px">basically</div>
+          <div style="font-size:10px;color:#A7C957;font-weight:600;margin-top:8px">saves ~3s</div>
+        </div>
+        <div style="background:#fff;border-radius:22px;padding:14px;box-shadow:0 6px 16px rgba(88,86,214,0.12)">
+          <div style="font-size:9px;color:#888">2 OCCURRENCES</div>
+          <div style="font-size:15px;font-weight:600;margin-top:3px;text-decoration:line-through;color:#5856D6;font-weight:700;opacity:0.5">like</div>
+          <div style="font-size:10px;color:#5856D6;font-weight:600;margin-top:8px;opacity:0.5">saves ~2s</div>
+        </div>
+        <div style="background:#fff;border-radius:22px;padding:12px;box-shadow:0 6px 16px rgba(88,86,214,0.12)">
+          <div style="font-size:9px;color:#888">⏱ LONG PAUSES</div>
+          <div style="font-size:13px;font-weight:600;margin-top:3px">1.5s</div>
+          <div style="height:3px;background:#e5e5ea;border-radius:2px;margin-top:6px;position:relative">
+            <div style="height:3px;background:#5856D6;border-radius:2px;width:50%"></div>
+            <div style="position:absolute;left:50%;top:-2px;width:7px;height:7px;background:#5856D6;border-radius:50%"></div>
+          </div>
+          <div style="font-size:10px;color:#A7C957;font-weight:600;margin-top:6px">saves 0:31</div>
+        </div>
+      </div>
+      <!-- Floating CTA -->
+      <div style="margin:14px -14px -14px;padding:10px 14px;background:rgba(255,255,255,0.85);backdrop-filter:blur(12px);border-top:1px solid rgba(0,0,0,0.05)">
+        <div style="background:#A7C957;text-align:center;padding:10px;border-radius:24px;font-weight:700;font-size:13px">✨ Apply Cuts</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mockup: 1-column -->
+  <div class="mockup">
+    <div class="mockup-header">B · single-column tall</div>
+    <div class="mockup-body" style="background:#f4f4f7;padding:14px">
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <div style="flex:1;text-align:center;padding:8px;border-radius:18px;border:1px solid #5856D6;color:#5856D6;font-size:11px">AI Denoise</div>
+        <div style="flex:1;text-align:center;padding:8px;border-radius:18px;background:#A7C957;color:#000;font-size:11px;font-weight:600">Smart Cut</div>
+      </div>
+      <div style="background:rgba(255,255,255,0.65);backdrop-filter:blur(10px);border:1px solid rgba(88,86,214,0.18);border-radius:24px;padding:16px;margin-bottom:12px">
+        <div style="font-size:11px;color:#5856D6;font-weight:600">✨ SMART CUT SUMMARY</div>
+        <div style="font-size:13px;margin-top:6px">7 fillers + 2 long pauses</div>
+        <div style="display:inline-block;background:#A7C957;padding:6px 12px;border-radius:12px;font-weight:700;font-size:14px;margin-top:10px;box-shadow:0 0 12px rgba(167,201,87,0.6)">saves ~31s</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:12px">
+        <div style="flex:1;text-align:center;padding:7px;border-radius:14px;background:#5856D6;color:#fff;font-size:11px;font-weight:600">Original</div>
+        <div style="flex:1;text-align:center;padding:7px;border-radius:14px;border:1px solid #5856D6;color:#5856D6;font-size:11px">Cleaned</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <div style="background:#fff;border-radius:22px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:9px;color:#888">3×</div><div style="font-size:15px;font-weight:600">you know</div></div>
+          <div style="font-size:11px;color:#A7C957;font-weight:600">~6s</div>
+        </div>
+        <div style="background:#fff;border-radius:22px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:9px;color:#888">2×</div><div style="font-size:15px;font-weight:600">basically</div></div>
+          <div style="font-size:11px;color:#A7C957;font-weight:600">~3s</div>
+        </div>
+        <div style="background:#fff;border-radius:22px;padding:14px;display:flex;justify-content:space-between;align-items:center">
+          <div><div style="font-size:9px;color:#888">2×</div><div style="font-size:15px;font-weight:600;text-decoration:line-through;color:#5856D6;opacity:0.5">like</div></div>
+          <div style="font-size:11px;color:#5856D6;opacity:0.5">~2s</div>
+        </div>
+        <div style="background:#fff;border-radius:22px;padding:14px">
+          <div style="display:flex;justify-content:space-between"><div style="font-size:9px;color:#888">⏱ LONG PAUSES</div><div style="font-size:11px;color:#A7C957;font-weight:600">0:31</div></div>
+          <div style="font-size:13px;font-weight:600;margin-top:6px">1.5s</div>
+          <div style="height:3px;background:#e5e5ea;border-radius:2px;margin-top:6px"><div style="height:3px;background:#5856D6;border-radius:2px;width:50%"></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top:24px">
+  <div class="option" data-choice="A" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>2-column bento grid</h3>
+      <p>Information-dense. Looks more "studio". Cards smaller — savings number is the only data shown per card. Tap card → detail sheet for occurrences.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Single-column wide cards</h3>
+      <p>Each card spans full width. Word + occurrence count + savings shown horizontally. Easier to read; more vertical scrolling. Less "bento", more "list-of-cards".</p>
+    </div>
+  </div>
+</div>

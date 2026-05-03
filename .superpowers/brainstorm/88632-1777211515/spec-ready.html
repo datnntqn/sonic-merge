@@ -1,0 +1,46 @@
+<h2>Spec approved by reviewer (3rd pass)</h2>
+<p class="subtitle">Ready for your read-through. Path: <code>docs/superpowers/specs/2026-04-26-smartcut-studio-refactor-design.md</code> (commit <code>ac5158d</code> + clarity follow-up).</p>
+
+<div class="section">
+  <span class="label">What changed across review passes</span>
+  <ul style="line-height:1.7">
+    <li><strong>Pass 1:</strong> Found that <code>scp-t1/scp-t2/scp-t3</code> live on a different branch (<code>smartcut-premium-ui</code>) and were never merged to main, so the cached-segments + <code>setPauseThreshold</code> mechanism the spec assumed doesn't exist. Spec rewrote to fold these foundational additions into chunk #1.</li>
+    <li><strong>Pass 2:</strong> Three blocking factual errors. <code>PauseDetector</code> is a static enum, not an init+method. Segment type is <code>TranscriptionState.RecognizedSegment</code>, not the fictional <code>TranscribedSegment</code>. <code>PauseEdit.id</code> has no rounding (it's just <code>"pause@\(lowerBound)"</code>). All corrected.</li>
+    <li><strong>Pass 3:</strong> Approved. One advisory clarity rewrite applied: <code>setPauseThreshold</code> doesn't fire its own haptic; caller does.</li>
+  </ul>
+</div>
+
+<div class="section">
+  <span class="label">In-scope behavior additions (not just visual)</span>
+  <ul style="line-height:1.7">
+    <li>Extend <code>SmartCutService.Update.completed</code> payload with segments + duration.</li>
+    <li>Add <code>SmartCutViewModel.setPauseThreshold(_:)</code> for live recompute.</li>
+    <li>Add <code>FillerLibrary.restoreAllDefaults()</code> one-line helper.</li>
+    <li>Add two optional tint parameters to <code>SegmentedPill</code> (non-breaking; defaults preserve current).</li>
+  </ul>
+</div>
+
+<div class="section">
+  <span class="label">View-layer replacements</span>
+  <ul style="line-height:1.7">
+    <li>Retire: <code>SmartCutCardView</code>, <code>FillerListPanel</code>, <code>EditFillerListSheet</code>.</li>
+    <li>New: 10 files under <code>SonicMerge/Features/SmartCut/Views/Studio/</code>.</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:24px">
+  <div class="option" data-choice="ok" onclick="toggleSelect(this)">
+    <div class="letter">✓</div>
+    <div class="content">
+      <h3>Spec looks good — write the implementation plan</h3>
+      <p>I'll invoke the writing-plans skill next.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="changes" onclick="toggleSelect(this)">
+    <div class="letter">✕</div>
+    <div class="content">
+      <h3>I want to change something in the spec</h3>
+      <p>Tell me which section in the terminal.</p>
+    </div>
+  </div>
+</div>

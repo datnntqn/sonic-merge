@@ -1,0 +1,67 @@
+<h2>Where does the Long Pauses control live?</h2>
+<p class="subtitle">It needs a slider + live "saves 0:31" readout. Three layouts. Click an option to lock it in.</p>
+
+<div class="cards" style="display:grid;grid-template-columns:repeat(3,1fr);gap:16px">
+
+  <!-- A: standalone section -->
+  <div class="card" data-choice="standalone" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f4f4f7;padding:14px">
+      <div style="font-size:11px;color:#999;margin-bottom:6px">SUMMARY ✨</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px">you know</div>
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px">basically</div>
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px">like</div>
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px;opacity:0.5"></div>
+      </div>
+      <div style="margin-top:10px;font-size:10px;color:#5856D6;font-weight:600">Long Pauses</div>
+      <div style="background:#fff;border-radius:12px;padding:10px;margin-top:4px">
+        <div style="height:4px;background:#5856D6;border-radius:2px;width:50%"></div>
+        <div style="font-size:11px;margin-top:6px">1.5s · saves 0:31</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A. Standalone section</h3>
+      <p>Own region under the filler card grid, no squircle. Distinct from filler cards — reads as a "global setting".</p>
+    </div>
+  </div>
+
+  <!-- B: as another bento card -->
+  <div class="card" data-choice="bento-slot" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f4f4f7;padding:14px">
+      <div style="font-size:11px;color:#999;margin-bottom:6px">SUMMARY ✨</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px">you know</div>
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px">basically</div>
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px">like</div>
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:10px;border:1px dashed #5856D6">
+          Pauses ━●━<br/>1.5s · 0:31
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B. Slot in the bento grid</h3>
+      <p>Pauses card sits alongside filler cards. Same 28pt squircle, but contains slider + saves badge instead of word + occurrences. Visual unity, but mixes two control kinds.</p>
+    </div>
+  </div>
+
+  <!-- C: inside summary card -->
+  <div class="card" data-choice="in-summary" onclick="toggleSelect(this)">
+    <div class="card-image" style="background:#f4f4f7;padding:14px">
+      <div style="background:rgba(255,255,255,0.7);border:1px solid rgba(88,86,214,0.15);border-radius:18px;padding:10px;backdrop-filter:blur(6px)">
+        <div style="font-size:11px;color:#999">SUMMARY ✨</div>
+        <div style="font-size:13px;margin-top:4px">7 fillers · 2 pauses</div>
+        <div style="display:inline-block;background:#A7C957;color:#000;padding:3px 8px;border-radius:9px;font-size:11px;margin-top:6px">saves ~31s</div>
+        <div style="height:3px;background:#5856D6;border-radius:2px;width:50%;margin-top:10px"></div>
+        <div style="font-size:10px;margin-top:4px">Pauses 1.5s · saves 0:31</div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:8px">
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px">you know</div>
+        <div style="background:#fff;border-radius:14px;padding:10px;font-size:11px">basically</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C. Inside the Summary Card</h3>
+      <p>Slider is part of the glass summary at top. Pauses + filler count feel like one cohesive "setup" panel. Deeper mental model: "summary = configuration + result".</p>
+    </div>
+  </div>
+</div>

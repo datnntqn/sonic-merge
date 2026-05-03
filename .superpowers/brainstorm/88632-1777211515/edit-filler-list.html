@@ -1,0 +1,87 @@
+<h2>Edit Filler List — section structure</h2>
+<p class="subtitle">Default library words can be enabled/disabled but never deleted (they're built-in). Custom words can be deleted. Two ways to surface this.</p>
+
+<div class="split">
+
+  <!-- Mockup A -->
+  <div class="mockup">
+    <div class="mockup-header">A · Two sections, distinct affordances</div>
+    <div class="mockup-body" style="background:#f4f4f7;padding:14px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">Edit filler list</div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px">DEFAULT LIBRARY · tap to toggle</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 12px;font-size:12px;color:#1c1c1e">um</div>
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 12px;font-size:12px;color:#1c1c1e">uh</div>
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 12px;font-size:12px;color:#1c1c1e">like</div>
+        <div style="background:rgba(255,255,255,0.4);border:1px dashed rgba(88,86,214,0.3);border-radius:14px;padding:5px 12px;font-size:12px;color:#5856D6;text-decoration:line-through;opacity:0.55">basically</div>
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 12px;font-size:12px">you know</div>
+        <div style="background:rgba(255,255,255,0.4);border:1px dashed rgba(88,86,214,0.3);border-radius:14px;padding:5px 12px;font-size:12px;color:#5856D6;text-decoration:line-through;opacity:0.55">sort of</div>
+      </div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px">YOUR WORDS · ✕ to delete</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 8px 5px 12px;font-size:12px;display:flex;align-items:center;gap:6px">
+          <span>literally</span>
+          <span style="color:#5856D6;font-size:11px;cursor:pointer">✕</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 8px 5px 12px;font-size:12px;display:flex;align-items:center;gap:6px">
+          <span>kinda</span>
+          <span style="color:#5856D6;font-size:11px;cursor:pointer">✕</span>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.85);border:1px solid rgba(0,0,0,0.06);border-radius:14px;padding:9px 12px;font-size:12px;color:#999">+ Add a word…</div>
+    </div>
+  </div>
+
+  <!-- Mockup B -->
+  <div class="mockup">
+    <div class="mockup-header">B · Unified pool, badge marks "default"</div>
+    <div class="mockup-body" style="background:#f4f4f7;padding:14px">
+      <div style="font-size:14px;font-weight:600;margin-bottom:6px">Edit filler list</div>
+      <div style="font-size:10px;color:#888;margin-bottom:8px">ALL FILLER WORDS</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 8px 5px 12px;font-size:12px;display:flex;align-items:center;gap:6px">
+          <span style="background:#5856D6;color:#fff;font-size:8px;padding:1px 5px;border-radius:5px">default</span>
+          <span>um</span>
+          <span style="color:#5856D6;font-size:11px;cursor:pointer">✕</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 8px 5px 12px;font-size:12px;display:flex;align-items:center;gap:6px">
+          <span style="background:#5856D6;color:#fff;font-size:8px;padding:1px 5px;border-radius:5px">default</span>
+          <span>like</span>
+          <span style="color:#5856D6;font-size:11px;cursor:pointer">✕</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.4);border:1px solid rgba(88,86,214,0.15);border-radius:14px;padding:5px 8px 5px 12px;font-size:12px;display:flex;align-items:center;gap:6px;opacity:0.55">
+          <span style="background:#5856D6;color:#fff;font-size:8px;padding:1px 5px;border-radius:5px">default</span>
+          <span style="text-decoration:line-through">basically</span>
+          <span style="color:#5856D6;font-size:11px;cursor:pointer">✕</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 8px 5px 12px;font-size:12px;display:flex;align-items:center;gap:6px">
+          <span>literally</span>
+          <span style="color:#5856D6;font-size:11px;cursor:pointer">✕</span>
+        </div>
+        <div style="background:rgba(255,255,255,0.7);backdrop-filter:blur(6px);border:1px solid rgba(88,86,214,0.2);border-radius:14px;padding:5px 8px 5px 12px;font-size:12px;display:flex;align-items:center;gap:6px">
+          <span>kinda</span>
+          <span style="color:#5856D6;font-size:11px;cursor:pointer">✕</span>
+        </div>
+      </div>
+      <div style="background:rgba(255,255,255,0.85);border:1px solid rgba(0,0,0,0.06);border-radius:14px;padding:9px 12px;font-size:12px;color:#999">+ Add a word…</div>
+    </div>
+  </div>
+
+</div>
+
+<div class="options" style="margin-top:24px">
+  <div class="option" data-choice="A" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Two sections, distinct affordances</h3>
+      <p>Default Library: tap capsule to toggle on/off (no ✕). Your Words: each has ✕ for delete, plus add input. Clear separation; no risk of accidentally "deleting" a default.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="B" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Unified pool with "default" badge</h3>
+      <p>One section. Every capsule has ✕. ✕ on default → toggles off (still visible, dimmed). ✕ on custom → permanent delete. Compact; one mental model. Risk: ✕ on default that was already off needs different feedback (re-enable?).</p>
+    </div>
+  </div>
+</div>

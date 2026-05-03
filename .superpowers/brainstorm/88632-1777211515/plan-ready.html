@@ -1,0 +1,41 @@
+<h2>Plan complete and saved</h2>
+<p class="subtitle">Path: <code>docs/superpowers/plans/2026-04-26-smartcut-studio-refactor.md</code></p>
+
+<div class="section">
+  <span class="label">Eight atomic chunks</span>
+  <ol style="line-height:1.8">
+    <li><strong>Foundational service + VM</strong> — Update.completed payload extension, cached segments, setPauseThreshold + 4 TDD tests. <em>~100 lines.</em></li>
+    <li><strong>SegmentedPill enhancement</strong> — Two optional tint params (non-breaking). <em>~10 lines.</em></li>
+    <li><strong>Studio chrome primitives</strong> — SmartCutFormatting, StudioGlassChrome, StudioFlowLayout. <em>~180 lines.</em></li>
+    <li><strong>Summary card + pulse badge</strong> — StudioPulseSavesBadge, StudioSummaryCard. <em>~120 lines.</em></li>
+    <li><strong>Bento chassis + content rows</strong> — StudioBentoCard, FillerCategoryRow, PauseControlRow. <em>~220 lines.</em></li>
+    <li><strong>Detail sheet</strong> — FillerOccurrenceSheet (with playWindow migration). <em>~150 lines.</em></li>
+    <li><strong>Edit Filler List</strong> — restoreAllDefaults() + EditFillerListStudioSheet. <em>~150 lines.</em></li>
+    <li><strong>Container + swap + retire</strong> — SmartCutStudioContainer, swap call-site, delete 3 old files. <em>~250 lines.</em></li>
+  </ol>
+</div>
+
+<div class="section">
+  <span class="label">Reviewer findings (all patched)</span>
+  <ul style="line-height:1.6">
+    <li>Pass 1 caught factual API errors in Chunk 1 — PauseDetector signature, segment type, no-op semantics.</li>
+    <li>Pass 2 caught Chunk 8 issues — wrong call-site signature (<code>vm:</code> not <code>viewModel:</code>; no <code>denoisedURL</code>), simplified scaffolds dropping shipped features. All 4 non-results scaffolds now port 1:1 from the existing <code>SmartCutCardView</code>.</li>
+  </ul>
+</div>
+
+<div class="options" style="margin-top:24px">
+  <div class="option" data-choice="execute" onclick="toggleSelect(this)">
+    <div class="letter">▶</div>
+    <div class="content">
+      <h3>Execute the plan</h3>
+      <p>I have subagents available, so I'll use <code>superpowers:subagent-driven-development</code> — a fresh subagent per chunk with two-stage review per the skill's standard.</p>
+    </div>
+  </div>
+  <div class="option" data-choice="review" onclick="toggleSelect(this)">
+    <div class="letter">📖</div>
+    <div class="content">
+      <h3>I want to read the plan first</h3>
+      <p>Tell me when ready or call out anything you want changed.</p>
+    </div>
+  </div>
+</div>
