@@ -42,17 +42,7 @@ struct MixingStationView: View {
                     VStack(spacing: 0) {
                         HStack {
                             Spacer()
-                            Button {
-                                showDocumentPicker = true
-                            } label: {
-                                Image(systemName: "waveform.badge.plus")
-                                    .font(.system(size: 18, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 44, height: 44)
-                                    .background(Circle().fill(Color(uiColor: semantic.accentAction)))
-                                    .shadow(color: Color(uiColor: semantic.accentAction).opacity(0.28), radius: 10, x: 0, y: 4)
-                            }
-                            .accessibilityLabel("Add audio file")
+                            CircularImportButton(size: .pinned) { showDocumentPicker = true }
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
@@ -157,17 +147,7 @@ struct MixingStationView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
-            Button {
-                showDocumentPicker = true
-            } label: {
-                Image(systemName: "waveform.badge.plus")
-                    .font(.system(size: 26, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 60, height: 60)
-                    .background(Circle().fill(Color(uiColor: semantic.accentAction)))
-                    .shadow(color: Color(uiColor: semantic.accentAction).opacity(0.32), radius: 16, x: 0, y: 6)
-            }
-            .accessibilityLabel("Add audio file")
+            CircularImportButton(size: .hero) { showDocumentPicker = true }
         }
     }
 
