@@ -58,7 +58,7 @@ struct CleaningLabView: View {
     /// space so the primary CTA is above the fold.
     @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
 
-    @State private var viewModel = CleaningLabViewModel()
+    @State private var viewModel = DenoiseSessionViewModel()
     @State private var selectedTab: CleaningLabTab = .denoise
     @State private var showExportSheet = false
     @State private var showExportProgressSheet = false
@@ -120,13 +120,8 @@ struct CleaningLabView: View {
         .navigationTitle("Cleaning Lab")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { toolbarContent }
-        // sc-t19: hand the merged URL to the VM so Smart Cut has an input
-        // even before the user runs Denoise. clt-t5: deep-link handler
-        // moved here from SmartCutCardView so it fires regardless of which
-        // tab is active on first entry.
         .onAppear {
-            viewModel.setMergedFileURL(mergedFileURL)
-            handlePendingSmartCutOpenIfNeeded()
+            viewModel.mergedFileURL = mergedFileURL
         }
         // Export format picker
         .sheet(isPresented: $showExportSheet) {
@@ -203,13 +198,14 @@ struct CleaningLabView: View {
         }
     }
 
-    /// Smart Cut tab — single SmartCutStudioContainer. Deep-link auto-open is
-    /// handled by the outer `.onAppear` on `body` (see
-    /// `handlePendingSmartCutOpenIfNeeded`).
+    /// Smart Cut tab content — moved to its own top-level tab. The legacy
+    /// segmented-pill route stays alive only for the brief Chunk 4/5 window;
+    /// the parent CleaningLabView retires entirely in Chunk 5.
     @ViewBuilder
     private var smartCutContent: some View {
-        SmartCutStudioContainer(vm: viewModel.smartCutVM,
-                                library: $viewModel.fillerLibrary)
+        Text("Smart Cut moved to its own tab")
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     // MARK: - Floating Action Bar
@@ -222,12 +218,7 @@ struct CleaningLabView: View {
         case .denoise:
             return true  // always-show; button itself is .disabled when not actionable
         case .smartCut:
-            let s = viewModel.smartCutVM.state
-            switch s {
-            case .results: return true
-            case .applied: return viewModel.smartCutVM.hasDirtyEditsSinceApply
-            case .idle, .analyzing, .stale, .error: return false
-            }
+            return false
         }
     }
 
@@ -237,7 +228,7 @@ struct CleaningLabView: View {
         case .denoise:
             denoiseFloatingButton
         case .smartCut:
-            smartCutFloatingButton
+            EmptyView()
         }
     }
 
@@ -255,60 +246,6 @@ struct CleaningLabView: View {
         }
         .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
         .disabled(viewModel.isProcessing || viewModel.mergedFileURL == nil)
-    }
-
-    @ViewBuilder
-    private var smartCutFloatingButton: some View {
-        let vm: SmartCutViewModel = viewModel.smartCutVM
-        switch vm.state {
-        case .results:
-            Button { Task { await vm.apply() } } label: {
-                Label("Apply Cuts", systemImage: "sparkles")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(maxWidth: .infinity)
-            }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
-        case .applied:
-            if vm.hasDirtyEditsSinceApply {
-                Button { Task { await vm.apply() } } label: {
-                    Label("Re-apply", systemImage: "arrow.clockwise")
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.85)
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
-            } else {
-                EmptyView()
-            }
-        case .idle, .analyzing, .stale, .error:
-            EmptyView()
-        }
-    }
-
-    // MARK: - Deep-link
-
-    /// Deep-link handler — must live on the OUTER `.onAppear` so it fires
-    /// regardless of which tab is active on first entry. Auto-switches to the
-    /// Smart Cut tab when a pending hash matches the current input.
-    private func handlePendingSmartCutOpenIfNeeded() {
-        // Claim-first pattern: read AND clear the pending hash synchronously so a
-        // re-fire of .onAppear (or any other call site) cannot start a duplicate
-        // analyze Task before the first one finishes.
-        guard let pending = PendingSmartCutOpen.shared.hash,
-              let inputURL = viewModel.smartCutVM.inputURL else {
-            return
-        }
-        PendingSmartCutOpen.shared.hash = nil
-        Task {
-            let currentHash = try? await SourceHasher.sha256Hex(of: inputURL)
-            if currentHash == pending {
-                await MainActor.run {
-                    selectedTab = .smartCut
-                    viewModel.smartCutVM.analyze()
-                }
-            }
-        }
     }
 
     // MARK: - Subviews

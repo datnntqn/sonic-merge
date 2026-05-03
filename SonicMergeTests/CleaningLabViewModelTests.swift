@@ -1,9 +1,9 @@
 //
-//  CleaningLabViewModelTests.swift
+//  DenoiseSessionViewModelTests.swift
 //  SonicMergeTests
 //
-//  TDD tests for CleaningLabViewModel (Plan 03-03, DNS-01/DNS-02/DNS-03/UX-02).
-//  RED phase: CleaningLabViewModel does not exist until Wave 3 (Plan 03-03).
+//  TDD tests for DenoiseSessionViewModel (Plan 03-03, DNS-01/DNS-02/DNS-03/UX-02).
+//  RED phase: DenoiseSessionViewModel does not exist until Wave 3 (Plan 03-03).
 //
 //  These tests cover the five observable behaviors:
 //    1. Default state: intensity=0.75, hasDenoisedResult=false, isProcessing=false
@@ -18,47 +18,47 @@ import Foundation
 @testable import SonicMerge
 
 @MainActor
-struct CleaningLabViewModelTests {
+struct DenoiseSessionViewModelTests {
 
     // MARK: - Initial State
 
     @Test func testDefaultIntensityIs0_75() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.intensity == 0.75, "intensity must default to 0.75 per CONTEXT.md locked decision")
     }
 
     @Test func testDefaultHasDenoisedResultIsFalse() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.hasDenoisedResult == false, "hasDenoisedResult must be false until denoise() completes")
     }
 
     @Test func testDefaultIsProcessingIsFalse() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.isProcessing == false)
     }
 
     @Test func testDefaultIsHoldingOriginalIsFalse() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.isHoldingOriginal == false)
     }
 
     @Test func testDefaultShowsStaleResultBannerIsFalse() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.showsStaleResultBanner == false)
     }
 
     @Test func testDefaultWaveformPeaksIsEmpty() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.waveformPeaks.isEmpty, "waveformPeaks must be [] before first denoise")
     }
 
     @Test func testDefaultProgressIsZero() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.progress == 0.0)
     }
 
     @Test func testDefaultErrorMessageIsNil() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.errorMessage == nil)
     }
 
@@ -66,7 +66,7 @@ struct CleaningLabViewModelTests {
 
     @Test func testMarkClipsChangedDoesNotSetBannerWhenNoResult() {
         // When hasDenoisedResult=false, markClipsChanged() must NOT set the stale banner
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         #expect(vm.hasDenoisedResult == false)
         vm.markClipsChanged()
         #expect(vm.showsStaleResultBanner == false,
@@ -78,7 +78,7 @@ struct CleaningLabViewModelTests {
         // helper that exposes it for test purposes, OR by verifying the logic:
         // We set hasDenoisedResult manually (it is a var, not private(set)) and call
         // markClipsChanged() — the banner should flip to true.
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         vm.hasDenoisedResult = true  // simulate post-denoise state
         vm.markClipsChanged()
         #expect(vm.showsStaleResultBanner == true,
@@ -88,7 +88,7 @@ struct CleaningLabViewModelTests {
     // MARK: - cancelDenoising()
 
     @Test func testCancelDenoisingResetsIsProcessing() {
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         // Force isProcessing to true to simulate in-flight state
         vm.isProcessing = true
         vm.cancelDenoising()
@@ -102,7 +102,7 @@ struct CleaningLabViewModelTests {
         // When false, it should be a no-op (no crash). isHoldingOriginal not set by holdBegan —
         // the view drives that flag; these methods perform AVAudioPlayer operations.
         // We verify no crash occurs on fresh VM.
-        let vm = CleaningLabViewModel()
+        let vm = DenoiseSessionViewModel()
         vm.holdBegan()  // must not crash when hasDenoisedResult=false
         vm.holdEnded()  // must not crash when hasDenoisedResult=false
     }
@@ -113,7 +113,7 @@ struct CleaningLabViewModelTests {
         // Verify that the ViewModel can be constructed with custom service instances
         let noiseService = NoiseReductionService()
         let waveService = WaveformService()
-        let vm = CleaningLabViewModel(
+        let vm = DenoiseSessionViewModel(
             noiseReductionService: noiseService,
             waveformService: waveService
         )
