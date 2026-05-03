@@ -66,7 +66,7 @@ struct SmartCutHomeView: View {
             Text("Cut fillers in seconds")
                 .font(.system(.title3, design: .rounded, weight: .semibold))
                 .foregroundStyle(Color(uiColor: semantic.textPrimary))
-            Text("Upload a recording and we'll find every \"um,\" \"uh,\" and long pause.")
+            Text("Upload a recording and we'll find every invalid word and long pause.")
                 .font(.system(.body, design: .rounded))
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 .multilineTextAlignment(.center)
