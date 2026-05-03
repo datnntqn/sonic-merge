@@ -34,7 +34,12 @@ struct SmartCutHomeView: View {
             }
         }
         .navigationTitle("Smart Cut")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ThemeToggleButton()
+            }
+        }
         .fileImporter(
             isPresented: $showFileImporter,
             allowedContentTypes: UTType.audioImportTypes,
@@ -60,8 +65,13 @@ struct SmartCutHomeView: View {
     private var emptyState: some View {
         VStack(spacing: SonicMergeTheme.Spacing.md) {
             Image(systemName: "sparkles")
-                .font(.system(size: 56, weight: .bold))
+                .font(.system(size: 38, weight: .bold))
                 .foregroundStyle(Color(uiColor: semantic.accentAI))
+                .frame(width: 76, height: 76)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color(uiColor: semantic.accentAI).opacity(0.18))
+                )
                 .accessibilityHidden(true)
             Text("Cut fillers in seconds")
                 .font(.system(.title3, design: .rounded, weight: .semibold))
@@ -74,9 +84,14 @@ struct SmartCutHomeView: View {
             Button {
                 showFileImporter = true
             } label: {
-                Label("Upload Audio", systemImage: "plus.circle.fill")
+                Image(systemName: "waveform.badge.plus")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 60, height: 60)
+                    .background(Circle().fill(Color(uiColor: semantic.accentAction)))
+                    .shadow(color: Color(uiColor: semantic.accentAction).opacity(0.32), radius: 16, x: 0, y: 6)
             }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+            .accessibilityLabel("Add audio file")
         }
     }
 
@@ -84,13 +99,20 @@ struct SmartCutHomeView: View {
 
     private var loadedState: some View {
         VStack(spacing: 0) {
-            Button {
-                showFileImporter = true
-            } label: {
-                Label("Upload Audio", systemImage: "plus.circle.fill")
-                    .frame(maxWidth: .infinity)
+            HStack {
+                Spacer()
+                Button {
+                    showFileImporter = true
+                } label: {
+                    Image(systemName: "waveform.badge.plus")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 44, height: 44)
+                        .background(Circle().fill(Color(uiColor: semantic.accentAction)))
+                        .shadow(color: Color(uiColor: semantic.accentAction).opacity(0.28), radius: 10, x: 0, y: 4)
+                }
+                .accessibilityLabel("Add audio file")
             }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 8)
