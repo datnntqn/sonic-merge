@@ -7,16 +7,29 @@
 // RootTabView. Spec: docs/superpowers/specs/2026-05-03-cleancut-onboarding-design.md
 
 import SwiftUI
+import Speech
+import UIKit
 
 struct OnboardingFlow: View {
     enum Step: Int { case brand = 0, trust, permission, sample, result }
 
     @AppStorage("sonicMerge.hasOnboarded") private var hasOnboarded: Bool = false
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(\.fillerLibrary) private var libraryStore
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
 
     @State private var step: Step = .brand
+    // Carried into step 5 — populated by step 4's analyze + apply.
+    @State private var speechGranted: Bool = false
+    @State private var sampleEditList: EditList?
+    @State private var sampleCleanedURL: URL?
+    @State private var sampleOriginalURL: URL? = Bundle.main.url(forResource: "onboarding-sample", withExtension: "m4a")
+    // Re-entry guard: SwiftUI may re-fire `.task` on view re-render
+    // (e.g. scenePhase change while the OS permission dialog is up).
+    // SFSpeechRecognizer.requestAuthorization is idempotent post-decision,
+    // but `advance(to: .sample)` is not — guard against double-advance.
+    @State private var permissionRequested: Bool = false
 
     var body: some View {
         ZStack {
@@ -40,10 +53,32 @@ struct OnboardingFlow: View {
                             reduceTransparency: reduceTransparency,
                             onContinue: { advance(to: .permission) }
                         )
-                    case .permission, .sample, .result:
-                        // TODO Chunks 4–5: replace
+                    case .permission:
+                        ProgressView()
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .task {
+                                guard !permissionRequested else { return }
+                                permissionRequested = true
+                                speechGranted = await Self.requestSpeechAuthorization()
+                                advance(to: .sample)
+                            }
+                    case .sample:
+                        SampleStep(
+                            semantic: semantic,
+                            libraryStore: libraryStore,
+                            speechGranted: speechGranted,
+                            sampleURL: sampleOriginalURL,
+                            onCompleted: { editList, cleanedURL in
+                                sampleEditList = editList
+                                sampleCleanedURL = cleanedURL
+                                advance(to: .result)
+                            },
+                            onSkipToHome: { hasOnboarded = true }
+                        )
+                    case .result:
+                        // TODO Chunk 5
                         VStack {
-                            Text("Step \(step.rawValue + 1) — not yet implemented")
+                            Text("Step 5 — not yet implemented")
                             Button("Done · Open Smart Cut") { hasOnboarded = true }
                                 .buttonStyle(.borderedProminent)
                         }
@@ -62,6 +97,14 @@ struct OnboardingFlow: View {
             step = next
         } else {
             withAnimation(.easeInOut(duration: 0.25)) { step = next }
+        }
+    }
+
+    private static func requestSpeechAuthorization() async -> Bool {
+        await withCheckedContinuation { continuation in
+            SFSpeechRecognizer.requestAuthorization { status in
+                continuation.resume(returning: status == .authorized)
+            }
         }
     }
 }
@@ -296,5 +339,234 @@ private struct TrustRow: View {
                 Rectangle().fill(.ultraThinMaterial)
             }
         }
+    }
+}
+
+// MARK: - Step 4: Hands-on first cut
+
+private struct SampleStep: View {
+    enum Phase { case ready, analyzing, cutting, error(String) }
+
+    let semantic: SonicMergeSemantic
+    let libraryStore: FillerLibraryStore
+    let speechGranted: Bool
+    let sampleURL: URL?
+    let onCompleted: (EditList, URL) -> Void
+    let onSkipToHome: () -> Void
+
+    @State private var phase: Phase = .ready
+    @State private var attemptCount: Int = 0
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Spacer().frame(height: 32)
+
+            VStack(alignment: .leading, spacing: 6) {
+                Text(speechGranted ? "Try it on a sample" : "Sample loaded")
+                    .font(.system(.title2, design: .rounded, weight: .bold))
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                Text(speechGranted
+                     ? "A 30-second podcast clip is loaded for you."
+                     : "Smart Cut needs Speech Recognition access. Enable it in Settings → CleanCut.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color(uiColor: semantic.textSecondary))
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 12)
+            .padding(.bottom, 16)
+
+            SampleCard(semantic: semantic, phase: phase)
+
+            if speechGranted {
+                TipKitHint(
+                    text: "💡 Tap Smart Cut to remove every \"um\" and long pause from this clip.",
+                    semantic: semantic
+                )
+                .padding(.top, 12)
+            }
+
+            Spacer()
+
+            if speechGranted {
+                grantedFooter
+            } else {
+                deniedFooter
+            }
+        }
+        .accessibilityElement(children: .contain)
+        .accessibilityLabel("Step 4 of 5: \(speechGranted ? "Try Smart Cut on a sample audio clip" : "Sample loaded — Speech Recognition required to analyze")")
+    }
+
+    // MARK: - Granted path
+
+    @ViewBuilder
+    private var grantedFooter: some View {
+        switch phase {
+        case .ready:
+            Button { Task { await runAnalyze() } } label: {
+                Label("Smart Cut This Sample", systemImage: "sparkles")
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .background(Capsule().fill(Color(uiColor: semantic.accentAI)))
+            }
+            .accessibilityHint("Removes filler words and long pauses from the bundled audio sample.")
+        case .analyzing:
+            ProgressView("Analyzing…").tint(Color(uiColor: semantic.accentAI))
+                .padding(.vertical, 14)
+        case .cutting:
+            ProgressView("Applying cuts…").tint(Color(uiColor: semantic.accentAI))
+                .padding(.vertical, 14)
+        case .error(let message):
+            VStack(spacing: 8) {
+                Text(message)
+                    .font(.caption)
+                    .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                    .multilineTextAlignment(.center)
+                HStack {
+                    Button("Try again") { Task { await runAnalyze() } }
+                        .buttonStyle(.bordered)
+                    Button("Skip to home") { onSkipToHome() }
+                        .buttonStyle(.borderless)
+                }
+            }
+        }
+    }
+
+    // MARK: - Denied path
+
+    private var deniedFooter: some View {
+        VStack(spacing: 12) {
+            Button {
+                if let url = URL(string: UIApplication.openSettingsURLString) {
+                    UIApplication.shared.open(url)
+                }
+            } label: {
+                Text("Open Settings")
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+                    .foregroundStyle(Color(uiColor: semantic.accentAction))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 14)
+                    .overlay(
+                        Capsule().strokeBorder(Color(uiColor: semantic.accentAction), lineWidth: 1.5)
+                    )
+            }
+            Button("Skip to home", action: onSkipToHome)
+                .font(.subheadline)
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
+    }
+
+    // MARK: - Pipeline
+
+    private func runAnalyze() async {
+        guard let url = sampleURL else {
+            phase = .error("Couldn't find the sample. Tap Skip to continue.")
+            return
+        }
+        attemptCount += 1
+        phase = .analyzing
+        let service = SmartCutService(library: libraryStore.library)
+        do {
+            var resolvedEditList: EditList?
+            for try await update in service.analyze(input: url) {
+                if case .completed(let list, _, _) = update {
+                    resolvedEditList = list
+                }
+            }
+            guard let editList = resolvedEditList else {
+                bumpError("Couldn't analyze the sample. Tap to try again or skip.")
+                return
+            }
+            phase = .cutting
+            let cleanedURL = try await AudioCutter().apply(input: url, editList: editList)
+            onCompleted(editList, cleanedURL)
+        } catch {
+            bumpError("Couldn't analyze the sample. Tap to try again or skip.")
+        }
+    }
+
+    private func bumpError(_ message: String) {
+        if attemptCount >= 2 {
+            // Spec §5 step 4: after 2 retries, force-skip to avoid a trapped user.
+            onSkipToHome()
+        } else {
+            phase = .error(message)
+        }
+    }
+}
+
+// MARK: - Sample card
+
+private struct SampleCard: View {
+    let semantic: SonicMergeSemantic
+    let phase: SampleStep.Phase
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("SAMPLE AUDIO")
+                .font(.caption.weight(.bold))
+                .tracking(0.5)
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+            Text("podcast-snippet.m4a")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color(uiColor: semantic.textPrimary))
+            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                .fill(LinearGradient(
+                    colors: [
+                        Color(uiColor: semantic.accentAction),
+                        Color(uiColor: semantic.accentAI)
+                    ],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                ))
+                .frame(height: 24)
+                .opacity(phase.busy ? 0.6 : 0.4)
+            Text("0:00 — 0:32")
+                .font(.caption)
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
+        .padding(12)
+        .background(
+            RoundedRectangle(cornerRadius: 14, style: .continuous)
+                .fill(Color(uiColor: semantic.surfaceCard))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 14, style: .continuous)
+                        .strokeBorder(Color(uiColor: .systemGray5), lineWidth: 0.5)
+                )
+        )
+    }
+}
+
+private extension SampleStep.Phase {
+    var busy: Bool {
+        if case .analyzing = self { return true }
+        if case .cutting = self { return true }
+        return false
+    }
+}
+
+// MARK: - TipKit-style decorative hint
+
+private struct TipKitHint: View {
+    let text: String
+    let semantic: SonicMergeSemantic
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(Color(uiColor: semantic.textPrimary))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(Color(uiColor: semantic.accentAction).opacity(0.08))
+            .overlay(
+                Rectangle()
+                    .fill(Color(uiColor: semantic.accentAction))
+                    .frame(width: 3),
+                alignment: .leading
+            )
+            .clipShape(RoundedRectangle(cornerRadius: 8, style: .continuous))
     }
 }
