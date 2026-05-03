@@ -9,9 +9,7 @@ import UniformTypeIdentifiers
 
 struct MixingStationView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
-    @Environment(\.colorScheme) private var colorScheme
-
-    @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.light.rawValue
+    @Environment(\.sonicMergeSemantic) private var semantic
 
     /// Phase 10 (D-06): persists across launches once the user has ever imported a clip.
     /// Gates the LocalFirstTrustStrip render in MergeTimelineView.
@@ -22,14 +20,6 @@ struct MixingStationView: View {
 
     // POL-01: one trigger @State per toolbar button — prevents cross-firing
     @State private var exportHaptic = false
-
-    private var themePreference: ThemePreference {
-        ThemePreference(rawValue: themePreferenceRaw) ?? .light
-    }
-
-    private var semantic: SonicMergeSemantic {
-        SonicMergeSemantic.resolved(colorScheme: colorScheme, preference: themePreference)
-    }
 
     var body: some View {
         NavigationStack {
@@ -103,7 +93,6 @@ struct MixingStationView: View {
                 return true
             }
         }
-        .environment(\.sonicMergeSemantic, semantic)
         .onChange(of: viewModel.clips.count) { _, newCount in
             // Phase 10 D-06: flip the first-launch trust-banner flag the first
             // time the user has any clips. Persists across launches via @AppStorage.

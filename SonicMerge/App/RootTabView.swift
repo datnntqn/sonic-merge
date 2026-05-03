@@ -14,12 +14,26 @@ struct RootTabView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
+    /// Single source of truth for theme. ThemeToggleButton writes to this
+    /// same key; reading it here lets us inject `\.sonicMergeSemantic` and
+    /// `.preferredColorScheme(...)` for the entire app from one place.
+    @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.light.rawValue
+
     @State private var selection: Tab = .smartCut
     @State private var smartCutPath = NavigationPath()
     @State private var denoisePath = NavigationPath()
     @State private var mergePath = NavigationPath()
 
     @State private var fillerLibraryStore = FillerLibraryStore()
+
+    private var themePreference: ThemePreference {
+        ThemePreference(rawValue: themePreferenceRaw) ?? .light
+    }
+
+    private var semantic: SonicMergeSemantic {
+        SonicMergeSemantic.resolved(colorScheme: themePreference == .dark ? .dark : .light,
+                                    preference: themePreference)
+    }
 
     /// Lazy-init: created on first appear, after modelContext is available.
     /// MixingStationViewModel.init takes ModelContext and cannot use a
@@ -65,6 +79,8 @@ struct RootTabView: View {
             .tag(Tab.merge)
         }
         .environment(\.fillerLibrary, fillerLibraryStore)
+        .environment(\.sonicMergeSemantic, semantic)
+        .preferredColorScheme(themePreference == .dark ? .dark : .light)
         .onAppear {
             if mixingStationViewModel == nil {
                 mixingStationViewModel = MixingStationViewModel(modelContext: modelContext)
