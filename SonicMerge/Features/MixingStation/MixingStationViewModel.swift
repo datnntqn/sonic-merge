@@ -254,7 +254,7 @@ final class MixingStationViewModel {
         let format = options.format
         let ext = format == .m4a ? "m4a" : "wav"
         let destURL = FileManager.default.temporaryDirectory
-            .appending(path: "SonicMerge-Export-\(UUID().uuidString).\(ext)")
+            .appending(path: "CleanCut-Export-\(UUID().uuidString).\(ext)")
 
         exportTask = Task {
             let stream = await mergerService.export(
@@ -285,7 +285,7 @@ final class MixingStationViewModel {
         if let items = try? FileManager.default.contentsOfDirectory(
             at: tempDir, includingPropertiesForKeys: nil
         ) {
-            for item in items where item.lastPathComponent.hasPrefix("SonicMerge-Export-") {
+            for item in items where item.lastPathComponent.hasPrefix("CleanCut-Export-") {
                 try? FileManager.default.removeItem(at: item)
             }
         }

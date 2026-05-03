@@ -175,7 +175,7 @@ final class SmartCutViewModel: PlaybackParticipant {
             case .authorized:
                 break
             case .denied, .restricted:
-                state = .error(message: "Smart Cut needs Speech Recognition access. Enable it in Settings → SonicMerge.")
+                state = .error(message: "Smart Cut needs Speech Recognition access. Enable it in Settings → CleanCut.")
                 return
             case .notDetermined:
                 // User dismissed the dialog without choosing — treat as denied for this run.

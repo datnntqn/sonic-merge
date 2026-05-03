@@ -12,6 +12,7 @@ import SwiftData
 struct SonicMergeApp: App {
 
     @UIApplicationDelegateAdaptor(SmartCutAppDelegate.self) private var smartCutAppDelegate
+    @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.light.rawValue
 
     /// SwiftData ModelContainer configured with the App Group shared container.
     ///
@@ -61,7 +62,23 @@ struct SonicMergeApp: App {
     var body: some Scene {
         WindowGroup {
             RootTabView()
+                .onAppear {
+                    if let migrated = Self.migrateLegacyTheme(themePreferenceRaw) {
+                        themePreferenceRaw = migrated
+                    }
+                }
         }
         .modelContainer(modelContainer)
+    }
+
+    // MARK: - Theme migration (binary toggle, drops .system)
+
+    /// Returns the new raw value to write back to `@AppStorage("sonicMergeThemePreference")`,
+    /// or `nil` if the stored value already matches a valid binary state. Pure — easily testable.
+    ///
+    /// Legacy `"system"` and any unrecognized raw both normalize to `"light"` (the new default).
+    static func migrateLegacyTheme(_ raw: String) -> String? {
+        if ThemePreference(rawValue: raw) != nil { return nil }
+        return ThemePreference.light.rawValue
     }
 }

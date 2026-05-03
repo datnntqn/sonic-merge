@@ -11,7 +11,7 @@ struct MixingStationView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
     @Environment(\.colorScheme) private var colorScheme
 
-    @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.system.rawValue
+    @AppStorage("sonicMergeThemePreference") private var themePreferenceRaw: String = ThemePreference.light.rawValue
 
     /// Phase 10 (D-06): persists across launches once the user has ever imported a clip.
     /// Gates the LocalFirstTrustStrip render in MergeTimelineView.
@@ -21,12 +21,10 @@ struct MixingStationView: View {
     @State private var showExportSheet = false
 
     // POL-01: one trigger @State per toolbar button — prevents cross-firing
-    @State private var importHaptic = false
-    @State private var appearanceHaptic = false
     @State private var exportHaptic = false
 
     private var themePreference: ThemePreference {
-        ThemePreference(rawValue: themePreferenceRaw) ?? .system
+        ThemePreference(rawValue: themePreferenceRaw) ?? .light
     }
 
     private var semantic: SonicMergeSemantic {
@@ -41,10 +39,20 @@ struct MixingStationView: View {
                 if viewModel.clips.isEmpty {
                     emptyState
                 } else {
-                    MergeTimelineView(onExportTap: { showExportSheet = true })
+                    VStack(spacing: 0) {
+                        HStack {
+                            Spacer()
+                            CircularImportButton(size: .pinned) { showDocumentPicker = true }
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.top, 12)
+                        .padding(.bottom, 8)
+
+                        MergeTimelineView(onExportTap: { showExportSheet = true })
+                    }
                 }
             }
-            .navigationTitle("SonicMerge")
+            .navigationTitle("Merge")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .sheet(isPresented: $showExportSheet) {
@@ -121,44 +129,30 @@ struct MixingStationView: View {
 
     private var emptyState: some View {
         VStack(spacing: SonicMergeTheme.Spacing.md) {
-            Image(systemName: "waveform")
-                .font(.system(size: 48))
+            Image(systemName: "rectangle.stack")
+                .font(.system(size: 38, weight: .bold))
                 .foregroundStyle(Color(uiColor: semantic.accentAction))
-                .shadow(
-                    color: Color(uiColor: semantic.accentGlow).opacity(0.35),
-                    radius: 20,
-                    x: 0,
-                    y: 0
+                .frame(width: 76, height: 76)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color(uiColor: semantic.accentAction).opacity(0.14))
                 )
                 .accessibilityHidden(true)
             Text("No clips yet")
                 .font(.system(.title3, design: .rounded, weight: .semibold))
                 .foregroundStyle(Color(uiColor: semantic.textPrimary))
-            Text("Tap + to add audio files\nor drop them here")
+            Text("Tap below to add audio files,\nor drop them here.")
                 .font(.system(.body, design: .rounded))
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 .multilineTextAlignment(.center)
-            Button {
-                showDocumentPicker = true
-            } label: {
-                Label("Import Audio", systemImage: "plus.circle.fill")
-            }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular))
+                .frame(maxWidth: 240)
+                .padding(.horizontal, 32)
+            CircularImportButton(size: .hero) { showDocumentPicker = true }
         }
     }
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
-        ToolbarItem(placement: .topBarLeading) {
-            Button {
-                importHaptic.toggle()
-                showDocumentPicker = true
-            } label: {
-                Label("Import", systemImage: "plus")
-            }
-            .disabled(viewModel.isImporting || viewModel.isExporting)
-            .sensoryFeedback(.impact(weight: .light), trigger: importHaptic)
-        }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 exportHaptic.toggle()
@@ -170,16 +164,7 @@ struct MixingStationView: View {
             .sensoryFeedback(.impact(weight: .light), trigger: exportHaptic)
         }
         ToolbarItem(placement: .topBarTrailing) {
-            Menu {
-                Picker("Appearance", selection: $themePreferenceRaw) {
-                    Text("System").tag(ThemePreference.system.rawValue)
-                    Text("Light").tag(ThemePreference.light.rawValue)
-                    Text("Dark conveyor").tag(ThemePreference.dark.rawValue)
-                }
-            } label: {
-                Label("More options", systemImage: "ellipsis.circle")
-            }
-            .sensoryFeedback(.impact(weight: .light), trigger: themePreferenceRaw)
+            ThemeToggleButton()
         }
     }
 

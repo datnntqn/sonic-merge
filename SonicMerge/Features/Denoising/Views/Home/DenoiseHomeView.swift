@@ -31,7 +31,12 @@ struct DenoiseHomeView: View {
             }
         }
         .navigationTitle("Denoise")
-        .navigationBarTitleDisplayMode(.large)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                ThemeToggleButton()
+            }
+        }
         .fileImporter(
             isPresented: $showFileImporter,
             allowedContentTypes: UTType.audioImportTypes,
@@ -55,8 +60,13 @@ struct DenoiseHomeView: View {
     private var emptyState: some View {
         VStack(spacing: SonicMergeTheme.Spacing.md) {
             Image(systemName: "waveform.badge.minus")
-                .font(.system(size: 56, weight: .bold))
+                .font(.system(size: 38, weight: .bold))
                 .foregroundStyle(Color(uiColor: semantic.accentAI))
+                .frame(width: 76, height: 76)
+                .background(
+                    RoundedRectangle(cornerRadius: 24, style: .continuous)
+                        .fill(Color(uiColor: semantic.accentAI).opacity(0.18))
+                )
                 .accessibilityHidden(true)
             Text("Clean noisy recordings")
                 .font(.system(.title3, design: .rounded, weight: .semibold))
@@ -65,25 +75,18 @@ struct DenoiseHomeView: View {
                 .font(.system(.body, design: .rounded))
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 .multilineTextAlignment(.center)
+                .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
-            Button {
-                showFileImporter = true
-            } label: {
-                Label("Upload Audio", systemImage: "plus.circle.fill")
-            }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+            CircularImportButton(size: .hero) { showFileImporter = true }
         }
     }
 
     private var loadedState: some View {
         VStack(spacing: 0) {
-            Button {
-                showFileImporter = true
-            } label: {
-                Label("Upload Audio", systemImage: "plus.circle.fill")
-                    .frame(maxWidth: .infinity)
+            HStack {
+                Spacer()
+                CircularImportButton(size: .pinned) { showFileImporter = true }
             }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 8)
