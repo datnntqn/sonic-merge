@@ -57,6 +57,7 @@ struct OnboardingFlow: View {
                     case .permission:
                         ProgressView()
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
+                            .accessibilityLabel("Requesting Speech Recognition permission")
                             .task {
                                 guard !permissionRequested else { return }
                                 permissionRequested = true
@@ -487,6 +488,9 @@ private struct SampleStep: View {
             let cleanedURL = try await AudioCutter().apply(input: url, editList: editList)
             onCompleted(editList, cleanedURL)
         } catch {
+            #if DEBUG
+            print("[Onboarding] analyze failed: \(error)")
+            #endif
             bumpError("Couldn't analyze the sample. Tap to try again or skip.")
         }
     }
@@ -659,6 +663,13 @@ private struct ResultStep: View {
     }
 
     private func preparePlayers() {
+        // Onboarding intentionally uses standalone AVAudioPlayer instances
+        // rather than registering with PlaybackCoordinator (spec §5). The
+        // .fullScreenCover blocks the rest of the app's players, so the
+        // single-active-player invariant is preserved by presentation context.
+        // If onboarding ever moves to a sheet or inline presentation, register
+        // these players as PlaybackParticipants.
+        //
         // Activate the shared audio session before the first AVAudioPlayer
         // call. Without this, prepareToPlay() succeeds silently but play()
         // produces no audible output on real devices.

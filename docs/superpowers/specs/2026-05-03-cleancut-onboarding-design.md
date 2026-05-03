@@ -91,7 +91,7 @@ The progress indicator briefly shows step 3 active during the OS dialog. We do N
 **Copy (granted path):**
 - Title: `"Try it on a sample"`
 - Subtitle: `"A 30-second podcast clip is loaded for you."`
-- Sample card: `"podcast-snippet.m4a"` + `"0:00 — 0:32"` + waveform stripe
+- Sample card: `"Podcast snippet"` + `"0:00 — 0:32"` + waveform stripe
 - TipKit hint: `"💡 Tap Smart Cut to remove every \"um\" and long pause from this clip."`
 - Primary CTA: `"✨ Smart Cut This Sample"` (lime pill — this is the AI moment)
 
