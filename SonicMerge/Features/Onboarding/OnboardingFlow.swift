@@ -384,7 +384,7 @@ private struct SampleStep: View {
 
             if speechGranted {
                 TipKitHint(
-                    text: "💡 Tap Smart Cut to remove every \"um\" and long pause from this clip.",
+                    text: "💡 Tap Smart Cut to remove filler words and long pauses from this clip.",
                     semantic: semantic
                 )
                 .padding(.top, 12)

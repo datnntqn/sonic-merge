@@ -92,7 +92,7 @@ The progress indicator briefly shows step 3 active during the OS dialog. We do N
 - Title: `"Try it on a sample"`
 - Subtitle: `"A 30-second podcast clip is loaded for you."`
 - Sample card: `"Podcast snippet"` + `"0:00 — 0:32"` + waveform stripe
-- TipKit hint: `"💡 Tap Smart Cut to remove every \"um\" and long pause from this clip."`
+- TipKit hint: `"💡 Tap Smart Cut to remove filler words and long pauses from this clip."` (generic — naming specific tokens like "um" sets a false expectation since speech-recognition reliability varies per word; the user-configurable filler list is the source of truth)
 - Primary CTA: `"✨ Smart Cut This Sample"` (lime pill — this is the AI moment)
 
 **Copy (denied path — speechGranted == false):**
