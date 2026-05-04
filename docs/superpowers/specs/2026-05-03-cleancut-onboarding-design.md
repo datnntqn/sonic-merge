@@ -91,7 +91,7 @@ The progress indicator briefly shows step 3 active during the OS dialog. We do N
 **Copy (granted path):**
 - Title: `"Try it on a sample"`
 - Subtitle: `"A 30-second podcast clip is loaded for you."`
-- Sample card: `"podcast-snippet.m4a"` + `"0:00 — 0:32"` + waveform stripe
+- Sample card: `"Podcast snippet"` + `"0:00 — 0:32"` + waveform stripe
 - TipKit hint: `"💡 Tap Smart Cut to remove every \"um\" and long pause from this clip."`
 - Primary CTA: `"✨ Smart Cut This Sample"` (lime pill — this is the AI moment)
 
@@ -214,7 +214,7 @@ NOT prompted during onboarding (CleanCut doesn't currently record — only impor
 ## 10. Accessibility
 
 - All text uses Dynamic Type (`.font(.title3, .body, .caption)` etc.) — no fixed point sizes for body text. Hero icons use fixed sizes (38pt within 80pt frames) since they're decorative.
-- Each step's `View` declares `.accessibilityElement(children: .combine)` on the wrapping `VStack` and a top-level `.accessibilityLabel` of the form `"Step <N> of 5: <step title>"` so VoiceOver users can orient.
+- Each step's `View` declares `.accessibilityElement(children: .contain)` on the wrapping `VStack` and a top-level `.accessibilityLabel` of the form `"Step <N> of 5: <step title>"` so VoiceOver users can orient. `.contain` keeps individual children (Continue button, etc.) independently focusable for VoiceOver, while still labeling the container; `.combine` would have flattened them and made the CTA non-focusable.
 - The 5-dot progress indicator carries `.accessibilityHidden(true)` (the per-step label already conveys position).
 - `@Environment(\.accessibilityReduceMotion)` gates the `.symbolEffect(.bounce)` on the brand opener hero icon and the result-reveal animation — fall back to opacity-only transitions.
 - `@Environment(\.accessibilityReduceTransparency)` gates the trust-primer glass background — fall back to `surfaceCard` solid fill.
