@@ -108,12 +108,12 @@ func render(_ view: some View, size: CGFloat, to path: String) {
 let appIconDir = "SonicMerge/Assets.xcassets/AppIcon.appiconset"
 let tabIconDir = "SonicMerge/Assets.xcassets/SmartCutTabIcon.imageset"
 
-/// App icon scale — glyph occupies 62% of the 1024×1024 canvas, leaving
-/// ~19% padding on each side. Visually aligned with iOS system icons that
-/// breathe inside their canvas (Watch, Camera, App Store) instead of
-/// extending edge-to-edge. Tab-bar PNGs stay full-bleed since the tab-bar
-/// UI already pads icons in its layout grid.
-let appIconGlyphScale: CGFloat = 0.62
+/// App icon scale — glyph occupies 92% of the 1024×1024 canvas, leaving
+/// ~4% padding on each side. Large but with an intentional margin so the
+/// glyph doesn't touch the squircle's curved edges (similar to Files /
+/// Fitness icons). User picked option B in the visual companion. Tab-bar
+/// PNGs stay full-bleed since the tab-bar UI already pads icons.
+let appIconGlyphScale: CGFloat = 0.92
 
 /// Wrap the Mark inside a padded canvas: full-bleed background fills the
 /// 1024×1024, glyph is centered at `appIconGlyphScale` of canvas size.
@@ -134,7 +134,7 @@ struct PaddedAppIcon: View {
 }
 
 await MainActor.run {
-    // App icon — 1024×1024, deep navy bg, fire gradient glyph (centered, ~19% padding)
+    // App icon — 1024×1024, deep navy bg, fire gradient glyph (centered, ~4% padding)
     render(PaddedAppIcon(canvas: 1024, background: deepNavy, monochromeTint: nil),
            size: 1024, to: "\(appIconDir)/AppIcon-1024.png")
 
