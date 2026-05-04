@@ -52,7 +52,7 @@ struct RootTabView: View {
                     SmartCutSessionView(sessionId: sessionId)
                 }
             }
-            .tabItem { Label("Smart Cut", systemImage: "sparkles") }
+            .tabItem { Label { Text("Smart Cut") } icon: { Image("SmartCutTabIcon") } }
             .tag(Tab.smartCut)
 
             NavigationStack(path: $denoisePath) {
