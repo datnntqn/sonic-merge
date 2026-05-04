@@ -8,6 +8,7 @@
 
 /* Begin PBXBuildFile section */
 		3F4C12CD2F869AC4001E4968 /* SonicMergeShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		CC0001CC0001CC0001CC0001 /* CleanCut.storekit in Resources */ = {isa = PBXBuildFile; fileRef = CC0002CC0002CC0002CC0002 /* CleanCut.storekit */; };
 		3FA1001A2F5E000000000001 /* mono_44100.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000001 /* mono_44100.wav */; };
 		3FA1001A2F5E000000000002 /* stereo_48000.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000002 /* stereo_48000.m4a */; };
 		3FA1001A2F5E000000000003 /* aac_22050.aac in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000003 /* aac_22050.aac */; };
@@ -47,6 +48,7 @@
 
 /* Begin PBXFileReference section */
 		3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SonicMergeShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC0002CC0002CC0002CC0002 /* CleanCut.storekit */ = {isa = PBXFileReference; lastKnownFileType = file.storekit; path = CleanCut.storekit; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000001 /* mono_44100.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = mono_44100.wav; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000002 /* stereo_48000.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = stereo_48000.m4a; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000003 /* aac_22050.aac */ = {isa = PBXFileReference; lastKnownFileType = file; path = aac_22050.aac; sourceTree = "<group>"; };
@@ -140,6 +142,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		CC0003CC0003CC0003CC0003 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				CC0002CC0002CC0002CC0002 /* CleanCut.storekit */,
+			);
+			name = Configuration;
+			path = Configuration;
+			sourceTree = "<group>";
+		};
 		3FA1001F2F5E000000000001 /* Fixtures */ = {
 			isa = PBXGroup;
 			children = (
@@ -158,6 +169,7 @@
 				3FA1001C2F5E000000000001 /* SonicMergeTests */,
 				3FA1001F2F5E000000000001 /* Fixtures */,
 				3F4C12C42F869AC4001E4968 /* SonicMergeShareExtension */,
+				CC0003CC0003CC0003CC0003 /* Configuration */,
 				3FCEB0142F5DAED600901F90 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -302,6 +314,7 @@
 				3FA1001A2F5E000000000001 /* mono_44100.wav in Resources */,
 				3FA1001A2F5E000000000002 /* stereo_48000.m4a in Resources */,
 				3FA1001A2F5E000000000003 /* aac_22050.aac in Resources */,
+				CC0001CC0001CC0001CC0001 /* CleanCut.storekit in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -1,0 +1,90 @@
+{
+  "identifier" : "9D6A8E5F-2E4B-4F2A-AC1D-8C3F0B0E5A4D",
+  "nonRenewingSubscriptions" : [],
+  "products" : [
+    {
+      "displayPrice" : "79.99",
+      "familyShareable" : true,
+      "internalID" : "com.cleancut.pro.lifetime",
+      "localizations" : [
+        {
+          "description" : "Unlock all CleanCut Pro features forever — no recurring charge.",
+          "displayName" : "CleanCut Pro · Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.cleancut.pro.lifetime",
+      "referenceName" : "CleanCut Pro Lifetime",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_compatibilityTimeRate" : 1,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : []
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21384721",
+      "localizations" : [],
+      "name" : "CleanCut Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "4.99",
+          "familyShareable" : true,
+          "groupNumber" : 1,
+          "internalID" : "com.cleancut.pro.monthly",
+          "introductoryOffer" : {
+            "internalID" : "free-trial-7d-monthly",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P7D"
+          },
+          "localizations" : [
+            {
+              "description" : "Unlimited Smart Cut and Denoise. No watermarks. Files of any length.",
+              "displayName" : "CleanCut Pro · Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.cleancut.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "CleanCut Pro Monthly",
+          "subscriptionGroupID" : "21384721",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [],
+          "codeOffers" : [],
+          "displayPrice" : "39.99",
+          "familyShareable" : true,
+          "groupNumber" : 2,
+          "internalID" : "com.cleancut.pro.yearly",
+          "introductoryOffer" : {
+            "internalID" : "free-trial-7d-yearly",
+            "paymentMode" : "free",
+            "subscriptionPeriod" : "P7D"
+          },
+          "localizations" : [
+            {
+              "description" : "Unlimited Smart Cut and Denoise. Save 33% vs monthly. 7-day free trial.",
+              "displayName" : "CleanCut Pro · Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.cleancut.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "CleanCut Pro Yearly",
+          "subscriptionGroupID" : "21384721",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}
