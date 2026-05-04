@@ -121,9 +121,12 @@ struct EditFillerListStudioSheet: View {
     }
 }
 
-private struct WordCapsule: View {
+/// Frosted-glass capsule for one filler word. When `onRemove` is non-nil,
+/// renders a trailing ✕ that calls it (used by the editor sheet). When nil,
+/// renders read-only (used by the idle-screen filler summary card).
+struct WordCapsule: View {
     let word: String
-    let onRemove: () -> Void
+    let onRemove: (() -> Void)?
 
     @Environment(\.sonicMergeSemantic) private var semantic
 
@@ -132,18 +135,20 @@ private struct WordCapsule: View {
             Text(word)
                 .font(.subheadline)
                 .foregroundStyle(Color(uiColor: semantic.textPrimary))
-            Button(action: onRemove) {
-                Image(systemName: "xmark")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color(uiColor: semantic.accentAction).opacity(0.6))
-                    .frame(width: 24, height: 24)
+            if let onRemove {
+                Button(action: onRemove) {
+                    Image(systemName: "xmark")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(Color(uiColor: semantic.accentAction).opacity(0.6))
+                        .frame(width: 24, height: 24)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Remove \(word)")
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel("Remove \(word)")
         }
         .padding(.vertical, 5)
         .padding(.leading, 12)
-        .padding(.trailing, 4)
+        .padding(.trailing, onRemove == nil ? 12 : 4)
         .studioFrostedCapsule(cornerRadius: 14)
     }
 }
