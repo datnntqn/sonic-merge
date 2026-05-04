@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Native iOS audio utility — merge multiple clips, on-device AI noise reduction, on-device filler-word + long-pause cutting (Smart Cut). Privacy-first, no cloud. The app's user-facing name is **CleanCut** but the bundle ID, Xcode scheme, module name, type names (`SonicMergeApp`, `SonicMergeTheme`, `SonicMergeSemantic`), entitlements, App Group ID (`group.com.yourteam.SonicMerge`), and `@AppStorage` keys (`sonicMergeThemePreference`, `sonicMerge.hasImportedFirstClip`) all remain `SonicMerge*`. Don't try to "fix" the inconsistency — it's deliberate (see `docs/superpowers/specs/2026-05-03-three-tab-ui-unification-design.md` §9).
 
-- **Stack:** Swift 6, SwiftUI, SwiftData, AVFoundation, Core ML / Speech, Accelerate / vDSP. Deployment target iOS 26.2 (iPhone 17 sim is the standard build target).
+- **Stack:** Swift 6, SwiftUI, SwiftData, AVFoundation, Core ML / Speech, Accelerate / vDSP. Deployment target **iOS 17.0** (iPhone 17 sim is the standard build target). `MeshGradient` is `#available(iOS 18, *)`-gated in `PremiumBackground.swift` because the floor is below 18. Any future Apple Intelligence / Foundation Models work needs `#available(iOS 26, *)`.
 - **Test framework:** Swift Testing (`import Testing`, `@Test`, `#expect`) is the project convention. A few legacy files still use XCTest — match what the file already uses; prefer Swift Testing for new files.
 
 ## Build & test commands
