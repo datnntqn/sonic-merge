@@ -32,19 +32,24 @@ struct SmartCutStudioContainer: View {
     @State private var showEditFillerList: Bool = false
 
     var body: some View {
-        switch vm.state {
-        case .idle:
-            idleScaffold
-        case .analyzing(let progress):
-            analyzingScaffold(progress: progress)
-        case .results:
-            studioLayout(headerBanner: nil)
-        case .applied(let saved):
-            studioLayout(headerBanner: AnyView(appliedBanner(saved: saved)))
-        case .stale:
-            staleScaffold
-        case .error(let message):
-            errorScaffold(message: message)
+        Group {
+            switch vm.state {
+            case .idle:
+                idleScaffold
+            case .analyzing(let progress):
+                analyzingScaffold(progress: progress)
+            case .results:
+                studioLayout(headerBanner: nil)
+            case .applied(let saved):
+                studioLayout(headerBanner: AnyView(appliedBanner(saved: saved)))
+            case .stale:
+                staleScaffold
+            case .error(let message):
+                errorScaffold(message: message)
+            }
+        }
+        .sheet(isPresented: $showEditFillerList) {
+            EditFillerListStudioSheet(library: $library)
         }
     }
 
@@ -121,9 +126,6 @@ struct SmartCutStudioContainer: View {
                 onToggleCategory: { enabled in vm.setCategory(sheetCategory.rawValue, enabled: enabled) }
             )
         }
-        .sheet(isPresented: $showEditFillerList) {
-            EditFillerListStudioSheet(library: $library)
-        }
     }
 
     private var playbackTrackBinding: Binding<PlaybackTrack> {
@@ -152,28 +154,42 @@ struct SmartCutStudioContainer: View {
     // MARK: - Non-results scaffolds (preserve all prior SmartCutCardView features)
 
     private var idleScaffold: some View {
-        // Mirrors SmartCutCardView.idleContent (lines 61-81): orb + body
-        // copy + Analyze button (estimated-minutes label) + footer.
-        VStack(spacing: 12) {
-            Text("Remove fillers and trim long silences")
-                .foregroundStyle(.secondary)
-            smartCutOrb(active: false)
-                .tint(.green)
-            Button {
-                vm.analyze()
-            } label: {
-                let label = vm.estimatedAnalysisMinutes > 0
-                    ? "Analyze ~\(vm.estimatedAnalysisMinutes) min"
-                    : "Analyze"
-                Label(label, systemImage: "sparkles")
-                    .frame(maxWidth: .infinity)
+        ScrollView {
+            VStack(spacing: 16) {
+                Text("Remove fillers and trim long silences")
+                    .foregroundStyle(.secondary)
+
+                smartCutOrb(active: false)
+                    .tint(.green)
+                    // Shrink the existing 80pt orb to ~56pt visually + reserve
+                    // a 56×56 layout slot. `.scaleEffect` defaults to `.center`
+                    // anchor, which keeps the orb visually centered inside its frame.
+                    .scaleEffect(56.0 / 80.0, anchor: .center)
+                    .frame(width: 56, height: 56)
+
+                IdleSettingsCards(
+                    viewModel: vm,
+                    library: $library,
+                    onEditFillerList: { showEditFillerList = true }
+                )
+
+                Button {
+                    vm.analyze()
+                } label: {
+                    let label = vm.estimatedAnalysisMinutes > 0
+                        ? "Analyze ~\(vm.estimatedAnalysisMinutes) min"
+                        : "Analyze"
+                    Label(label, systemImage: "sparkles")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+
+                Text("Reads from: denoised audio")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
-            Text("Reads from: denoised audio")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+            .padding()
         }
-        .padding()
     }
 
     private func analyzingScaffold(progress: Double) -> some View {
