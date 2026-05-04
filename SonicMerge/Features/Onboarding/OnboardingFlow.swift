@@ -419,12 +419,20 @@ private struct SampleStep: View {
         switch phase {
         case .ready:
             Button { Task { await runAnalyze() } } label: {
-                Label("Smart Cut This Sample", systemImage: "sparkles")
-                    .font(.system(.body, design: .rounded, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 14)
-                    .background(Capsule().fill(Color(uiColor: semantic.accentAI)))
+                HStack(spacing: 6) {
+                    SmartCutMark(size: .toolbar, monochromeTint: .white)
+                        .frame(width: 22, height: 22)
+                    Text("Smart Cut This Sample")
+                }
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Capsule().fill(LinearGradient(
+                    colors: semantic.accentAIGradientStops.map { Color(uiColor: $0) },
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )))
             }
             .accessibilityHint("Removes filler words and long pauses from the bundled audio sample.")
         case .analyzing:
