@@ -14,7 +14,10 @@ struct FillerLibraryTests {
 
     @Test func testDefaultOnSetMatchesSpec() {
         let (lib, _) = freshLibrary()
-        #expect(lib.defaultOnWords == ["um", "ah", "er"])
+        // Empty by design — the on-device recognizer is unreliable on short
+        // hesitation tokens, so we ship nothing on-by-default. Users opt in
+        // via Edit list.
+        #expect(lib.defaultOnWords.isEmpty)
     }
 
     @Test func testDefaultOffSetMatchesSpec() {
@@ -41,8 +44,10 @@ struct FillerLibraryTests {
     @Test func testAddingDuplicateIsNoOp() {
         let (lib, _) = freshLibrary()
         var mutable = lib
-        mutable.addCustom("um")
-        let counts = mutable.allWords.filter { $0 == "um" }.count
+        // Use a default-off word since defaultOnWords is now empty; add() must
+        // still no-op for any word already present in allWords.
+        mutable.addCustom("like")
+        let counts = mutable.allWords.filter { $0 == "like" }.count
         #expect(counts == 1)
     }
 
@@ -55,9 +60,11 @@ struct FillerLibraryTests {
         #expect(!reloaded.allWords.contains("like"))
     }
 
-    @Test func testIsEnabledByDefault_OnSet() {
+    @Test func testIsEnabledByDefault_EmptyOnSet() {
         let (lib, _) = freshLibrary()
-        #expect(lib.isEnabledByDefault("um") == true)
+        // No words ship enabled-by-default. Even a default-on string from a
+        // prior version would now report false.
+        #expect(lib.isEnabledByDefault("um") == false)
     }
 
     @Test func testIsEnabledByDefault_OffSet() {

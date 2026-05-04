@@ -8,12 +8,13 @@ import Foundation
 struct FillerLibrary: Equatable {
     let defaults: UserDefaults
 
-    /// SPEC: tight set, on by default — never false-positives a real word.
-    /// NOTE: "uh" and "oh" were removed from the default list because the
-    /// on-device speech recognizer is unreliable on those tokens (frequently
-    /// drops or mistags them), producing inconsistent Smart Cut results.
-    /// Users can re-add them as custom words via the Edit list sheet.
-    let defaultOnWords: [String] = ["um", "ah", "er"]
+    /// Empty by default. The on-device SFSpeechRecognizer is unreliable on
+    /// short hesitation tokens ("um", "uh", "ah", "er", "oh") — it frequently
+    /// drops or mistags them, producing inconsistent Smart Cut results that
+    /// erode user trust. Rather than ship false confidence, ship nothing
+    /// on by default and let the user opt in via the Edit list sheet
+    /// (custom-added words are off-by-default; users explicitly enable them).
+    let defaultOnWords: [String] = []
 
     /// SPEC: standard set, off by default — pulled in when the user opts in.
     let defaultOffWords: [String] = ["like", "you know", "sort of", "basically", "actually", "literally"]
