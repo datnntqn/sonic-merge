@@ -186,7 +186,7 @@ final class SmartCutViewModel: PlaybackParticipant {
                 return
             }
             do {
-                for try await update in await service.analyze(input: inputURL) {
+                for try await update in await service.analyze(input: inputURL, pauseThreshold: pauseThreshold) {
                     if Task.isCancelled { return }
                     switch update {
                     case .progress(let p):

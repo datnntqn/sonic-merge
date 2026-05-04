@@ -11,6 +11,16 @@ import Foundation
 import Speech
 import AVFoundation
 
+/// Protocol seam over `TranscriptionService` so `SmartCutService` can be
+/// tested against a deterministic stub. The real `TranscriptionService` is
+/// an actor, which cannot be subclassed — a protocol is the only way to
+/// inject a stub.
+protocol TranscriptionServicing: Sendable {
+    func transcribe(input: URL) -> AsyncThrowingStream<TranscriptionState, Error>
+}
+
+extension TranscriptionService: TranscriptionServicing {}
+
 actor TranscriptionService {
 
     enum TranscriptionError: Error {

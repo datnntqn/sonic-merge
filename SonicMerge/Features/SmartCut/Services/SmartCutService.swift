@@ -9,18 +9,15 @@ actor SmartCutService {
     }
 
     private let library: FillerLibrary
-    private let pauseThreshold: TimeInterval
-    private let transcriptionService: TranscriptionService
+    private let transcriptionService: any TranscriptionServicing
 
     init(library: FillerLibrary,
-         pauseThreshold: TimeInterval = 1.5,
-         transcriptionService: TranscriptionService = TranscriptionService()) {
+         transcriptionService: any TranscriptionServicing = TranscriptionService()) {
         self.library = library
-        self.pauseThreshold = pauseThreshold
         self.transcriptionService = transcriptionService
     }
 
-    func analyze(input: URL) -> AsyncThrowingStream<Update, Error> {
+    func analyze(input: URL, pauseThreshold: TimeInterval) -> AsyncThrowingStream<Update, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 do {

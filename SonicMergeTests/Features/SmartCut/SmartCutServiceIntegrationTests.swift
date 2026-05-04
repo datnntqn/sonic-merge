@@ -16,10 +16,10 @@ struct SmartCutServiceIntegrationTests {
         guard SFSpeechRecognizer(locale: Locale(identifier: "en-US"))?.supportsOnDeviceRecognition == true else { return }
 
         let library = FillerLibrary(defaults: UserDefaults(suiteName: "smartcut-int-\(UUID())")!)
-        let service = SmartCutService(library: library, pauseThreshold: 1.5)
+        let service = SmartCutService(library: library)
 
         var finalEditList: EditList?
-        for try await update in service.analyze(input: url) {
+        for try await update in service.analyze(input: url, pauseThreshold: 1.5) {
             if case .completed(let list, _, _) = update {
                 finalEditList = list
             }
