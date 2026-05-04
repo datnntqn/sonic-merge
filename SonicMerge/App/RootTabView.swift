@@ -79,6 +79,7 @@ struct RootTabView: View {
             .tabItem { Label("Merge", systemImage: "rectangle.stack") }
             .tag(Tab.merge)
         }
+        .tint(Color(uiColor: semantic.accentAction))
         .environment(\.fillerLibrary, fillerLibraryStore)
         .environment(\.sonicMergeSemantic, semantic)
         .preferredColorScheme(themePreference == .dark ? .dark : .light)

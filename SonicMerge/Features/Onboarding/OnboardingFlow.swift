@@ -543,10 +543,7 @@ private struct SampleCard: View {
                 .foregroundStyle(Color(uiColor: semantic.textPrimary))
             RoundedRectangle(cornerRadius: 4, style: .continuous)
                 .fill(LinearGradient(
-                    colors: [
-                        Color(uiColor: semantic.accentAction).opacity(0.35),
-                        Color(uiColor: semantic.accentAction).opacity(0.55)
-                    ],
+                    colors: semantic.accentAIGradientStops.map { Color(uiColor: $0) },
                     startPoint: .leading,
                     endPoint: .trailing
                 ))
@@ -793,24 +790,31 @@ private struct ABToggle: View {
             selected = track
             onChange(track)
         } label: {
-            Text(label)
-                .font(.system(.body, design: .rounded, weight: .semibold))
-                .foregroundStyle(isSelected ? .white : Color(uiColor: semantic.textPrimary))
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(
-                    Capsule().fill(isSelected
-                                   ? Color(uiColor: semantic.accentAction)
-                                   : Color(uiColor: semantic.surfaceCard))
+            HStack(spacing: 6) {
+                // Play icon — solid on the selected (currently playing) segment,
+                // outline on the unselected one. Communicates that both buttons
+                // trigger audio playback when tapped.
+                Image(systemName: isSelected ? "play.fill" : "play")
+                    .font(.system(size: 13, weight: .bold))
+                Text(label)
+                    .font(.system(.body, design: .rounded, weight: .semibold))
+            }
+            .foregroundStyle(isSelected ? .white : Color(uiColor: semantic.textPrimary))
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 12)
+            .background(
+                Capsule().fill(isSelected
+                               ? Color(uiColor: semantic.accentAction)
+                               : Color(uiColor: semantic.surfaceCard))
+            )
+            .overlay(
+                Capsule().strokeBorder(
+                    isSelected ? Color.clear : Color(uiColor: .systemGray5),
+                    lineWidth: 1
                 )
-                .overlay(
-                    Capsule().strokeBorder(
-                        isSelected ? Color.clear : Color(uiColor: .systemGray5),
-                        lineWidth: 1
-                    )
-                )
+            )
         }
         .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-        .accessibilityLabel("\(label) audio\(isSelected ? ", selected" : "")")
+        .accessibilityLabel("\(label) audio\(isSelected ? ", playing" : ", tap to play")")
     }
 }

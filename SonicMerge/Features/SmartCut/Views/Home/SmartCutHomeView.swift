@@ -217,7 +217,7 @@ private struct SmartCutRecentRow: View {
         HStack(spacing: 12) {
             RoundedRectangle(cornerRadius: 9, style: .continuous)
                 .fill(LinearGradient(
-                    colors: [Color(uiColor: semantic.accentAI), Color(uiColor: semantic.accentAction)],
+                    colors: semantic.accentAIGradientStops.map { Color(uiColor: $0) },
                     startPoint: .topLeading,
                     endPoint: .bottomTrailing
                 ))
