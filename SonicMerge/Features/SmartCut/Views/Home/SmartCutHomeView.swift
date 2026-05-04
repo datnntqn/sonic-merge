@@ -64,13 +64,16 @@ struct SmartCutHomeView: View {
 
     private var emptyState: some View {
         VStack(spacing: SonicMergeTheme.Spacing.md) {
-            Image(systemName: "sparkles")
-                .font(.system(size: 38, weight: .bold))
-                .foregroundStyle(Color(uiColor: semantic.accentAI))
+            SmartCutMark(size: .splash)
                 .frame(width: 76, height: 76)
+                .padding(20)
                 .background(
                     RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .fill(Color(uiColor: semantic.accentAI).opacity(0.18))
+                        .fill(LinearGradient(
+                            colors: semantic.accentAIGradientStops.map { Color(uiColor: $0).opacity(0.18) },
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        ))
                 )
                 .accessibilityHidden(true)
             Text("Cut fillers in seconds")
