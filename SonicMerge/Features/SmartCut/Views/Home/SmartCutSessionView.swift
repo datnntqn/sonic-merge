@@ -14,6 +14,7 @@ struct SmartCutSessionView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @Environment(\.fillerLibrary) private var libraryStore
+    @Environment(\.sonicMergeSemantic) private var semantic
 
     @State private var viewModel: SmartCutViewModel?
     @State private var session: SmartCutSession?
@@ -133,12 +134,24 @@ struct SmartCutSessionView: View {
         switch vm.state {
         case .results:
             Button { Task { await vm.apply() } } label: {
-                Label("Apply Cuts", systemImage: "sparkles")
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: 6) {
+                    SmartCutMark(size: .toolbar, monochromeTint: .white)
+                        .frame(width: 22, height: 22)
+                    Text("Apply Cuts")
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                .font(.system(.body, design: .rounded, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .background(Capsule().fill(LinearGradient(
+                    colors: semantic.accentAIGradientStops.map { Color(uiColor: $0) },
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )))
             }
-            .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+            .accessibilityLabel("Apply Cuts")
         case .applied:
             if vm.hasDirtyEditsSinceApply {
                 Button { Task { await vm.apply() } } label: {
