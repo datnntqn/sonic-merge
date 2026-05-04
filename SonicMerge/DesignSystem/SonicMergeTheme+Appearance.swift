@@ -50,6 +50,11 @@ struct SonicMergeSemantic {
     /// System Purple #AF52DE — waveform mesh gradient end-stop (Phase 7, MIX-03)
     var accentGradientEnd: UIColor
 
+    /// Fire-gradient stops red → orange → magenta → violet (CleanCut rebrand 2026-05-04).
+    /// Use as `LinearGradient(colors: stops.map { Color(uiColor: $0) }, startPoint: ..., endPoint: ...)`.
+    /// Callsites that need a single flat color should keep using `accentAI` (the magenta stop).
+    var accentAIGradientStops: [UIColor]
+
     // MARK: - Factory methods
 
     static func resolved(
@@ -72,19 +77,25 @@ struct SonicMergeSemantic {
 
     private static func lightClassic() -> SonicMergeSemantic {
         SonicMergeSemantic(
-            surfaceBase: SonicMergeTheme.ColorPalette.canvasBackground,       // #FBFBFC
-            surfaceSlot: SonicMergeTheme.ColorPalette.cardSurface,            // #FFFFFF
+            surfaceBase: SonicMergeTheme.ColorPalette.canvasBackground,       // #FBFBFC (unchanged)
+            surfaceSlot: SonicMergeTheme.ColorPalette.cardSurface,            // #FFFFFF (unchanged)
             surfaceElevated: UIColor.white,
-            accentAction: SonicMergeTheme.ColorPalette.primaryAccent,         // Deep Indigo #5856D6
-            accentWaveform: SonicMergeTheme.ColorPalette.primaryAccent,       // Deep Indigo #5856D6
+            accentAction: SonicMergeTheme.ColorPalette.deepViolet,            // #6F2DBD (was #5856D6)
+            accentWaveform: SonicMergeTheme.ColorPalette.deepViolet,          // #6F2DBD (was #5856D6)
             textPrimary: SonicMergeTheme.ColorPalette.primaryText,
             textSecondary: UIColor(red: 0.235, green: 0.235, blue: 0.263, alpha: 0.6),
-            trustIcon: SonicMergeTheme.ColorPalette.aiAccent,                 // Deep Indigo #5856D6
-            accentAI: SonicMergeTheme.ColorPalette.limeGreen,                 // #A7C957
-            accentGlow: SonicMergeTheme.ColorPalette.aiAccent,                // Deep Indigo #5856D6
-            surfaceCard: SonicMergeTheme.ColorPalette.cardSurface,            // #FFFFFF
+            trustIcon: SonicMergeTheme.ColorPalette.deepViolet,               // #6F2DBD (was #5856D6)
+            accentAI: SonicMergeTheme.ColorPalette.magentaAccent,             // #F0506E (was lime #A7C957)
+            accentGlow: SonicMergeTheme.ColorPalette.magentaAccent,           // #F0506E (was indigo)
+            surfaceCard: SonicMergeTheme.ColorPalette.cardSurface,            // #FFFFFF (unchanged)
             surfaceGlass: UIColor(red: 251 / 255, green: 251 / 255, blue: 252 / 255, alpha: 0.6),
-            accentGradientEnd: SonicMergeTheme.ColorPalette.systemPurple      // #AF52DE
+            accentGradientEnd: SonicMergeTheme.ColorPalette.deepViolet,       // #6F2DBD (was #AF52DE)
+            accentAIGradientStops: [
+                SonicMergeTheme.ColorPalette.emberRed,                        // #FF4E50
+                SonicMergeTheme.ColorPalette.emberOrange,                     // #F9A66C
+                SonicMergeTheme.ColorPalette.magentaAccent,                   // #F0506E
+                SonicMergeTheme.ColorPalette.deepViolet                       // #6F2DBD
+            ]
         )
     }
 
@@ -92,19 +103,25 @@ struct SonicMergeSemantic {
 
     private static func darkConveyor() -> SonicMergeSemantic {
         SonicMergeSemantic(
-            surfaceBase: SonicMergeTheme.ColorPalette.darkBackground,         // #000000 pure black
-            surfaceSlot: SonicMergeTheme.ColorPalette.darkCardSurface,        // #0F0F0F near-black
-            surfaceElevated: SonicMergeTheme.ColorPalette.darkCardSurface,    // #0F0F0F
-            accentAction: SonicMergeTheme.ColorPalette.aiAccent,              // Deep Indigo #5856D6
-            accentWaveform: SonicMergeTheme.ColorPalette.aiAccent,            // Deep Indigo #5856D6
-            textPrimary: SonicMergeTheme.ColorPalette.darkTextPrimary,        // near-white 0.96
-            textSecondary: SonicMergeTheme.ColorPalette.darkTextSecondary,    // muted 0.55
-            trustIcon: SonicMergeTheme.ColorPalette.aiAccent,                 // Deep Indigo #5856D6
-            accentAI: SonicMergeTheme.ColorPalette.limeGreen,                 // #A7C957
-            accentGlow: SonicMergeTheme.ColorPalette.aiAccent,                // Deep Indigo #5856D6
-            surfaceCard: SonicMergeTheme.ColorPalette.darkCardSurface,        // #0F0F0F
-            surfaceGlass: UIColor(red: 0, green: 0, blue: 0, alpha: 0.7),     // black@0.7
-            accentGradientEnd: SonicMergeTheme.ColorPalette.systemPurple      // #AF52DE
+            surfaceBase: SonicMergeTheme.ColorPalette.deepNavy,               // #0A0A18 (was #000000)
+            surfaceSlot: SonicMergeTheme.ColorPalette.deepNavyCard,           // #15172B (was #0F0F0F)
+            surfaceElevated: SonicMergeTheme.ColorPalette.deepNavyCard,       // #15172B (was #0F0F0F)
+            accentAction: SonicMergeTheme.ColorPalette.deepViolet,            // #6F2DBD (was #5856D6)
+            accentWaveform: SonicMergeTheme.ColorPalette.deepViolet,          // #6F2DBD (was #5856D6)
+            textPrimary: SonicMergeTheme.ColorPalette.darkTextPrimary,
+            textSecondary: SonicMergeTheme.ColorPalette.darkTextSecondary,
+            trustIcon: SonicMergeTheme.ColorPalette.deepViolet,               // #6F2DBD (was #5856D6)
+            accentAI: SonicMergeTheme.ColorPalette.magentaAccent,             // #F0506E (was lime)
+            accentGlow: SonicMergeTheme.ColorPalette.magentaAccent,           // #F0506E (was indigo)
+            surfaceCard: SonicMergeTheme.ColorPalette.deepNavyCard,           // #15172B (was #0F0F0F)
+            surfaceGlass: UIColor(red: 10 / 255, green: 10 / 255, blue: 24 / 255, alpha: 0.7), // deep navy @ 0.7
+            accentGradientEnd: SonicMergeTheme.ColorPalette.deepViolet,       // #6F2DBD (was #AF52DE)
+            accentAIGradientStops: [
+                SonicMergeTheme.ColorPalette.emberRed,
+                SonicMergeTheme.ColorPalette.emberOrange,
+                SonicMergeTheme.ColorPalette.magentaAccent,
+                SonicMergeTheme.ColorPalette.deepViolet
+            ]
         )
     }
 }

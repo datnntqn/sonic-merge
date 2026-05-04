@@ -131,67 +131,74 @@ struct SonicMergeThemeTests {
         #expect(semantic.surfaceGlass.getRed(&r, green: &g, blue: &b, alpha: &a))
     }
 
-    @Test func lightSemantic_accentAI_isLimeGreen() {
+    @Test func lightSemantic_accentAI_isMagentaAccent() {
+        // Updated 2026-05-04 (CleanCut rebrand): accentAI changed from lime #A7C957 to magenta #F0506E
         let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentAI.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (167.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (201.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (87.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (240.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (80.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (110.0 / 255.0)) < 0.01)
     }
 
-    @Test func lightSemantic_accentGradientEnd_isSystemPurple() {
+    @Test func lightSemantic_accentGradientEnd_isDeepViolet() {
+        // Updated 2026-05-04 (CleanCut rebrand): accentGradientEnd changed from #AF52DE to #6F2DBD
         let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentGradientEnd.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (175.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (82.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (222.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (111.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (45.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (189.0 / 255.0)) < 0.01)
     }
 
-    @Test func darkSemantic_accentGradientEnd_isSystemPurple() {
+    @Test func darkSemantic_accentGradientEnd_isDeepViolet() {
+        // Updated 2026-05-04 (CleanCut rebrand): accentGradientEnd changed from #AF52DE to #6F2DBD
         let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentGradientEnd.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (175.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (82.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (222.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (111.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (45.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (189.0 / 255.0)) < 0.01)
     }
 
-    @Test func darkSemantic_hasPureBlackBase() {
+    @Test func darkSemantic_hasDeepNavyBase() {
+        // Updated 2026-05-04 (CleanCut rebrand): surfaceBase changed from #000000 to deepNavy #0A0A18
         let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.surfaceBase.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(Double(r) == 0.0)
-        #expect(Double(g) == 0.0)
-        #expect(Double(b) == 0.0)
+        #expect(abs(Double(r) - (10.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (10.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (24.0 / 255.0)) < 0.01)
     }
 
-    @Test func darkSemantic_hasDeepIndigoAccent() {
+    @Test func darkSemantic_hasDeepVioletAccent() {
+        // Updated 2026-05-04 (CleanCut rebrand): accentAction changed from indigo #5856D6 to deepViolet #6F2DBD
         let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentAction.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (88.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (86.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (214.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (111.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (45.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (189.0 / 255.0)) < 0.01)
     }
 
-    @Test func darkSemantic_surfaceCardIsNearBlack() {
+    @Test func darkSemantic_surfaceCardIsDeepNavyCard() {
+        // Updated 2026-05-04 (CleanCut rebrand): surfaceCard changed from #0F0F0F to deepNavyCard #15172B
         let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.surfaceCard.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (15.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (15.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (15.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (21.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (23.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (43.0 / 255.0)) < 0.01)
     }
 
-    @Test func darkSemantic_accentAI_isLimeGreen() {
+    @Test func darkSemantic_accentAI_isMagentaAccent() {
+        // Updated 2026-05-04 (CleanCut rebrand): accentAI changed from lime #A7C957 to magenta #F0506E
         let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentAI.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (167.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (201.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (87.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (240.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (80.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (110.0 / 255.0)) < 0.01)
     }
 
     @Test func fallbackLight_matchesLightClassicValues() {
