@@ -18,10 +18,11 @@ A whole-app visual rebrand inspired by the AHS Audio reference: deep-navy base w
 ## Non-Goals
 
 - Renaming bundle ID, scheme, module, App Group ID, type names, `@AppStorage` keys (deliberate per CLAUDE.md §Project).
-- Touching `MeshGradient` math in `PremiumBackground.swift` beyond the input colors it consumes.
+- Changing `MeshGradient` math in `PremiumBackground.swift` — only its input colors flip. Waveform thumbnails will look different at the gradient end-stop because `accentGradientEnd` shifts from system purple `#AF52DE` to violet `#6F2DBD`; that's intended.
 - Touching tab-bar layout, navigation hierarchy, copy, or feature behavior.
 - Changing the binary `ThemePreference` (still `.light` / `.dark`).
 - Generating an entire icon family (notification icon, Spotlight, Settings, etc. — Xcode's "Single Size" 1024×1024 entry handles those automatically on iOS 14+).
+- Changing `migrateLegacyTheme(_:)` — the rebrand is purely additive at the token level (one new slot, value swaps); no persisted preference key changes shape, so no migration is needed.
 
 ## Design Decisions
 
@@ -90,15 +91,23 @@ struct SmartCutMark: View {
 `Size.hero` → 56×56 (onboarding feature pill, AI Orb idle state).
 `Size.splash` → 96×96 (onboarding hero step 1, Smart Cut empty-state).
 
-**Tab bar caveat:** UIKit's `UITabBarItem` does NOT render gradient images in its native rendering. Two options:
-- **Option α (preferred):** Pre-render the mark to a 1× / 2× / 3× PNG asset set in `Assets.xcassets/SmartCutTabIcon.imageset/`, with `Render As: Default`, and supply both filled and outline variants (selected vs. unselected).
+**Tab bar caveat:** UIKit's `UITabBarItem` template-tints any image it renders, which would flatten our fire gradient to a solid tint color. Two options:
+- **Option α (preferred):** Pre-render the mark to a 1× / 2× / 3× PNG asset set in `Assets.xcassets/SmartCutTabIcon.imageset/` with `Render As: Original Image`. Use `Image("SmartCutTabIcon")` in the `.tabItem` Label so SwiftUI honors the asset's render mode. (Equivalent UIKit form: `UITabBarItem(image: UIImage(named: "SmartCutTabIcon")?.withRenderingMode(.alwaysOriginal), …)`.)
 - **Option β (rejected):** Use `Label("Smart Cut", systemImage: "...")` and have iOS auto-tint a flat shape — loses the gradient identity.
 
-We pick Option α — the asset set means the gradient survives in the tab bar, which is the most-visible single placement of the mark in the app.
+We pick Option α. **Visual asymmetry note:** Denoise and Merge tabs continue to receive the violet `accentAction` template-tint on their SF Symbol icons (selected vs. unselected). Smart Cut's full-color gradient asset will not respond to the tint — it always looks the same selected vs. unselected. This is intentional: Smart Cut is the headline feature and we want its mark to read as a brand asset, not a chrome-tinted symbol.
 
 ### D-07 — Onboarding: hero badge keeps the gradient frame, swaps the glyph
 
-Current onboarding hero (`OnboardingFlow.swift:159`) is a 80×80 rounded rectangle with a 20%-alpha gradient fill and a `sparkles` symbol on top. We replace just the symbol — `SmartCutMark(size: .hero)` — and update the gradient stops to the fire gradient. The feature pill at line 193 (`FeaturePill(icon: "sparkles", …)`) gets a new variant that takes a `View` instead of a `String` symbol name, so it can host the mark.
+Current onboarding hero (`OnboardingFlow.swift:159`) is a 80×80 rounded rectangle with a 20%-alpha gradient fill and a `sparkles` symbol on top. We replace just the symbol — `SmartCutMark(size: .hero)` — and update the gradient stops to the fire gradient. The feature pill at line 193 (`FeaturePill(icon: "sparkles", …)`) gets a new variant that takes a `View` instead of a `String` symbol name, so it can host the mark. The Denoise feature pill at line 195 keeps its SF Symbol but its `iconBg` updates to the new flat `accentAI` (magenta `#F0506E`) automatically through the token swap.
+
+**Other onboarding `accentAI` callsites that update through the token swap (no per-callsite logic change):**
+- Line 163 — hero gradient frame fill at `accentAI.opacity(0.20)` becomes magenta-at-20% (visually compatible with the new fire gradient running through the rest of the screen).
+- Line 421 — `ProgressView("Analyzing…").tint(...)` becomes magenta. `.tint()` cannot take a gradient, so flat magenta is the right call here.
+- Line 424 — `ProgressView("Applying cuts…").tint(...)` — same, magenta.
+- Line 740 — sample-podcast result-summary chip (`Capsule().fill(accentAI)`) becomes magenta.
+
+**Onboarding "Smart Cut This Sample" CTA at line 412/417 — full fire gradient (matches the in-app "Apply Cuts" CTA per D-01).** Implementation reads `accentAIGradientStops` and uses `LinearGradient` instead of `Color(uiColor: accentAI)` for the capsule fill. This is a one-line change beyond the token swap.
 
 ### D-08 — `accentGlow` becomes magenta `#F0506E`
 
@@ -112,8 +121,10 @@ Glow shadows on AI-moment elements (currently indigo) become magenta — warmer 
 | `surfaceCard` (dark) | `#0F0F0F` | `#15172B` |
 | `surfaceSlot` (dark) | `#0F0F0F` | `#15172B` |
 | `surfaceElevated` (dark) | `#0F0F0F` | `#15172B` |
+| `surfaceGlass` (dark) | `#000000 @ 0.7` | `#0A0A18 @ 0.7` |
 | `surfaceBase` (light) | `#FBFBFC` | `#FBFBFC` *(unchanged)* |
 | `surfaceCard` (light) | `#FFFFFF` | `#FFFFFF` *(unchanged)* |
+| `surfaceGlass` (light) | `#FBFBFC @ 0.6` | `#FBFBFC @ 0.6` *(unchanged)* |
 | `accentAction` | `#5856D6` indigo | `#6F2DBD` violet |
 | `accentWaveform` | `#5856D6` | `#6F2DBD` |
 | `accentAI` (flat) | `#A7C957` lime | `#F0506E` magenta |
@@ -122,7 +133,6 @@ Glow shadows on AI-moment elements (currently indigo) become magenta — warmer 
 | `trustIcon` | `#5856D6` | `#6F2DBD` violet |
 | `accentGradientEnd` | `#AF52DE` | `#6F2DBD` *(aligns mesh-gradient end with new violet)* |
 | `textPrimary`, `textSecondary` | unchanged | unchanged |
-| `surfaceGlass` | unchanged | unchanged |
 
 ## File Inventory
 
@@ -150,7 +160,9 @@ SonicMerge/App/RootTabView.swift:55                                 — Label(sy
 SonicMerge/Features/SmartCut/Views/Home/SmartCutHomeView.swift:67   — sparkles → SmartCutMark(size: .splash)
 SonicMerge/Features/SmartCut/Views/Home/SmartCutSessionView.swift:136 — sparkles → SmartCutMark(size: .toolbar)
 SonicMerge/Features/SmartCut/Views/Studio/SmartCutStudioContainer.swift:182, 243 — sparkles → SmartCutMark(.toolbar / .hero)
-SonicMerge/Features/Onboarding/OnboardingFlow.swift:159, 169, 193, 412 — sparkles → SmartCutMark + FeaturePill variant
+SonicMerge/Features/Onboarding/OnboardingFlow.swift:158-176 — hero badge: SmartCutMark(.hero) + fire gradient frame
+SonicMerge/Features/Onboarding/OnboardingFlow.swift:193 — FeaturePill variant accepting View (hosts SmartCutMark)
+SonicMerge/Features/Onboarding/OnboardingFlow.swift:412-417 — "Smart Cut This Sample" CTA: SmartCutMark + LinearGradient(accentAIGradientStops)
 SonicMerge/DesignSystem/PremiumBackground.swift                     — corner gradient inputs (token-driven; no math change)
 SonicMerge/DesignSystem/PillButtonStyle.swift                       — comments only (lime → magenta refs)
 SonicMerge/Assets.xcassets/AppIcon.appiconset/Contents.json         — wire up the 3 1024×1024 PNGs
@@ -159,12 +171,16 @@ SonicMerge/Assets.xcassets/AppIcon.appiconset/Contents.json         — wire up 
 ### Asset generation strategy
 
 We will NOT hand-design the icon PNGs in a vector editor. Instead, we ship a **headless SwiftUI render** invoked by a one-shot `xcrun swift run` script (`Scripts/RenderSmartCutAppIcon.swift`) that:
-1. Uses `ImageRenderer` (SwiftUI iOS 16+ / macOS 13+) on the same `SmartCutMark` SwiftUI view.
+1. Uses `ImageRenderer` (macOS 13+ host, since the script runs on the dev machine, not on iOS device) on the same `SmartCutMark` SwiftUI view.
 2. Renders at 1024×1024 with `#0A0A18` background, full-bleed.
 3. Saves to `SonicMerge/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`.
 4. Re-runs with monochrome variants for `-Dark` (white-on-dark stays the same) and `-Tinted` (full grayscale gradient).
 
+**Cross-platform compile constraint:** `SmartCutMark.swift` must compile on macOS host as well as iOS, since the render script imports it. Use `#if canImport(UIKit)` guards if any UIKit-specific bridging is needed; prefer pure SwiftUI primitives (Path, Rectangle, LinearGradient, Color) so no guards are required.
+
 Single source of truth — the same view drives both in-app rendering and the app icon. If we tweak the glyph later, one change updates everything. The script is committed to git but only re-run when the mark itself changes; the resulting PNGs are also committed.
+
+Same render pipeline produces the **tab-bar asset set** at `SmartCutTabIcon.imageset/` — three sizes (22, 44, 66 px), `Render As: Original Image` (set in the imageset's `Contents.json`).
 
 ## Architecture / Data Flow
 
