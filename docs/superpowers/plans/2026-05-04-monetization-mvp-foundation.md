@@ -317,27 +317,35 @@ struct SubscriptionProductTests {
         let p = SubscriptionProduct(
             id: "com.cleancut.pro.monthly",
             displayPrice: "$4.99",
-            tier: .monthly
+            tier: .monthly,
+            monthlyEquivalent: nil,
+            isEligibleForIntroOffer: true
         )
         #expect(p.periodLabel == "/mo")
         #expect(p.tier == .monthly)
+        #expect(p.monthlyEquivalent == nil)
+        #expect(p.isEligibleForIntroOffer == true)
     }
 
     @Test func tierYearly() {
         let p = SubscriptionProduct(
             id: "com.cleancut.pro.yearly",
             displayPrice: "$39.99",
-            tier: .yearly
+            tier: .yearly,
+            monthlyEquivalent: "$3.33",
+            isEligibleForIntroOffer: true
         )
         #expect(p.periodLabel == "/yr")
-        #expect(p.tier == .yearly)
+        #expect(p.monthlyEquivalent == "$3.33")
     }
 
     @Test func tierLifetime() {
         let p = SubscriptionProduct(
             id: "com.cleancut.pro.lifetime",
             displayPrice: "$79.99",
-            tier: .lifetime
+            tier: .lifetime,
+            monthlyEquivalent: nil,
+            isEligibleForIntroOffer: false
         )
         #expect(p.periodLabel == "once")
     }
@@ -358,9 +366,21 @@ import Foundation
 /// only this type; `StoreKitClient` is the only place `Product` itself
 /// appears. Decouples view code from StoreKit.
 struct SubscriptionProduct: Equatable, Identifiable, Sendable {
-    let id: String              // App Store product ID
-    let displayPrice: String    // localized e.g. "$4.99" / "₹450" / "¥600"
+    let id: String                          // App Store product ID
+    let displayPrice: String                // localized e.g. "$4.99" / "₹450" / "¥600"
     let tier: Tier
+    /// Localized monthly-equivalent string for yearly tier (e.g. "$3.33/mo").
+    /// Computed in `StoreKitClient.bridgeToSubscriptionProduct(_:)` from the
+    /// real `Product.price / 12` rendered with the product's locale.
+    /// `nil` for monthly + lifetime. Required by Apple 3.1.2(a) — must reflect
+    /// what the user will actually be charged, not a hardcoded value.
+    let monthlyEquivalent: String?
+    /// Whether the user is eligible for the 7-day introductory free trial on
+    /// this product. False if user has already used the intro offer (Apple
+    /// tracks this server-side via `Product.subscription.isEligibleForIntroOffer`).
+    /// Drives CTA copy: "Start 7-day free trial" vs "Subscribe" — required
+    /// for Apple 3.1.2(a) plain-language disclosure (no false trial promises).
+    let isEligibleForIntroOffer: Bool
 
     enum Tier: Equatable, Sendable {
         case monthly
@@ -374,18 +394,6 @@ struct SubscriptionProduct: Equatable, Identifiable, Sendable {
         case .yearly: return "/yr"
         case .lifetime: return "once"
         }
-    }
-
-    /// "$3.33/mo" for yearly, derived. Returns nil for non-yearly tiers.
-    /// Plan-author note: this is a display-only convenience. For Apple
-    /// guideline 3.1.2(a) compliance, the yearly capsule must show BOTH
-    /// the actual yearly price (`displayPrice`) AND any "/mo equivalent"
-    /// derived value if shown.
-    var monthlyEquivalentPrice: String? {
-        guard tier == .yearly else { return nil }
-        // Display-only computation: parses the "$" + decimal value.
-        // Real Apple-localized version reads from `Product.subscription.subscriptionPeriod`.
-        return nil  // Computed by StoreKitClient when the actual Product is bridged in Task 2.2.
     }
 }
 
@@ -521,7 +529,7 @@ Create `Configuration/CleanCut.storekit` with this JSON content:
 
 - [ ] **Step 2: Add the `.storekit` file to Xcode project**
 
-In Xcode: drag `Configuration/CleanCut.storekit` into the project navigator (top-level, sibling to `SonicMerge/`). Confirm it's added with target membership unchecked (it's a config file, not a build artifact).
+In Xcode: drag `Configuration/CleanCut.storekit` into the project navigator (top-level, sibling to `SonicMerge/`). Add it to the `SonicMergeTests` target's resources (NOT the main app target — `.storekit` files are runtime config consumed by the StoreKit Test framework). `SKTestSession(configurationFileNamed: "CleanCut")` resolves it from the test bundle at test time.
 
 - [ ] **Step 3: Configure scheme to use the file**
 
@@ -597,7 +605,7 @@ Expected: FAIL — `EntitlementService` not in scope.
 
 ```swift
 import Foundation
-import SwiftUI
+import Observation
 
 /// Single source of truth for the user's Pro entitlement state. Other
 /// code in the app talks to this — never to StoreKit directly. That
@@ -636,17 +644,11 @@ final class EntitlementService {
     }
 }
 
-private struct EntitlementServiceKey: EnvironmentKey {
-    @MainActor static let defaultValue = EntitlementService.shared
-}
-
-extension EnvironmentValues {
-    var entitlementService: EntitlementService {
-        get { self[EntitlementServiceKey.self] }
-        set { self[EntitlementServiceKey.self] = newValue }
-    }
-}
+// EntitlementService is @Observable — inject via @Environment(EntitlementService.self)
+// (Swift 5.9+ Observation framework). No EnvironmentKey needed.
 ```
+
+Note: `import Foundation` only — no `import SwiftUI` here. The class uses `@Observable` from the `Observation` framework which is part of `Foundation`'s extended deps; SwiftUI views inject it via `.environment(entitlementService)` and read via `@Environment(EntitlementService.self) private var entitlements`. Keeps the service Foundation-only and SwiftUI-free.
 
 - [ ] **Step 4: Verify passing**
 
@@ -711,11 +713,11 @@ struct StoreKitClientTests {
         let client = StoreKitClient(entitlementService: entitlements)
         _ = try await client.loadProducts()
 
+        // purchase() calls refreshCurrentEntitlement() inline before
+        // returning, so we can assert immediately — no Task.sleep needed.
+        // The Transaction.updates listener also fires for the same txn,
+        // but that's a redundant no-op (same entitlement state).
         try await client.purchase(productID: SubscriptionProductID.monthly)
-
-        // The Transaction.updates listener should have fired by now.
-        // Give it a tick to propagate.
-        try await Task.sleep(nanoseconds: 100_000_000)
         #expect(entitlements.isPro == true)
         _ = session  // keep alive
     }
@@ -727,7 +729,6 @@ struct StoreKitClientTests {
         _ = try await client.loadProducts()
 
         try await client.purchase(productID: SubscriptionProductID.lifetime)
-        try await Task.sleep(nanoseconds: 100_000_000)
         #expect(entitlements.currentEntitlement == .lifetime)
 
         try await client.restore()
@@ -788,12 +789,20 @@ final class StoreKitClient {
 
     /// Loads all 3 products from the App Store (or `.storekit` config in
     /// debug) and caches them. Returns view-friendly wrappers.
+    /// `bridgeToSubscriptionProduct` is async because intro-offer eligibility
+    /// requires an awaitable property on `Product.subscription`.
     func loadProducts() async throws -> [SubscriptionProduct] {
         let storeProducts = try await Product.products(for: SubscriptionProductID.allIDs)
         for p in storeProducts {
             products[p.id] = p
         }
-        return storeProducts.compactMap { Self.bridgeToSubscriptionProduct($0) }
+        var bridged: [SubscriptionProduct] = []
+        for p in storeProducts {
+            if let sp = await Self.bridgeToSubscriptionProduct(p) {
+                bridged.append(sp)
+            }
+        }
+        return bridged
     }
 
     /// Purchases `productID`. On success, the `Transaction.updates`
@@ -852,8 +861,13 @@ final class StoreKitClient {
             case SubscriptionProductID.monthly, SubscriptionProductID.yearly:
                 if case .lifetime = resolved { continue } // lifetime trumps
                 if let expiration = transaction.expirationDate, expiration > .now {
+                    // Keep the LATEST expiry — if `existing >= expiration`,
+                    // we already have one that ends at the same time or
+                    // later than this transaction's, so skip (don't
+                    // overwrite). Otherwise fall through and overwrite
+                    // with the later expiration.
                     if case .pro(let existing) = resolved, existing >= expiration {
-                        continue // keep the later one
+                        continue
                     }
                     resolved = .pro(expiresAt: expiration)
                 }
@@ -864,7 +878,7 @@ final class StoreKitClient {
         entitlementService.setEntitlement(resolved)
     }
 
-    static func bridgeToSubscriptionProduct(_ product: Product) -> SubscriptionProduct? {
+    static func bridgeToSubscriptionProduct(_ product: Product) async -> SubscriptionProduct? {
         let tier: SubscriptionProduct.Tier
         switch product.id {
         case SubscriptionProductID.monthly: tier = .monthly
@@ -872,10 +886,35 @@ final class StoreKitClient {
         case SubscriptionProductID.lifetime: tier = .lifetime
         default: return nil
         }
+
+        // Monthly equivalent for yearly tier — derived from real Product.price,
+        // formatted with the product's locale, NOT a hardcoded "$3.33"
+        // (Apple guideline 3.1.2(a) — disclosure must reflect actual charge).
+        let monthlyEquivalent: String?
+        if tier == .yearly {
+            let perMonth = product.price / 12
+            monthlyEquivalent = perMonth.formatted(product.priceFormatStyle)
+        } else {
+            monthlyEquivalent = nil
+        }
+
+        // Intro-offer eligibility from StoreKit. `nil` for non-subscriptions
+        // (lifetime is non-consumable, so .isEligibleForIntroOffer is N/A and
+        // we always return false for it). Subscriptions read from the
+        // `Product.SubscriptionInfo`'s async property.
+        let isEligible: Bool
+        if let subscription = product.subscription {
+            isEligible = await subscription.isEligibleForIntroOffer
+        } else {
+            isEligible = false
+        }
+
         return SubscriptionProduct(
             id: product.id,
             displayPrice: product.displayPrice,
-            tier: tier
+            tier: tier,
+            monthlyEquivalent: monthlyEquivalent,
+            isEligibleForIntroOffer: isEligible
         )
     }
 }
@@ -892,7 +931,31 @@ Run: `set -o pipefail; xcodebuild ... -parallel-testing-enabled NO test 2>&1 | t
 Then: `echo "FAIL=$(grep -E '✘ Test [a-zA-Z_]+\(\) failed' /tmp/test.log | grep -oE 'Test [a-zA-Z_]+\(\)' | sort -u | wc -l)"`
 Expected: `FAIL=5` (baseline preserved).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Add Environment injection for `StoreKitClient`**
+
+Append at the bottom of `StoreKitClient.swift`:
+
+```swift
+// MARK: - Environment injection
+
+private struct StoreKitClientKey: EnvironmentKey {
+    static let defaultValue: StoreKitClient? = nil
+}
+
+extension EnvironmentValues {
+    /// Hoisted at app-level (RootTabView) so PaywallView + SettingsView
+    /// share ONE StoreKitClient instance — not two (which would start two
+    /// Transaction.updates listeners and double-fire entitlement updates).
+    var storeKitClient: StoreKitClient? {
+        get { self[StoreKitClientKey.self] }
+        set { self[StoreKitClientKey.self] = newValue }
+    }
+}
+```
+
+`import SwiftUI` needed for `EnvironmentKey` / `EnvironmentValues`. Both PaywallView and SettingsView read this in their respective chunks (no `@State var client` per view).
+
+- [ ] **Step 7: Commit**
 
 ```bash
 git add SonicMerge/Features/Subscription/Services/StoreKitClient.swift \
@@ -1263,18 +1326,27 @@ import SwiftUI
 @MainActor
 struct PaywallViewTests {
 
+    /// PaywallView reads `@Environment(EntitlementService.self)` and
+    /// `@Environment(\.storeKitClient)`. Both MUST be injected or the
+    /// view crashes on render with "No observable EntitlementService found."
+    private func makeView(reason: PaywallReason, scheme: ColorScheme) -> some View {
+        let entitlements = EntitlementService()
+        // storeKitClient is intentionally left nil — render-only smoke test.
+        // PaywallView guards `loadProducts()` with `guard let client` so a
+        // nil client renders the empty state without crashing.
+        return PaywallView(reason: reason)
+            .environment(entitlements)
+            .environment(\.sonicMergeSemantic, .resolved(colorScheme: scheme, preference: scheme == .dark ? .dark : .light))
+    }
+
     @Test func rendersInLightMode() {
-        let view = PaywallView(reason: .settingsUpgrade)
-            .environment(\.sonicMergeSemantic, .resolved(colorScheme: .light, preference: .light))
-        let renderer = ImageRenderer(content: view.frame(width: 390, height: 800))
+        let renderer = ImageRenderer(content: makeView(reason: .settingsUpgrade, scheme: .light).frame(width: 390, height: 800))
         renderer.scale = 1
         #expect(renderer.uiImage != nil)
     }
 
     @Test func rendersInDarkMode() {
-        let view = PaywallView(reason: .settingsUpgrade)
-            .environment(\.sonicMergeSemantic, .resolved(colorScheme: .dark, preference: .dark))
-        let renderer = ImageRenderer(content: view.frame(width: 390, height: 800))
+        let renderer = ImageRenderer(content: makeView(reason: .settingsUpgrade, scheme: .dark).frame(width: 390, height: 800))
         renderer.scale = 1
         #expect(renderer.uiImage != nil)
     }
@@ -1282,9 +1354,7 @@ struct PaywallViewTests {
     @Test func rendersAllReasons() {
         let reasons: [PaywallReason] = [.endOfOnboarding, .hitDailyCap, .hitLengthCap, .watermarkExport, .settingsUpgrade, .trialExpired]
         for reason in reasons {
-            let view = PaywallView(reason: reason)
-                .environment(\.sonicMergeSemantic, .resolved(colorScheme: .dark, preference: .dark))
-            let renderer = ImageRenderer(content: view.frame(width: 390, height: 800))
+            let renderer = ImageRenderer(content: makeView(reason: reason, scheme: .dark).frame(width: 390, height: 800))
             renderer.scale = 1
             #expect(renderer.uiImage != nil, "Failed to render reason: \(reason)")
         }
@@ -1380,6 +1450,7 @@ struct PaywallView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(\.storeKitClient) private var client
     @Environment(EntitlementService.self) private var entitlementService
 
     @State private var selectedTier: SubscriptionProduct.Tier = .yearly
@@ -1387,11 +1458,6 @@ struct PaywallView: View {
     @State private var isPurchasing = false
     @State private var isRestoring = false
     @State private var purchaseError: String?
-
-    /// `StoreKitClient` is created here for Sub-project 1 simplicity. In
-    /// Sub-project 3+ it should be hoisted to app-level via @Environment
-    /// or a process-wide store.
-    @State private var client: StoreKitClient?
 
     private static let testimonials: [TestimonialQuote] = [
         TestimonialQuote(stars: 5, quote: "Cleaned a 45-min interview in 30 seconds. My old workflow took 2 hours.", author: "Jamie, podcast editor"),
@@ -1555,11 +1621,23 @@ struct PaywallView: View {
         }
     }
 
+    /// Composes the small print under the price card. Apple guideline 3.1.2(a)
+    /// requires plain-language disclosure that reflects the actual charge — so
+    /// the monthly equivalent for yearly comes from `product.monthlyEquivalent`
+    /// (computed in `StoreKitClient.bridgeToSubscriptionProduct`), NOT a
+    /// hardcoded "$3.33". The "7-day free trial" copy only appears when
+    /// `isEligibleForIntroOffer == true` (i.e., the user hasn't used the trial
+    /// before — otherwise showing "free trial" would be deceptive).
     private func priceSubtext(for product: SubscriptionProduct) -> String {
+        let trialPart = product.isEligibleForIntroOffer ? "7-day free trial · " : ""
         switch product.tier {
-        case .monthly: return "7-day free trial · Cancel anytime · Auto-renews"
-        case .yearly: return "$3.33/mo · 7-day free trial · Auto-renews"
-        case .lifetime: return "One-time payment · No renewal"
+        case .monthly:
+            return "\(trialPart)Cancel anytime · Auto-renews"
+        case .yearly:
+            let monthly = product.monthlyEquivalent.map { "\($0)/mo · " } ?? ""
+            return "\(monthly)\(trialPart)Auto-renews"
+        case .lifetime:
+            return "One-time payment · No renewal"
         }
     }
 
@@ -1672,22 +1750,37 @@ struct PaywallView: View {
         )
     }
 
+    /// CTA copy depends on the selected tier AND the user's intro-offer
+    /// eligibility on that tier. If they've used the trial before, the
+    /// CTA says "Subscribe — $X.XX" rather than "Start 7-day free trial"
+    /// (Apple 3.1.2(a) — no false trial promises).
     private var ctaLabel: String {
+        let selected = products.first(where: { $0.tier == selectedTier })
         switch selectedTier {
-        case .monthly: return "Start 7-day free trial"
-        case .yearly: return "Start 7-day free trial"
-        case .lifetime: return "Buy Lifetime · \(products.first(where: { $0.tier == .lifetime })?.displayPrice ?? "$79.99")"
+        case .monthly:
+            if selected?.isEligibleForIntroOffer == true {
+                return "Start 7-day free trial"
+            }
+            return "Subscribe \u{2014} \(selected?.displayPrice ?? "$4.99")/mo"
+        case .yearly:
+            if selected?.isEligibleForIntroOffer == true {
+                return "Start 7-day free trial"
+            }
+            return "Subscribe \u{2014} \(selected?.displayPrice ?? "$39.99")/yr"
+        case .lifetime:
+            return "Buy Lifetime \u{2014} \(selected?.displayPrice ?? "$79.99")"
         }
     }
 
     // MARK: - Actions
 
     private func loadProducts() async {
-        if client == nil {
-            client = StoreKitClient(entitlementService: entitlementService)
+        guard let client else {
+            purchaseError = "StoreKit not ready. Try again."
+            return
         }
         do {
-            products = try await client?.loadProducts() ?? []
+            products = try await client.loadProducts()
         } catch {
             purchaseError = "Couldn't load products: \(error.localizedDescription)"
         }
@@ -1765,6 +1858,11 @@ import SwiftUI
 
 /// Gear icon in the home-view toolbar. Tap presents Settings as a sheet.
 /// Lives in all 3 home views (SmartCut / Denoise / Merge).
+///
+/// Note: `EntitlementService` and `\.storeKitClient` are NOT injected here
+/// — RootTabView's body injects them at the root, and `.sheet` content
+/// inherits the parent environment automatically (SwiftUI sheet
+/// modal-presentation rules). Re-injecting would be redundant.
 struct SettingsToolbarButton: View {
 
     @Environment(\.sonicMergeSemantic) private var semantic
@@ -1785,7 +1883,6 @@ struct SettingsToolbarButton: View {
             NavigationStack {
                 SettingsView()
             }
-            .environment(EntitlementService.shared)
         }
     }
 }
@@ -1905,12 +2002,11 @@ struct SettingsView: View {
 
     @Environment(\.dismiss) private var dismiss
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(\.storeKitClient) private var client
     @Environment(EntitlementService.self) private var entitlements
 
     @State private var paywallReason: PaywallReason?
     @State private var isRestoring = false
-
-    @State private var client: StoreKitClient?
 
     var body: some View {
         ScrollView {
@@ -1953,11 +2049,11 @@ struct SettingsView: View {
             }
         }
         .paywall(reason: $paywallReason)
-        .task {
-            if client == nil {
-                client = StoreKitClient(entitlementService: entitlements)
-            }
-        }
+        // No .task to create StoreKitClient — it's injected via
+        // \.storeKitClient from RootTabView at app level. If client is
+        // nil here (defensive), Restore Purchases simply no-ops; that
+        // shouldn't happen in practice since the root injection runs
+        // before any view is rendered.
     }
 }
 
@@ -1970,6 +2066,14 @@ extension Bundle {
     }
 }
 ```
+
+**Pre-flight check before adding the `Bundle` extension:** if the codebase already declares `appVersion` / `appBuild` on `Bundle`, this declaration will collide with a "redeclaration" compile error. Run:
+
+```bash
+grep -rn 'extension Bundle\|var appVersion\|var appBuild' SonicMerge/ --include="*.swift"
+```
+
+If results show an existing declaration, REMOVE this extension from `SettingsView.swift` and use the existing one. If no results, add the extension as written above.
 
 - [ ] **Step 5: Write the failing render test**
 
@@ -2099,45 +2203,71 @@ git add SonicMerge/Features/SmartCut/Views/Home/SmartCutHomeView.swift \
 git commit -m "feat(settings): wire SettingsToolbarButton into all 3 home toolbars"
 ```
 
-### Task 5.3: Inject EntitlementService at app level + scenePhase reset
+### Task 5.3: Hoist StoreKitClient + EntitlementService + PaywallTriggerCoordinator to app level
 
 **Files:**
 - Modify: `SonicMerge/App/RootTabView.swift`
-- Modify: `SonicMerge/SonicMergeApp.swift`
 
-`EntitlementService.shared` exists as a process-wide singleton, but views need it injected via `.environment` so previews + tests can swap a fake. Also wire `PaywallTriggerCoordinator.resetSession()` to `scenePhase` transitions.
+This is the architecturally important step: ONE `StoreKitClient` exists for the entire app lifetime, injected via `\.storeKitClient` so PaywallView and SettingsView read the same instance. Without this, both views would create their own client, each starting its own `Transaction.updates` listener — double-firing entitlement updates.
 
-- [ ] **Step 1: In `RootTabView.swift`, inject `EntitlementService` + create the coordinator**
+- [ ] **Step 1: Add app-scope state at the top of `RootTabView`**
 
-Add at the top of `RootTabView`:
+Insert below the existing `@State private var fillerLibraryStore = FillerLibraryStore()`:
 
 ```swift
+/// Subscription stack — created once at app root, shared via @Environment
+/// to PaywallView + SettingsView. This is the SINGLE StoreKitClient
+/// instance for the entire app lifetime.
+@State private var entitlementService = EntitlementService()
 @State private var paywallCoordinator = PaywallTriggerCoordinator()
+@State private var storeKitClient: StoreKitClient?
 ```
 
-Add `.environment(EntitlementService.shared)` and `.environment(paywallCoordinator)` to the body's TabView (after the existing `.environment(\.sonicMergeSemantic, ...)`).
+- [ ] **Step 2: Initialize `storeKitClient` lazily on first appear**
 
-- [ ] **Step 2: Reset session on scenePhase transitions**
-
-In the existing `.onChange(of: scenePhase)` block, add:
+`StoreKitClient.init` is `@MainActor` and starts a background task — must be on the main actor when called. Initialize in the existing `.onAppear` block:
 
 ```swift
-if phase == .active {
-    paywallCoordinator.resetSession()
+.onAppear {
+    if storeKitClient == nil {
+        storeKitClient = StoreKitClient(entitlementService: entitlementService)
+    }
+    // ... existing onAppear logic (mixingStationViewModel init, share import handlers)
 }
 ```
 
-(There's already an `.onChange(of: scenePhase)` block in RootTabView — extend it; don't add a second.)
+- [ ] **Step 3: Inject the full subscription stack into the TabView's environment**
 
-- [ ] **Step 3: Build + smoke**
+Add three modifiers BEFORE the existing `.environment(\.sonicMergeSemantic, semantic)`:
 
-Run: build → expect BUILD SUCCEEDED. Open Settings, tap Upgrade, dismiss, tap Upgrade again — paywall should still show (because `.settingsUpgrade` bypasses throttling). Background the app and re-foreground; the session flag should reset.
+```swift
+.environment(entitlementService)
+.environment(paywallCoordinator)
+.environment(\.storeKitClient, storeKitClient)
+```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 4: Reset coordinator session on scenePhase transitions**
+
+In the existing `.onChange(of: scenePhase)` block, add inside the `phase == .active` branch:
+
+```swift
+paywallCoordinator.resetSession()
+```
+
+(There's already a `.onChange(of: scenePhase)` in RootTabView — extend it; don't add a second.)
+
+- [ ] **Step 5: Build + smoke**
+
+Run: `xcodebuild ... build 2>&1 | tail -3`
+Expected: BUILD SUCCEEDED.
+
+Manual: open Settings, tap Upgrade, dismiss, tap Upgrade again — paywall should still show (`.settingsUpgrade` bypasses throttling). Background the app and re-foreground; session flag should reset.
+
+- [ ] **Step 6: Commit**
 
 ```bash
 git add SonicMerge/App/RootTabView.swift
-git commit -m "feat(subscription): inject EntitlementService + PaywallTriggerCoordinator at root"
+git commit -m "feat(subscription): hoist subscription stack (EntitlementService, StoreKitClient, PaywallTriggerCoordinator) to RootTabView"
 ```
 
 ### Task 5.4: Final full-suite test + ship-readiness check
