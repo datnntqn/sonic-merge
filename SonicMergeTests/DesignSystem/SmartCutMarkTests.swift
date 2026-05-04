@@ -1,3 +1,10 @@
+// SmartCutMarkTests.swift
+// SonicMergeTests
+//
+// Render-without-crash smoke tests for the three SmartCutMark size presets,
+// plus a pixel-diversity test that confirms the fire gradient is actually
+// rendering and not silently flattening.
+
 import Testing
 import SwiftUI
 @testable import SonicMerge
