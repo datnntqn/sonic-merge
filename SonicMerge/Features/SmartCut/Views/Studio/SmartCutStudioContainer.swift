@@ -179,8 +179,12 @@ struct SmartCutStudioContainer: View {
                     let label = vm.estimatedAnalysisMinutes > 0
                         ? "Analyze ~\(vm.estimatedAnalysisMinutes) min"
                         : "Analyze"
-                    Label(label, systemImage: "sparkles")
-                        .frame(maxWidth: .infinity)
+                    HStack(spacing: 6) {
+                        SmartCutMark(size: .toolbar, monochromeTint: .white)
+                            .frame(width: 22, height: 22)
+                        Text(label)
+                    }
+                    .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
 
@@ -240,11 +244,20 @@ struct SmartCutStudioContainer: View {
     }
 
     private func smartCutOrb(active: Bool) -> some View {
-        Image(systemName: "sparkles")
-            .font(.system(size: 56, weight: .bold))
-            .foregroundStyle(.tint)
-            .symbolEffect(.pulse, options: active ? .repeating : .nonRepeating)
-            .frame(width: 80, height: 80)
+        Group {
+            if active {
+                SmartCutMark(size: .hero)
+                    .frame(width: 80, height: 80)
+                    .phaseAnimator([1.0, 1.05]) { content, phase in
+                        content.scaleEffect(phase)
+                    } animation: { _ in
+                        .easeInOut(duration: 0.9)
+                    }
+            } else {
+                SmartCutMark(size: .hero)
+                    .frame(width: 80, height: 80)
+            }
+        }
     }
 
     private func formatDuration(_ s: TimeInterval) -> String {
