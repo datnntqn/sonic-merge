@@ -87,6 +87,8 @@ Spacing: 12pt between the orb and the first card, 12pt between the two cards, 16
 - `StudioBentoCard` shape
 - Leading: `text.bubble` icon + "FILLER WORDS" caption + right-aligned word count chip (`"\(library.allWords.count) words"` in `accentAction` indigo at 14% alpha)
 - Body: wrapped capsule flow, one capsule per word. Capsule style matches `EditFillerListStudioSheet`'s frosted-glass treatment but **without** the trailing `✕`. Read-only summary.
+
+  **Capsule reuse (decided):** the existing `WordCapsule` private struct in `EditFillerListStudioSheet.swift` (~line 124) is hoisted to file-internal and given an optional `onRemove: (() -> Void)?` parameter. When `onRemove == nil`, the capsule renders without the trailing ✕ (read-only mode). When `onRemove` is provided, it renders the existing ✕ that calls back. This avoids duplicating the ~12-line capsule shape and keeps the styling single-sourced — future visual tweaks land in one place. The hoist is part of this chunk's diff (no separate refactor commit needed; both consumers end up in the same file or same module).
 - Footer: `"✏ Edit list"` with chevron, indigo `accentAction`, tappable
 
 **Empty state** (user removed every word, `allWords.isEmpty`): replace the chip wrap with a single line `"No filler words. Tap Edit list to add some."` in `textSecondary`. The Edit link still works.
@@ -150,7 +152,7 @@ IdleSettingsCards(
 )
 ```
 
-Sheet presentation (`.sheet(isPresented: $showEditFillerList) { EditFillerListStudioSheet(library: $library) }`) is already attached to the body via the existing studio chain — works for both the post-analyze "Edit list" trigger and the new idle "Edit list" trigger because the same `@State` flag drives both.
+**Sheet attachment must move.** Currently the `.sheet(isPresented: $showEditFillerList) { EditFillerListStudioSheet(library: $library) }` modifier lives inside `studioLayout(headerBanner:)` (post-analyze branch only) — it is **not** visible to the idle scaffold. For the idle "Edit list" tap to actually present the sheet, the `.sheet` modifier moves up to the container's `body` outermost level (or wraps the `switch vm.state` `Group`), so it's attached once and serves both the post-analyze studio path and the new idle path. The post-analyze trigger continues to work unchanged (same `@State` flag, same sheet content).
 
 ## 8. Files to change
 
