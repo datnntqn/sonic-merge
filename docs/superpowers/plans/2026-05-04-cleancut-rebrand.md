@@ -72,6 +72,8 @@ new dark-mode surface/accent token swap (CleanCut rebrand).
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
 
+**Note on dead-code-adjacent constants:** The old primitives `aiAccent`, `limeGreen`, `primaryAccent`, `darkBackground`, `darkCardSurface`, `systemPurple` will become unused after Task 1.2 swaps the resolver values. Per CLAUDE.md Karpathy guideline #1 (surgical changes only) and project rule "if you notice unrelated dead code, mention it — don't delete it," **leave these declarations in place**. The Share Extension target's `AppConstants.swift` mirror also references some of these names for parity reasons. Cleanup is a separate task if/when the user requests it.
+
 ### Task 1.2: Add `accentAIGradientStops` slot to `SonicMergeSemantic`
 
 **Files:**
@@ -99,46 +101,43 @@ struct SonicMergeSemanticGradientTests {
         #expect(s.accentAIGradientStops.count == 4)
     }
 
+    /// Helper — assert a UIColor matches the given 0-255 channel values within a small
+    /// tolerance. UIColor stores normalized CGFloat; round-trip rounding can produce
+    /// off-by-one Int() results, so compare normalized channels with epsilon.
+    private func expectChannels(_ color: UIColor, r: Int, g: Int, b: Int,
+                                tolerance: CGFloat = 0.01) {
+        var rr: CGFloat = 0, gg: CGFloat = 0, bb: CGFloat = 0, aa: CGFloat = 0
+        color.getRed(&rr, green: &gg, blue: &bb, alpha: &aa)
+        #expect(abs(rr - CGFloat(r) / 255) < tolerance)
+        #expect(abs(gg - CGFloat(g) / 255) < tolerance)
+        #expect(abs(bb - CGFloat(b) / 255) < tolerance)
+    }
+
     @Test func firstStopIsEmberRed() {
         let s = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        s.accentAIGradientStops[0].getRed(&r, green: &g, blue: &b, alpha: &a)
-        #expect(Int(r * 255) == 255)
-        #expect(Int(g * 255) == 78)
-        #expect(Int(b * 255) == 80)
+        expectChannels(s.accentAIGradientStops[0], r: 255, g: 78, b: 80)
     }
 
     @Test func lastStopIsDeepViolet() {
         let s = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        s.accentAIGradientStops[3].getRed(&r, green: &g, blue: &b, alpha: &a)
-        #expect(Int(r * 255) == 111)
-        #expect(Int(g * 255) == 45)
-        #expect(Int(b * 255) == 189)
+        expectChannels(s.accentAIGradientStops[3], r: 111, g: 45, b: 189)
     }
 
     @Test func accentActionIsDeepVioletInBothSchemes() {
         let dark = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         let light = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        dark.accentAction.getRed(&r, green: &g, blue: &b, alpha: &a)
-        #expect(Int(r * 255) == 111 && Int(g * 255) == 45 && Int(b * 255) == 189)
-        light.accentAction.getRed(&r, green: &g, blue: &b, alpha: &a)
-        #expect(Int(r * 255) == 111 && Int(g * 255) == 45 && Int(b * 255) == 189)
+        expectChannels(dark.accentAction, r: 111, g: 45, b: 189)
+        expectChannels(light.accentAction, r: 111, g: 45, b: 189)
     }
 
     @Test func accentAIIsMagentaFlat() {
         let s = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        s.accentAI.getRed(&r, green: &g, blue: &b, alpha: &a)
-        #expect(Int(r * 255) == 240 && Int(g * 255) == 80 && Int(b * 255) == 110)
+        expectChannels(s.accentAI, r: 240, g: 80, b: 110)
     }
 
     @Test func darkSurfaceBaseIsDeepNavy() {
         let s = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-        s.surfaceBase.getRed(&r, green: &g, blue: &b, alpha: &a)
-        #expect(Int(r * 255) == 10 && Int(g * 255) == 10 && Int(b * 255) == 24)
+        expectChannels(s.surfaceBase, r: 10, g: 10, b: 24)
     }
 }
 ```
@@ -300,9 +299,13 @@ struct SmartCutMarkTests {
         #expect(renderer.uiImage != nil)
     }
 
-    /// Pixel-diversity smoke test: the gradient version should produce more
-    /// distinct colors than the monochrome version. Gives confidence the
-    /// LinearGradient is actually rendering, not silently flattening.
+    /// Pixel-diversity smoke test: the gradient version should produce many
+    /// more distinct hues than the monochrome version, giving confidence the
+    /// LinearGradient is actually rendering and not silently flattening.
+    /// We sample only the bar-interior region (a narrow horizontal band at
+    /// y=h/2) and require the gradient hue count to be at least 2× the
+    /// monochrome hue count — anti-aliasing produces some pixel diversity
+    /// in mono too, so a multiplicative threshold is the stable signal.
     @Test func gradientProducesMoreColorVarietyThanMonochrome() {
         let gradient = SmartCutMark(size: .splash)
         let mono = SmartCutMark(size: .splash, monochromeTint: .white)
@@ -313,22 +316,30 @@ struct SmartCutMarkTests {
             guard let img = r.uiImage, let cg = img.cgImage,
                   let data = cg.dataProvider?.data,
                   let ptr = CFDataGetBytePtr(data) else { return 0 }
-            let length = CFDataGetLength(data)
+            let bytesPerRow = cg.bytesPerRow
+            let bpp = cg.bitsPerPixel / 8  // expected 4 (RGBA8888)
+            // Sample a 4-row band centered at the canvas vertical midline,
+            // every other column — this is where bar interiors sit.
+            let yStart = 48 - 2, yEnd = 48 + 2
             var samples = Set<UInt32>()
-            // Sample every 4th pixel (RGBA 4 bytes each — stride 16)
-            var i = 0
-            while i + 4 <= length {
-                let r = UInt32(ptr[i]); let g = UInt32(ptr[i+1])
-                let b = UInt32(ptr[i+2]); let a = UInt32(ptr[i+3])
-                samples.insert((r << 24) | (g << 16) | (b << 8) | a)
-                i += 16
+            for y in yStart..<yEnd {
+                var x = 0
+                while x < 96 {
+                    let i = y * bytesPerRow + x * bpp
+                    if i + 4 > CFDataGetLength(data) { break }
+                    let rC = UInt32(ptr[i]); let gC = UInt32(ptr[i+1])
+                    let bC = UInt32(ptr[i+2]); let aC = UInt32(ptr[i+3])
+                    samples.insert((rC << 24) | (gC << 16) | (bC << 8) | aC)
+                    x += 2
+                }
             }
             return samples.count
         }
 
         let gradientUnique = uniquePixelCount(gradient)
         let monoUnique = uniquePixelCount(mono)
-        #expect(gradientUnique > monoUnique, "gradient=\(gradientUnique) mono=\(monoUnique)")
+        #expect(gradientUnique > monoUnique * 2,
+                "expected gradient>2×mono — got gradient=\(gradientUnique) mono=\(monoUnique)")
     }
 }
 ```
@@ -432,7 +443,11 @@ struct SmartCutMark: View {
                 .stroke(Color.white, style: StrokeStyle(lineWidth: size.diagonalStroke, lineCap: .round))
             }
         }
-        .frame(width: size.pointSize, height: size.pointSize)
+        // Note: we deliberately do NOT apply an inner .frame(width:height:) here.
+        // Callers pass `.frame(width: ..., height: ...)` from the outside (tab bar,
+        // CTA, hero badge), and an inner frame would conflict with parent layout
+        // when sizes differ from `size.pointSize`. The Size enum's pointSize is
+        // documentation of intended size, not enforced.
         .accessibilityHidden(true)
     }
 }
@@ -460,6 +475,10 @@ struct SmartCutMark: View {
 ```
 
 Add the file to the `SonicMerge` target in pbxproj.
+
+**Accessibility-label preservation across callsite swaps.** `SmartCutMark` itself sets `.accessibilityHidden(true)` because the parent context is what announces the action ("Apply Cuts", "Analyze", "Smart Cut" tab). When Chunk 4/5 swap from `Label("Apply Cuts", systemImage: "sparkles")` to `HStack { SmartCutMark(); Text("Apply Cuts") }`, the parent `Label`-provided accessibility label disappears. Each callsite swap MUST preserve accessibility — either by wrapping the new HStack in `.accessibilityElement(children: .combine)` so the inner `Text` is read, or by adding `.accessibilityLabel("Apply Cuts")` explicitly on the button.
+
+**Spec deviation note (Chunk 3 reuse):** The spec §"Asset generation strategy" calls for `SmartCutMark.swift` to compile on macOS host so the render script can import it. We deliberately deviate by **duplicating the glyph constants in the script** instead — the constants are short and the script-mode import path is more brittle than copy-paste. If we later need a single source of truth, both can be extracted to a shared `SmartCutGeometry.swift` consumable by both targets. For now: when the glyph geometry changes, edit BOTH files. (One pre-commit grep — `grep -l "leftHeights" SonicMerge/DesignSystem/SmartCutMark.swift Scripts/RenderSmartCutAppIcon.swift` — catches drift.)
 
 - [ ] **Step 4: Run test to verify it passes**
 
@@ -542,7 +561,11 @@ struct Mark: View {
 
     var body: some View {
         ZStack {
-            if let bg = background { bg }
+            // Always include an explicit background — Color.clear when the caller
+            // passed nil — so ImageRenderer flushes alpha through to the PNG.
+            // (Without this, macOS ImageRenderer can rasterize transparent regions
+            // as opaque white when the SwiftUI hierarchy has no explicit background.)
+            (background ?? Color.clear)
             GeometryReader { geo in
                 let w = geo.size.width, h = geo.size.height
                 let barWidth = w * 0.047
@@ -576,7 +599,9 @@ struct Mark: View {
     }
 }
 
-@MainActor
+// Note: render(...) is called inside MainActor.run { ... } below. Don't
+// double-mark with @MainActor — that produces an actor-isolation warning
+// in Swift 5.9+ script mode.
 func render(_ view: some View, size: CGFloat, to path: String) {
     let renderer = ImageRenderer(content: view.frame(width: size, height: size))
     renderer.scale = 1
@@ -614,20 +639,21 @@ await MainActor.run {
     render(Mark(canvas: 1024, background: nil, monochromeTint: .white),
            size: 1024, to: "\(appIconDir)/AppIcon-1024-Tinted.png")
 
-    // Tab bar — 22 / 44 / 66 px, transparent bg, fire gradient
-    render(Mark(canvas: 22, background: nil, monochromeTint: nil),
-           size: 22, to: "\(tabIconDir)/SmartCutTabIcon.png")
-    render(Mark(canvas: 44, background: nil, monochromeTint: nil),
-           size: 44, to: "\(tabIconDir)/SmartCutTabIcon@2x.png")
-    render(Mark(canvas: 66, background: nil, monochromeTint: nil),
-           size: 66, to: "\(tabIconDir)/SmartCutTabIcon@3x.png")
+    // Tab bar — iOS UITabBar grid is 25pt selected; ship 25 / 50 / 75 px
+    // (1×/2×/3×) so @3x devices render crisp. Transparent bg, fire gradient.
+    render(Mark(canvas: 25, background: nil, monochromeTint: nil),
+           size: 25, to: "\(tabIconDir)/SmartCutTabIcon.png")
+    render(Mark(canvas: 50, background: nil, monochromeTint: nil),
+           size: 50, to: "\(tabIconDir)/SmartCutTabIcon@2x.png")
+    render(Mark(canvas: 75, background: nil, monochromeTint: nil),
+           size: 75, to: "\(tabIconDir)/SmartCutTabIcon@3x.png")
 }
 ```
 
 - [ ] **Step 2: Make the script executable and run it**
 
 Run: `chmod +x Scripts/RenderSmartCutAppIcon.swift && swift Scripts/RenderSmartCutAppIcon.swift`
-Expected: 6 lines of `✓ SonicMerge/Assets.xcassets/...png` output, all 6 PNGs created.
+Expected: 6 lines of `✓ SonicMerge/Assets.xcassets/...png` output, all 6 PNGs created. The tab-bar PNGs are 25/50/75 px (1×/2×/3× of 25pt — matches iOS UITabBar grid).
 
 - [ ] **Step 3: Spot-check the rendered output**
 
@@ -751,7 +777,7 @@ Replace the existing `Contents.json` with:
 }
 ```
 
-(Mac entries unchanged — we don't ship a Mac binary, but Xcode templates always emit them. Leave them.)
+(Mac entries unchanged — we don't ship a Mac binary, but Xcode templates always emit them. Leave them. Xcode's asset compiler will emit "missing image" warnings for the unfilled `mac` entries; those are pre-existing and not introduced by this rebrand.)
 
 - [ ] **Step 2: Build and run on simulator to verify icon shows up**
 
@@ -822,6 +848,15 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 This chunk swaps every non-onboarding `sparkles` SF Symbol callsite to `SmartCutMark` and updates two CTAs (`Apply Cuts`, `Analyze`) to use the fire gradient. Onboarding is held back to Chunk 5 because the file is the largest single touch point.
 
+**Line-drift defense for every task in this chunk:** before applying a patch, re-grep for the symbol you're replacing — line numbers cited below were captured 2026-05-04 and prior commits may shift them.
+
+```bash
+grep -n 'sparkles' SonicMerge/App/RootTabView.swift
+grep -n 'sparkles' SonicMerge/Features/SmartCut/Views/Home/SmartCutHomeView.swift
+grep -n 'sparkles' SonicMerge/Features/SmartCut/Views/Home/SmartCutSessionView.swift
+grep -n 'sparkles' SonicMerge/Features/SmartCut/Views/Studio/SmartCutStudioContainer.swift
+```
+
 ### Task 4.1: Tab bar — Smart Cut tab item
 
 **Files:**
@@ -890,25 +925,35 @@ git commit -m "feat(rebrand): SmartCutHomeView empty-state hero uses SmartCutMar
 **Files:**
 - Modify: `SonicMerge/Features/SmartCut/Views/Home/SmartCutSessionView.swift:135-141, 144-150`
 
-- [ ] **Step 1: Replace `Label("Apply Cuts", systemImage: "sparkles")` with `SmartCutMark` + text label**
+- [ ] **Step 1: Replace `Label("Apply Cuts", systemImage: "sparkles")` with `SmartCutMark` + text label, and override the pill background with the fire gradient**
 
-In the `applyCutsButton(for:)` switch, both `.results` and `.applied` (Re-apply path) cases use a `Label`. Replace the `.results` case with:
+In the `applyCutsButton(for:)` switch, the `.results` case currently wraps a `Label` in `PillButtonStyle(...tint: .ai)` which paints a flat magenta capsule. Per spec D-01/D-07, the **Apply Cuts CTA hosts the full fire gradient** — same treatment as the onboarding "Smart Cut This Sample" CTA in Task 5.3. Replace the `.results` case with a hand-styled button (skipping `PillButtonStyle.ai`, which only paints a flat color):
 
 ```swift
 case .results:
     Button { Task { await vm.apply() } } label: {
         HStack(spacing: 6) {
-            SmartCutMark(size: .toolbar)
+            SmartCutMark(size: .toolbar, monochromeTint: .white)
             Text("Apply Cuts")
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
         }
+        .font(.system(.body, design: .rounded, weight: .semibold))
+        .foregroundStyle(.white)
         .frame(maxWidth: .infinity)
+        .padding(.vertical, 14)
+        .background(Capsule().fill(LinearGradient(
+            colors: semantic.accentAIGradientStops.map { Color(uiColor: $0) },
+            startPoint: .leading,
+            endPoint: .trailing
+        )))
     }
-    .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
+    .accessibilityLabel("Apply Cuts")
 ```
 
-The `.applied`/Re-apply path keeps the `arrow.clockwise` symbol (it's a re-action, not a Smart-Cut moment) — leave that unchanged.
+The glyph uses `monochromeTint: .white` — at 22pt against the gradient capsule, white-on-fire reads cleanly (gradient-on-gradient muddies). The `.applied`/Re-apply path keeps the `arrow.clockwise` SF Symbol with `PillButtonStyle.ai` (flat magenta) — re-apply is a re-action, not a fresh AI moment, so it doesn't get the headline gradient treatment.
+
+If `semantic` isn't already in scope at this callsite, add `@Environment(\.sonicMergeSemantic) private var semantic` to the `SmartCutSessionView` struct.
 
 - [ ] **Step 2: Build + verify visually**
 
@@ -959,25 +1004,28 @@ private func smartCutOrb(active: Bool) -> some View {
 }
 ```
 
-Replace with:
+Replace with (using SwiftUI's iOS 17 `phaseAnimator` for a true repeating breath):
 
 ```swift
 private func smartCutOrb(active: Bool) -> some View {
-    SmartCutMark(size: .hero)
-        .frame(width: 80, height: 80)
-        .scaleEffect(active && pulse ? 1.05 : 1.0)
-        .animation(active ? .easeInOut(duration: 0.9).repeatForever(autoreverses: true) : .default, value: pulse)
-        .onAppear { pulse.toggle() }
+    Group {
+        if active {
+            SmartCutMark(size: .hero)
+                .frame(width: 80, height: 80)
+                .phaseAnimator([1.0, 1.05]) { content, phase in
+                    content.scaleEffect(phase)
+                } animation: { _ in
+                    .easeInOut(duration: 0.9)
+                }
+        } else {
+            SmartCutMark(size: .hero)
+                .frame(width: 80, height: 80)
+        }
+    }
 }
 ```
 
-And add the state property at the top of `SmartCutStudioContainer`:
-
-```swift
-@State private var pulse: Bool = false
-```
-
-`SmartCutMark` is not an SF Symbol so `.symbolEffect(.pulse)` is replaced with a manual scale animation — same visual feel (gentle breathing) without symbol-effect machinery.
+`SmartCutMark` is not an SF Symbol so `.symbolEffect(.pulse)` is replaced with `phaseAnimator(_:content:animation:)` — iOS 17+ — which alternates between phase values continuously, producing the gentle breathing scale. No external `@State` driver needed; the animator runs as long as the view is on screen with `active == true`. (The earlier draft used a single `pulse: Bool` toggled in `.onAppear`, which only fires once and would not actually repeat.)
 
 - [ ] **Step 3: Build + verify visually**
 
@@ -1012,14 +1060,18 @@ If any visual issue, file a follow-up note in `docs/superpowers/qa/2026-05-04-cl
 **Files:**
 - Modify: `SonicMerge/Features/Onboarding/OnboardingFlow.swift:158-176`
 
-- [ ] **Step 1: Replace the hero badge with SmartCutMark inside a fire-gradient frame**
+- [ ] **Step 0: Re-grep current line numbers**
 
-Replace lines 158–176 (the `// Hero badge — gradient at 20% alpha, sparkles inside` ZStack) with:
+Run: `grep -n 'sparkles\|bounceTrigger' SonicMerge/Features/Onboarding/OnboardingFlow.swift`
+Captured 2026-05-04: lines 158, 169, 193, 412 — confirm before patching.
+
+- [ ] **Step 1: Replace the hero badge with SmartCutMark inside a fire-gradient frame, using a true one-shot bounce**
+
+Replace the `// Hero badge — gradient at 20% alpha, sparkles inside` ZStack (lines ~158–176) with:
 
 ```swift
-// Hero badge — fire gradient frame at 20% alpha, SmartCutMark inside.
-// Frame uses the gradient stops from the semantic resolver so it matches
-// the in-app fire identity exactly.
+// Hero badge — fire gradient frame at 20% alpha, SmartCutMark inside,
+// gentle one-shot scale-bounce on appear.
 ZStack {
     RoundedRectangle(cornerRadius: 24, style: .continuous)
         .fill(LinearGradient(
@@ -1028,8 +1080,11 @@ ZStack {
             endPoint: .bottomTrailing
         ))
     SmartCutMark(size: .hero)
-        .scaleEffect(bounceTrigger ? 1.05 : 1.0)
-        .animation(.spring(response: 0.4, dampingFraction: 0.55), value: bounceTrigger)
+        .phaseAnimator([0.95, 1.08, 1.0], trigger: bounceTrigger) { content, phase in
+            content.scaleEffect(phase)
+        } animation: { phase in
+            phase == 1.08 ? .spring(response: 0.32, dampingFraction: 0.55) : .easeOut(duration: 0.18)
+        }
 }
 .frame(width: 80, height: 80)
 .accessibilityHidden(true)
@@ -1037,7 +1092,7 @@ ZStack {
 .onAppear { if !reduceMotion { bounceTrigger.toggle() } }
 ```
 
-The previous `.symbolEffect(.bounce)` is replaced with a `.scaleEffect` + `.spring` animation since `SmartCutMark` is not a SF Symbol. Same one-shot bounce on appear.
+The previous `.symbolEffect(.bounce)` was a true one-shot; we replicate it with `phaseAnimator(_:trigger:content:animation:)` (iOS 17+) cycling through three phases (0.95 → 1.08 → 1.0) once per `bounceTrigger` toggle. (The earlier draft's `.scaleEffect + .animation` would scale to 1.05 and stay there permanently because the trigger toggles only once on appear.)
 
 ### Task 5.2: Onboarding feature pill — accept arbitrary icon view
 
@@ -1115,6 +1170,11 @@ The Smart Cut pill's icon uses `monochromeTint: .white` — at 14pt the gradient
 
 **Files:**
 - Modify: `SonicMerge/Features/Onboarding/OnboardingFlow.swift:412-417`
+
+- [ ] **Step 0: Read the surrounding 25 lines to confirm exact `.font(...)` / structure**
+
+Run: `sed -n '405,425p' SonicMerge/Features/Onboarding/OnboardingFlow.swift`
+Copy the exact `.font(...)` modifier from the current code into the patch below — don't ellipsize. Line numbers may have drifted.
 
 - [ ] **Step 1: Replace the Label + flat capsule fill**
 
@@ -1235,11 +1295,11 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ### Task 5.5: Update auto-memory feedback rule
 
+**⚠️ Side effect outside repo.** The auto-memory directory `/Users/datnnt/.claude/projects/.../memory/` is OUTSIDE this git repo, so this task's changes don't appear in any commit. They'll persist across future Claude sessions but won't be reverted by `git reset`. The user's existing feedback memory says "indigo = navigation/CTAs; lime green reserved for AI moments only" — that rule will be wrong after this rebrand ships. Auto-mode authorizes us to update memory based on observed user direction (the user picked direction A); this update brings memory in sync with reality.
+
 **Files:**
 - Modify: `/Users/datnnt/.claude/projects/-Users-datnnt-Desktop-DatNNT-App-SonicMerge/memory/feedback_color_discipline.md`
 - Modify: `/Users/datnnt/.claude/projects/-Users-datnnt-Desktop-DatNNT-App-SonicMerge/memory/MEMORY.md`
-
-The persisted feedback memory currently says "indigo = navigation/CTAs; lime green reserved for AI moments only." After this rebrand, the rule shape is unchanged but the colors flip.
 
 - [ ] **Step 1: Update `feedback_color_discipline.md`**
 
