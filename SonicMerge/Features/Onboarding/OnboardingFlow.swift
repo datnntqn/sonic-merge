@@ -155,21 +155,22 @@ private struct BrandOpenerStep: View {
 
             Spacer(minLength: 0)
 
-            // Hero badge — gradient at 20% alpha, sparkles inside
+            // Hero badge — fire gradient frame at 20% alpha, SmartCutMark inside,
+            // gentle one-shot scale-bounce on appear.
             ZStack {
                 RoundedRectangle(cornerRadius: 24, style: .continuous)
                     .fill(LinearGradient(
-                        colors: [
-                            Color(uiColor: semantic.accentAI).opacity(0.20),
-                            Color(uiColor: semantic.accentAction).opacity(0.20)
-                        ],
+                        colors: semantic.accentAIGradientStops.map { Color(uiColor: $0).opacity(0.20) },
                         startPoint: .topLeading,
                         endPoint: .bottomTrailing
                     ))
-                Image(systemName: "sparkles")
-                    .font(.system(size: 38, weight: .bold))
-                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
-                    .symbolEffect(.bounce, value: bounceTrigger)
+                SmartCutMark(size: .hero)
+                    .frame(width: 56, height: 56)
+                    .phaseAnimator([0.95, 1.08, 1.0], trigger: bounceTrigger) { content, phase in
+                        content.scaleEffect(phase)
+                    } animation: { phase in
+                        phase == 1.08 ? .spring(response: 0.32, dampingFraction: 0.55) : .easeOut(duration: 0.18)
+                    }
             }
             .frame(width: 80, height: 80)
             .accessibilityHidden(true)
