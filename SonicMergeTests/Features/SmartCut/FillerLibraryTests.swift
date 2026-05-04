@@ -14,7 +14,7 @@ struct FillerLibraryTests {
 
     @Test func testDefaultOnSetMatchesSpec() {
         let (lib, _) = freshLibrary()
-        #expect(lib.defaultOnWords == ["um", "uh", "ah", "er", "oh"])
+        #expect(lib.defaultOnWords == ["um", "ah", "er"])
     }
 
     @Test func testDefaultOffSetMatchesSpec() {

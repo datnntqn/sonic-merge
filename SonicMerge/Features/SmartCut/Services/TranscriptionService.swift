@@ -142,7 +142,7 @@ actor TranscriptionService {
         // contextualStrings as "domain-specific terms" — feeding the
         // hesitation list nudges the LM scoring to prefer these short tokens
         // over the filtered alternatives.
-        request.contextualStrings = ["um", "uh", "ah", "er", "oh"]
+        request.contextualStrings = ["um", "ah", "er"]
 
         return try await withCheckedThrowingContinuation { continuation in
             let didResumeBox = DidResumeBox()

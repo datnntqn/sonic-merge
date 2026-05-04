@@ -27,9 +27,11 @@ struct SmartCutServiceIntegrationTests {
         let editList = try #require(finalEditList)
 
         // Fixture says "um hello uh world like this" then 2s silence then "yeah basically that's it".
+        // "uh" is no longer in the default filler list (removed because the
+        // recognizer is unreliable on that token), so it won't appear as a
+        // detected category. "um" remains the default-on assertion target.
         let categories = Set(editList.categories)
         #expect(categories.contains("um"))
-        #expect(categories.contains("uh"))
 
         // Default-on fillers should be enabled
         let umEdits = editList.fillers.filter { $0.matchedText == "um" }

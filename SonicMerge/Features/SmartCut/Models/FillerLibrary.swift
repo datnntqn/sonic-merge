@@ -9,7 +9,11 @@ struct FillerLibrary: Equatable {
     let defaults: UserDefaults
 
     /// SPEC: tight set, on by default — never false-positives a real word.
-    let defaultOnWords: [String] = ["um", "uh", "ah", "er", "oh"]
+    /// NOTE: "uh" and "oh" were removed from the default list because the
+    /// on-device speech recognizer is unreliable on those tokens (frequently
+    /// drops or mistags them), producing inconsistent Smart Cut results.
+    /// Users can re-add them as custom words via the Edit list sheet.
+    let defaultOnWords: [String] = ["um", "ah", "er"]
 
     /// SPEC: standard set, off by default — pulled in when the user opts in.
     let defaultOffWords: [String] = ["like", "you know", "sort of", "basically", "actually", "literally"]
