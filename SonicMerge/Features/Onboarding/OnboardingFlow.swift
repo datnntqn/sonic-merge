@@ -191,12 +191,22 @@ private struct BrandOpenerStep: View {
                 .padding(.bottom, 24)
 
             VStack(spacing: 10) {
-                FeaturePill(icon: "sparkles", iconBg: Color(uiColor: semantic.accentAI),
-                            title: "Smart Cut", subtitle: "remove fillers", semantic: semantic)
-                FeaturePill(icon: "waveform.badge.minus", iconBg: Color(uiColor: semantic.accentAI),
-                            title: "Denoise", subtitle: "clean noisy clips", semantic: semantic)
-                FeaturePill(icon: "rectangle.stack", iconBg: Color(uiColor: semantic.accentAction),
-                            title: "Merge", subtitle: "combine audio", semantic: semantic)
+                FeaturePill(icon: {
+                    SmartCutMark(size: .toolbar, monochromeTint: .white)
+                }, iconBg: Color(uiColor: semantic.accentAI),
+                    title: "Smart Cut", subtitle: "remove fillers", semantic: semantic)
+                FeaturePill(icon: {
+                    Image(systemName: "waveform.badge.minus")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white)
+                }, iconBg: Color(uiColor: semantic.accentAI),
+                    title: "Denoise", subtitle: "clean noisy clips", semantic: semantic)
+                FeaturePill(icon: {
+                    Image(systemName: "rectangle.stack")
+                        .font(.system(size: 13, weight: .bold))
+                        .foregroundStyle(.white)
+                }, iconBg: Color(uiColor: semantic.accentAction),
+                    title: "Merge", subtitle: "combine audio", semantic: semantic)
             }
 
             Spacer()
@@ -215,8 +225,8 @@ private struct BrandOpenerStep: View {
     }
 }
 
-private struct FeaturePill: View {
-    let icon: String
+private struct FeaturePill<Icon: View>: View {
+    @ViewBuilder let icon: () -> Icon
     let iconBg: Color
     let title: String
     let subtitle: String
@@ -226,9 +236,8 @@ private struct FeaturePill: View {
         HStack(spacing: 12) {
             ZStack {
                 RoundedRectangle(cornerRadius: 7, style: .continuous).fill(iconBg)
-                Image(systemName: icon)
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.white)
+                icon()
+                    .frame(width: 14, height: 14)
             }
             .frame(width: 24, height: 24)
             VStack(alignment: .leading, spacing: 0) {
