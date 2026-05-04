@@ -102,21 +102,28 @@ Three SKUs in App Store Connect, plus an introductory offer.
 ```
 SonicMerge/Features/Subscription/
 ├── Services/
-│   ├── EntitlementService.swift     // single source of truth: isPro, currentTier, gate(_ feature: ProFeature)
-│   ├── StoreKitClient.swift         // wraps Product.products(for:), Transaction.updates listener, restore
-│   └── DailyUsageTracker.swift      // tracks "N Smart Cuts today" gate (UserDefaults + ISO date)
+│   ├── EntitlementService.swift        // single source of truth: isPro, currentTier, gate(_ feature: ProFeature)
+│   ├── StoreKitClient.swift            // wraps Product.products(for:), Transaction.updates listener (incl. .expired/.revoked), restore
+│   ├── DailyUsageTracker.swift         // tracks "N Smart Cuts today" gate (UserDefaults + ISO date)
+│   └── PaywallTriggerCoordinator.swift // session-level throttling: "paywall already shown this session" flag, per-reason dismiss-count, mutual exclusion with ReviewPromptCoordinator
 ├── Models/
-│   ├── Entitlement.swift            // .free / .pro(expirationDate) / .lifetime
-│   ├── ProFeature.swift             // .smartCutSession / .smartCutLength(seconds: TimeInterval) / .denoiseSession / etc.
-│   └── SubscriptionProduct.swift    // (id, type, displayPrice) wrapper
+│   ├── Entitlement.swift               // .free / .pro(expirationDate) / .lifetime
+│   ├── ProFeature.swift                // .smartCutSession / .smartCutLength(seconds: TimeInterval) / .denoiseSession / etc.
+│   └── SubscriptionProduct.swift       // (id, type, displayPrice) wrapper
 └── Views/
-    ├── PaywallView.swift            // full-sheet paywall (Variant A — annual-default + toggle)
-    ├── PaywallTrigger.swift         // .paywall(reason:) view modifier — show paywall on a trigger
+    ├── PaywallView.swift               // full-sheet paywall (Variant A — annual-default + toggle)
+    ├── PaywallTrigger.swift            // .paywall(reason:) view modifier — calls into PaywallTriggerCoordinator before presenting
     ├── RestorePurchasesButton.swift
-    └── PaywallReason.swift          // enum: .endOfOnboarding / .hitDailyCap / .hitLengthCap / .watermarkExport / .settingsUpgrade
+    └── PaywallReason.swift             // enum: .endOfOnboarding / .hitDailyCap / .hitLengthCap / .watermarkExport / .settingsUpgrade / .trialExpired
 ```
 
 **`EntitlementService` is the only thing the rest of the app talks to.** Exposes `@Published var isPro: Bool`, `@Published var currentTier: Entitlement`, and `func gate(_ feature: ProFeature) -> GateResult`. Other code never touches StoreKit. Swap-out story: the day we go cross-platform, `StoreKitClient.swift` is the only file that changes.
+
+**`PaywallTriggerCoordinator` enforces session-level rules so each callsite doesn't reinvent suppression logic.** Responsibilities:
+- Tracks per-reason dismiss-count in `UserDefaults` (so e.g. the daily-cap paywall stops appearing if the user has dismissed it 5 times in the last 30 days — Apple may flag aggressive re-prompting otherwise).
+- Holds a session-scoped `@Published var hasShownPaywallThisSession: Bool` flag.
+- Holds the mutual-exclusion contract with `ReviewPromptCoordinator`: if `hasShownPaywallThisSession` is true, the review-prompt coordinator returns false from `shouldPromptNow()`. Implemented as a shared `SubscriptionFlowState` actor or via direct injection.
+- Exposes `func shouldPresent(_ reason: PaywallReason) -> Bool` so view-layer `PaywallTrigger` modifier checks this before mounting the sheet.
 
 A new `Settings/` feature directory is created (currently the app has no Settings tab — the rebrand kept theme toggle in each home toolbar; Settings becomes a fourth slot in the navigation, OR a sheet from the existing toolbar — see §"Open questions" §OQ-1).
 
@@ -158,10 +165,11 @@ The paywall surfaces at five distinct trigger points, each with its own framing:
 | # | Trigger | When | Frame | Dismissible? |
 |---|---|---|---|---|
 | **1** | **End of onboarding** | After sample-podcast Smart Cut completes (step 5 of OnboardingFlow) | Soft, celebratory — "You just cleaned 27 seconds. Want unlimited?" | Yes — "Maybe later" drops into free tier |
-| **2** | **Hit the daily cap** | User tries 4th Smart Cut or Denoise today | Hard wall — "You've used your 3 free Smart Cuts today. Pro = unlimited." | No exit other than Cancel/Restore |
-| **3** | **Hit the length cap** | User imports clip > 5 min for Smart Cut OR > 3 min for Denoise | Specific — "This clip is 12 min. Free is up to 5. Upgrade for any length." | Cancel / Restore |
+| **2** | **Hit the daily cap** | User tries 4th Smart Cut or Denoise today | Hard wall — "You've used your 3 free Smart Cuts today. Pro = unlimited." | Yes — "Continue with free tier · come back tomorrow" exit (the action they tried IS blocked, but the sheet itself dismisses) |
+| **3** | **Hit the length cap** | User imports clip > 5 min for Smart Cut OR > 3 min for Denoise | Specific — "This clip is 12 min. Free is up to 5. Upgrade for any length." | Yes — "Use a shorter clip" exit |
 | **4** | **Watermark export** | At Export sheet, free user toggles "Remove watermark" | Inline — toggle opens the paywall sheet | Yes |
 | **5** | **Settings entry** | Settings tab, persistent card "Upgrade to Pro" / "Pro · expires Mar 2027" | Always visible | N/A |
+| **6** | **Trial / subscription lapsed** | `StoreKitClient.Transaction.updates` listener detects `.expired` or `.revoked` transition: `EntitlementService.currentTier` flips `.pro → .free` | Re-engagement — "Your Pro trial ended. Keep unlimited?" | Yes — "Continue with free tier" exit |
 
 **Highest-ROI moment is #1 (post-onboarding).** Per RevenueCat's industry data on iOS audio/utility apps, post-onboarding paywalls convert at 4-7% vs 0.5-2% for arbitrary triggers. Onboarding step 5 ("Smart Cut applied" — the wow moment) flows directly into:
 
@@ -215,6 +223,8 @@ Skip
 
 This is **Apple-permitted** (non-blocking nudge before the system prompt). Pattern used by AudioPen, Things, Day One. Outcome: ~3-4× more 5-star reviews vs unprompted; ~70% fewer 1-star reviews because unhappy users get routed to email instead of the App Store.
 
+**Compliance note (guideline 1.1.6):** Apple guideline 1.1.6 prohibits prompts that *manipulate* users into giving a positive review. The mood-check sheet stays compliant because (a) it is non-blocking — a "Skip" link is always visible; (b) it does not gate App Store access — even if the user picks 😞 they can still leave their own review by going to the App Store directly; (c) the 😞 path routes to email but does NOT suppress or hide the user's ability to also write an App Store review. The plan-author implementing this MUST keep "Skip" reachable at all times and MUST NOT add code that intercepts or blocks App Store navigation.
+
 ### Testimonials in paywall
 
 Pre-launch we have no App Store reviews. Strategy: **recruit 5-10 TestFlight beta testers, harvest 1-line quotes with attribution** ("— Jamie, podcast editor"), rotate them in the paywall testimonial slot. After launch, replace with real ★★★★★ reviews pulled via App Store Connect API (Phase 2 enhancement, not blocking launch).
@@ -257,11 +267,9 @@ The strategy is too big for one implementation cycle. Decomposed into four shipp
 - (a) Add a 4th tab in the bottom bar (most discoverable, but stretches the 3-tab visual rhythm)
 - (b) Sheet from a "gear" icon in each home view's toolbar (less discoverable, preserves 3-tab balance)
 
-**Defer this decision to Sub-project 1's plan.** Both work; (a) is more conventional, (b) preserves the design language. Will visual-companion side-by-side mock during plan-writing.
+**Resolve at the top of Sub-project 1's plan-writing — not later.** `RestorePurchasesButton` and the persistent upgrade card both live in Settings, so Sub-project 1 cannot proceed without picking. Visual-companion side-by-side mock during plan-writing makes the call. Both work; (a) is more conventional, (b) preserves the design language.
 
 **OQ-2 — Watermark voiceover content.** "Cleaned with CleanCut" feels promotional but tolerable for free users. Alternatives: a low-volume audio-logo sting, a TTS voice, or just brand "powered by CleanCut" in the export's iTunes metadata (NOT in the audio itself). Pure-metadata-only is friendlier but loses the social-proof viral effect. **Defer to Sub-project 2's plan.**
-
-**OQ-3 — Custom filler library: where does it live in Settings?** Sub-project 2 gates the custom filler library editor. Currently the editor lives in `Features/SmartCut/Views/Studio/EditFillerListStudioSheet.swift`. Pro users access it from Smart Cut Studio. Free users tap "Edit list" → see paywall. Architecture stays unchanged; gate is a single `EntitlementService.gate(.customFillerLibrary)` check at the sheet's onAppear.
 
 ## Decisions Log
 
@@ -280,6 +288,12 @@ The strategy is too big for one implementation cycle. Decomposed into four shipp
 **D-07 — Pre-launch testimonial seeding from TestFlight beta testers.** Paywall has a testimonial slot from Day 1; pre-launch we recruit 5-10 beta testers and harvest 1-line quotes with real attribution. Post-launch we replace with App-Store-Connect-API-pulled ★★★★★ reviews. Not faking — using real beta-tester voices.
 
 **D-08 — Retention features (push, streaks, re-engagement) deferred to a separate spec.** Premature without real engagement data; we don't know which behaviors to nudge until we see how users actually use the shipped app.
+
+**D-09 — Custom filler library gating: in-place at the existing sheet, not relocated to Settings.** The editor at `Features/SmartCut/Views/Studio/EditFillerListStudioSheet.swift` stays where it is. Pro users see the editor; free users hit a single `EntitlementService.gate(.customFillerLibrary)` check at the sheet's `onAppear` which presents the paywall instead. No file moves, no architectural shifts.
+
+**D-10 — Cap-hit and length-cap paywalls are dismissible.** Originally drafted as "no exit other than Cancel/Restore" — that's an Apple-rejection pattern (guideline 3.1.2(a) prohibits manipulative subscription prompts). Each cap-hit paywall has a "Continue with free tier · come back tomorrow" or "Use a shorter clip" exit. The *action* the user attempted IS blocked, but the sheet itself dismisses cleanly.
+
+**D-11 — Trigger #6 (trial / subscription lapsed) added.** When `EntitlementService.currentTier` transitions `.pro → .free` via `Transaction.updates`'s `.expired`/`.revoked` events, fire a re-engagement paywall on next app foreground. Highest re-conversion probability of any moment (the user already paid once).
 
 ## Risks
 
