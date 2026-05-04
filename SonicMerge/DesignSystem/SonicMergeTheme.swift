@@ -45,6 +45,26 @@ enum SonicMergeTheme {
 
         /// System Purple #AF52DE — mesh gradient end-stop on waveform thumbnails (Phase 7, MIX-03)
         static let systemPurple = UIColor(red: 175 / 255, green: 82 / 255, blue: 222 / 255, alpha: 1)
+
+        // MARK: Fire-gradient primitives (CleanCut rebrand 2026-05-04)
+
+        /// Ember red — fire-gradient stop 1 (warmest)
+        static let emberRed = UIColor(red: 255 / 255, green: 78 / 255, blue: 80 / 255, alpha: 1)
+
+        /// Ember orange — fire-gradient stop 2
+        static let emberOrange = UIColor(red: 249 / 255, green: 166 / 255, blue: 108 / 255, alpha: 1)
+
+        /// Magenta — fire-gradient stop 3, also flat `accentAI` (replaces lime green)
+        static let magentaAccent = UIColor(red: 240 / 255, green: 80 / 255, blue: 110 / 255, alpha: 1)
+
+        /// Deep violet — fire-gradient stop 4, also `accentAction` (replaces deep indigo)
+        static let deepViolet = UIColor(red: 111 / 255, green: 45 / 255, blue: 189 / 255, alpha: 1)
+
+        /// Deep navy — dark-mode `surfaceBase` (replaces pure black)
+        static let deepNavy = UIColor(red: 10 / 255, green: 10 / 255, blue: 24 / 255, alpha: 1)
+
+        /// Deep navy card — dark-mode `surfaceCard`/`surfaceSlot`/`surfaceElevated` (replaces #0F0F0F)
+        static let deepNavyCard = UIColor(red: 21 / 255, green: 23 / 255, blue: 43 / 255, alpha: 1)
     }
 
     enum Radius {
