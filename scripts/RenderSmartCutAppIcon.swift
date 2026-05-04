@@ -108,21 +108,47 @@ func render(_ view: some View, size: CGFloat, to path: String) {
 let appIconDir = "SonicMerge/Assets.xcassets/AppIcon.appiconset"
 let tabIconDir = "SonicMerge/Assets.xcassets/SmartCutTabIcon.imageset"
 
+/// App icon scale — glyph occupies 62% of the 1024×1024 canvas, leaving
+/// ~19% padding on each side. Visually aligned with iOS system icons that
+/// breathe inside their canvas (Watch, Camera, App Store) instead of
+/// extending edge-to-edge. Tab-bar PNGs stay full-bleed since the tab-bar
+/// UI already pads icons in its layout grid.
+let appIconGlyphScale: CGFloat = 0.62
+
+/// Wrap the Mark inside a padded canvas: full-bleed background fills the
+/// 1024×1024, glyph is centered at `appIconGlyphScale` of canvas size.
+struct PaddedAppIcon: View {
+    let canvas: CGFloat
+    let background: Color?
+    let monochromeTint: Color?
+
+    var body: some View {
+        ZStack {
+            (background ?? Color.clear)
+            Mark(canvas: canvas * appIconGlyphScale,
+                 background: nil,
+                 monochromeTint: monochromeTint)
+        }
+        .frame(width: canvas, height: canvas)
+    }
+}
+
 await MainActor.run {
-    // App icon — 1024×1024, deep navy bg, fire gradient glyph
-    render(Mark(canvas: 1024, background: deepNavy, monochromeTint: nil),
+    // App icon — 1024×1024, deep navy bg, fire gradient glyph (centered, ~19% padding)
+    render(PaddedAppIcon(canvas: 1024, background: deepNavy, monochromeTint: nil),
            size: 1024, to: "\(appIconDir)/AppIcon-1024.png")
 
     // App icon dark — same canvas (per spec D-03 — dark default for the icon)
-    render(Mark(canvas: 1024, background: deepNavy, monochromeTint: nil),
+    render(PaddedAppIcon(canvas: 1024, background: deepNavy, monochromeTint: nil),
            size: 1024, to: "\(appIconDir)/AppIcon-1024-Dark.png")
 
     // App icon tinted — grayscale source (white glyph on transparent for iOS 18 to tint)
-    render(Mark(canvas: 1024, background: nil, monochromeTint: .white),
+    render(PaddedAppIcon(canvas: 1024, background: nil, monochromeTint: .white),
            size: 1024, to: "\(appIconDir)/AppIcon-1024-Tinted.png")
 
     // Tab bar — iOS UITabBar grid is 25pt selected; ship 25/50/75 px
     // (1x/2x/3x) so @3x devices render crisp. Transparent bg, fire gradient.
+    // Full-bleed glyph: tab-bar UI provides its own padding around the icon.
     render(Mark(canvas: 25, background: nil, monochromeTint: nil),
            size: 25, to: "\(tabIconDir)/SmartCutTabIcon.png")
     render(Mark(canvas: 50, background: nil, monochromeTint: nil),
