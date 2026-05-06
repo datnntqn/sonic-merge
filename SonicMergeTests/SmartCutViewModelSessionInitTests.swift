@@ -49,6 +49,7 @@ struct SmartCutViewModelSessionInitTests {
             session: session,
             library: library,
             coordinator: coordinator,
+            entitlements: EntitlementService(),
             modelContext: context
         )
 
@@ -80,6 +81,7 @@ struct SmartCutViewModelSessionInitTests {
             session: session,
             library: library,
             coordinator: coordinator,
+            entitlements: EntitlementService(),
             modelContext: context
         )
 
@@ -114,6 +116,7 @@ struct SmartCutViewModelSessionInitTests {
             session: session,
             library: library,
             coordinator: coordinator,
+            entitlements: EntitlementService(),
             modelContext: context
         )
 
@@ -146,6 +149,7 @@ struct SmartCutViewModelSessionInitTests {
             session: session,
             library: library,
             coordinator: coordinator,
+            entitlements: EntitlementService(),
             modelContext: context
         )
 

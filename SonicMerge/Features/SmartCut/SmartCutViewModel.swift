@@ -51,7 +51,7 @@ final class SmartCutViewModel: PlaybackParticipant {
 
     init(coordinator: PlaybackCoordinator,
          library: FillerLibrary,
-         entitlements: EntitlementService = .shared,
+         entitlements: EntitlementService,
          service: SmartCutService? = nil,
          cutter: AudioCutter = AudioCutter()) {
         self.coordinator = coordinator
@@ -78,7 +78,7 @@ final class SmartCutViewModel: PlaybackParticipant {
         session: SmartCutSession,
         library: FillerLibrary,
         coordinator: PlaybackCoordinator,
-        entitlements: EntitlementService = .shared,
+        entitlements: EntitlementService,
         modelContext: ModelContext
     ) {
         self.init(coordinator: coordinator, library: library, entitlements: entitlements)

@@ -27,7 +27,7 @@ struct SmartCutViewModelPersistTests {
 
         let library = FillerLibrary(defaults: UserDefaults(suiteName: "test-\(UUID())")!)
         let coordinator = PlaybackCoordinator()
-        let vm = SmartCutViewModel(coordinator: coordinator, library: library)
+        let vm = SmartCutViewModel(coordinator: coordinator, library: library, entitlements: EntitlementService())
 
         // Inject a non-trivial editList via the existing test seam.
         let edits = EditList(
@@ -63,7 +63,7 @@ struct SmartCutViewModelPersistTests {
 
         let library = FillerLibrary(defaults: UserDefaults(suiteName: "test-\(UUID())")!)
         let coordinator = PlaybackCoordinator()
-        let vm = SmartCutViewModel(coordinator: coordinator, library: library)
+        let vm = SmartCutViewModel(coordinator: coordinator, library: library, entitlements: EntitlementService())
         // VM starts with empty editList — persist should write nil, not an
         // empty-list blob, so resume cleanly lands in .idle.
         vm.persist(to: session)

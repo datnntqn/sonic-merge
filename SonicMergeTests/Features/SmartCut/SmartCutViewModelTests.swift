@@ -7,13 +7,15 @@ struct SmartCutViewModelTests {
 
     @Test func testInitialStateIsIdle() {
         let vm = SmartCutViewModel(coordinator: PlaybackCoordinator(),
-                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!))
+                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!),
+                                   entitlements: EntitlementService())
         #expect(vm.state == .idle)
     }
 
     @Test func testInvalidateResetsResultsToIdle() {
         let vm = SmartCutViewModel(coordinator: PlaybackCoordinator(),
-                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!))
+                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!),
+                                   entitlements: EntitlementService())
         vm._injectResultsForTesting(EditList(fillers: [], pauses: []))
         #expect(vm.state == .results)
         vm.invalidate()
@@ -23,7 +25,8 @@ struct SmartCutViewModelTests {
 
     @Test func testStaleStateAppliedWhenInvalidatedFromResults() {
         let vm = SmartCutViewModel(coordinator: PlaybackCoordinator(),
-                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!))
+                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!),
+                                   entitlements: EntitlementService())
         vm._injectResultsForTesting(EditList(fillers: [], pauses: []))
         vm.markDenoiseChanged()
         #expect(vm.state == .stale)
@@ -31,7 +34,8 @@ struct SmartCutViewModelTests {
 
     @Test func testReanalyzeFromStaleClearsAndReturnsToIdle() {
         let vm = SmartCutViewModel(coordinator: PlaybackCoordinator(),
-                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!))
+                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!),
+                                   entitlements: EntitlementService())
         vm._injectResultsForTesting(EditList(fillers: [], pauses: []))
         vm.markDenoiseChanged()
         vm.requestReanalyze()
@@ -40,7 +44,8 @@ struct SmartCutViewModelTests {
 
     @Test func testCategoryToggleUpdatesEditListAndSavings() {
         let vm = SmartCutViewModel(coordinator: PlaybackCoordinator(),
-                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!))
+                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!),
+                                   entitlements: EntitlementService())
         let edit = FillerEdit(matchedText: "um",
                               timeRange: 1...1.5,
                               confidence: 0.9,
@@ -54,7 +59,8 @@ struct SmartCutViewModelTests {
 
     @Test func testHasDirtyEditsSinceApplyFalseInitially() {
         let vm = SmartCutViewModel(coordinator: PlaybackCoordinator(),
-                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!))
+                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!),
+                                   entitlements: EntitlementService())
         let edit = FillerEdit(matchedText: "um", timeRange: 1...1.5, confidence: 0.9,
                               contextExcerpt: "ctx", isEnabled: true)
         vm._injectResultsForTesting(EditList(fillers: [edit], pauses: []))
@@ -63,7 +69,8 @@ struct SmartCutViewModelTests {
 
     @Test func testHasDirtyEditsSinceApplyTrueAfterToggleFollowingApply() {
         let vm = SmartCutViewModel(coordinator: PlaybackCoordinator(),
-                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!))
+                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!),
+                                   entitlements: EntitlementService())
         let edit = FillerEdit(matchedText: "um", timeRange: 1...1.5, confidence: 0.9,
                               contextExcerpt: "ctx", isEnabled: true)
         vm._injectResultsForTesting(EditList(fillers: [edit], pauses: []))
@@ -81,7 +88,7 @@ struct SmartCutViewModelSetPauseThresholdTests {
     private func makeVM() -> SmartCutViewModel {
         let coordinator = PlaybackCoordinator()
         let library = FillerLibrary(defaults: UserDefaults(suiteName: "TestSuite-\(UUID())")!)
-        let vm = SmartCutViewModel(coordinator: coordinator, library: library)
+        let vm = SmartCutViewModel(coordinator: coordinator, library: library, entitlements: EntitlementService())
         let segments: [TranscriptionState.RecognizedSegment] = [
             .init(text: "hello", startTime: 1.5, endTime: 4.0, confidence: 0.9),
             .init(text: "world", startTime: 6.0, endTime: 9.0, confidence: 0.9)
@@ -94,7 +101,7 @@ struct SmartCutViewModelSetPauseThresholdTests {
     func setPauseThreshold_noCache_isNoop() {
         let coordinator = PlaybackCoordinator()
         let library = FillerLibrary(defaults: UserDefaults(suiteName: "TestSuite-\(UUID())")!)
-        let vm = SmartCutViewModel(coordinator: coordinator, library: library)
+        let vm = SmartCutViewModel(coordinator: coordinator, library: library, entitlements: EntitlementService())
         let priorPauses = vm.editList.pauses
         let priorThreshold = vm.pauseThreshold
         vm.setPauseThreshold(2.5)
