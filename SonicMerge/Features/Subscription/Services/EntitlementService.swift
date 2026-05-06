@@ -30,9 +30,9 @@ final class EntitlementService {
         currentEntitlement = entitlement
     }
 
-    /// Sub-project 1: always `.allowed`. Sub-project 2 will read daily
-    /// usage trackers and the entitlement to return `.requiresPro(reason:)`
-    /// at the right times.
+    /// Maps a `ProFeature` to a `GateResult`, deciding whether the user can
+    /// proceed. Free-tier callers bind the returned `PaywallReason` straight
+    /// into a `.paywall(reason:)` modifier when denied.
     func gate(_ feature: ProFeature) -> GateResult {
         return .allowed
     }

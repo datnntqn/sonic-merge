@@ -27,9 +27,11 @@ enum ProFeature: Equatable, Hashable, Sendable {
     }
 }
 
-/// Returned by `EntitlementService.gate(_:)`. Sub-project 1 only declares the
-/// type; Sub-project 2 returns specific reasons at gate sites.
+/// Returned by `EntitlementService.gate(_:)`. The `requiresPro` case carries
+/// a `PaywallReason` so call sites can bind it directly to a
+/// `.paywall(reason:)` modifier without parsing strings — keeps gate logic
+/// and paywall-routing logic in one piece.
 enum GateResult: Equatable, Sendable {
     case allowed
-    case requiresPro(reason: String)
+    case requiresPro(reason: PaywallReason)
 }
