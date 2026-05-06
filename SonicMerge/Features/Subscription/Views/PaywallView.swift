@@ -170,7 +170,7 @@ struct PaywallView: View {
         )
         .overlay(alignment: .topTrailing) {
             if product.tier == .yearly {
-                Text("SAVE 33%")
+                Text("SAVE 83%")
                     .font(.caption2.weight(.heavy))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
