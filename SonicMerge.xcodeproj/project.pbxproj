@@ -8,11 +8,11 @@
 
 /* Begin PBXBuildFile section */
 		3F4C12CD2F869AC4001E4968 /* SonicMergeShareExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		CC0001CC0001CC0001CC0001 /* CleanCut.storekit in Resources */ = {isa = PBXBuildFile; fileRef = CC0002CC0002CC0002CC0002 /* CleanCut.storekit */; };
 		3FA1001A2F5E000000000001 /* mono_44100.wav in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000001 /* mono_44100.wav */; };
 		3FA1001A2F5E000000000002 /* stereo_48000.m4a in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000002 /* stereo_48000.m4a */; };
 		3FA1001A2F5E000000000003 /* aac_22050.aac in Resources */ = {isa = PBXBuildFile; fileRef = 3FA1001B2F5E000000000003 /* aac_22050.aac */; };
 		3FA1001A2F5E000000000010 /* SonicMerge.app in Frameworks */ = {isa = PBXBuildFile; fileRef = 3FCEB0132F5DAED600901F90 /* SonicMerge.app */; };
+		CC0001CC0001CC0001CC0001 /* CleanCut.storekit in Resources */ = {isa = PBXBuildFile; fileRef = CC0002CC0002CC0002CC0002 /* CleanCut.storekit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -48,12 +48,12 @@
 
 /* Begin PBXFileReference section */
 		3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = SonicMergeShareExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
-		CC0002CC0002CC0002CC0002 /* CleanCut.storekit */ = {isa = PBXFileReference; lastKnownFileType = file.storekit; path = CleanCut.storekit; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000001 /* mono_44100.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; path = mono_44100.wav; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000002 /* stereo_48000.m4a */ = {isa = PBXFileReference; lastKnownFileType = file; path = stereo_48000.m4a; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000003 /* aac_22050.aac */ = {isa = PBXFileReference; lastKnownFileType = file; path = aac_22050.aac; sourceTree = "<group>"; };
 		3FA1001B2F5E000000000004 /* SonicMergeTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SonicMergeTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		3FCEB0132F5DAED600901F90 /* SonicMerge.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SonicMerge.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		CC0002CC0002CC0002CC0002 /* CleanCut.storekit */ = {isa = PBXFileReference; lastKnownFileType = file.storekit; path = CleanCut.storekit; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -142,15 +142,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		CC0003CC0003CC0003CC0003 /* Configuration */ = {
-			isa = PBXGroup;
-			children = (
-				CC0002CC0002CC0002CC0002 /* CleanCut.storekit */,
-			);
-			name = Configuration;
-			path = Configuration;
-			sourceTree = "<group>";
-		};
 		3FA1001F2F5E000000000001 /* Fixtures */ = {
 			isa = PBXGroup;
 			children = (
@@ -182,6 +173,14 @@
 				3F4C12C32F869AC4001E4968 /* SonicMergeShareExtension.appex */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		CC0003CC0003CC0003CC0003 /* Configuration */ = {
+			isa = PBXGroup;
+			children = (
+				CC0002CC0002CC0002CC0002 /* CleanCut.storekit */,
+			);
+			path = Configuration;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
