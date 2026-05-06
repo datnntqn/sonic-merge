@@ -10,6 +10,7 @@ import UniformTypeIdentifiers
 struct MixingStationView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(EntitlementService.self) private var entitlements
 
     /// Phase 10 (D-06): persists across launches once the user has ever imported a clip.
     /// Gates the LocalFirstTrustStrip render in MergeTimelineView.
@@ -17,6 +18,7 @@ struct MixingStationView: View {
 
     @State private var showDocumentPicker = false
     @State private var showExportSheet = false
+    @State private var paywallReason: PaywallReason?
 
     // POL-01: one trigger @State per toolbar button — prevents cross-firing
     @State private var exportHaptic = false
@@ -46,7 +48,7 @@ struct MixingStationView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbarContent }
             .sheet(isPresented: $showExportSheet) {
-                ExportFormatSheet(isPresented: $showExportSheet) { options in
+                ExportFormatSheet(isPresented: $showExportSheet, paywallReason: $paywallReason) { options in
                     viewModel.exportMerged(options: options)
                 }
             }
@@ -77,7 +79,10 @@ struct MixingStationView: View {
                 allowsMultipleSelection: true
             ) { result in
                 switch result {
-                case .success(let urls): viewModel.importFiles(urls)
+                case .success(let urls):
+                    if let reason = viewModel.importFiles(urls) {
+                        paywallReason = reason
+                    }
                 case .failure: break
                 }
             }
@@ -87,12 +92,15 @@ struct MixingStationView: View {
                     let urls = await AudioDropImport.urls(from: providers)
                     guard !urls.isEmpty else { return }
                     await MainActor.run {
-                        viewModel.importFiles(urls)
+                        if let reason = viewModel.importFiles(urls) {
+                            paywallReason = reason
+                        }
                     }
                 }
                 return true
             }
         }
+        .paywall(reason: $paywallReason)
         .onChange(of: viewModel.clips.count) { _, newCount in
             // Phase 10 D-06: flip the first-launch trust-banner flag the first
             // time the user has any clips. Persists across launches via @AppStorage.
@@ -110,7 +118,9 @@ struct MixingStationView: View {
             guard let clipsDir = try? AppConstants.clipsDirectory() else { return }
             let fileURL = clipsDir.appending(path: filename)
             guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
-            viewModel.importFiles([fileURL])
+            if let reason = viewModel.importFiles([fileURL]) {
+                paywallReason = reason
+            }
         }
     }
 

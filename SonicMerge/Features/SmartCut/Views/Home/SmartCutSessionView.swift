@@ -27,6 +27,7 @@ struct SmartCutSessionView: View {
     @State private var showShareSheet = false
     @State private var exportedFileURL: URL? = nil
     @State private var isNormalizingExport = false
+    @State private var paywallReason: PaywallReason?
 
     var body: some View {
         ZStack(alignment: .bottom) {
@@ -68,10 +69,11 @@ struct SmartCutSessionView: View {
             Text("The source audio and any saved edits will be removed.")
         }
         .sheet(isPresented: $showExportSheet) {
-            ExportFormatSheet(isPresented: $showExportSheet) { options in
+            ExportFormatSheet(isPresented: $showExportSheet, paywallReason: $paywallReason) { options in
                 startExport(options: options)
             }
         }
+        .paywall(reason: $paywallReason)
         .sheet(isPresented: $showExportProgressSheet) {
             ExportProgressSheet(
                 isNormalizing: isNormalizingExport,

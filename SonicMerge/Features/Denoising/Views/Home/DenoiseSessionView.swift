@@ -29,6 +29,7 @@ struct DenoiseSessionView: View {
     @State private var showShareSheet = false
     @State private var exportedFileURL: URL? = nil
     @State private var isNormalizingExport = false
+    @State private var paywallReason: PaywallReason?
 
     @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
 
@@ -101,10 +102,11 @@ struct DenoiseSessionView: View {
             Button("Cancel", role: .cancel) {}
         }
         .sheet(isPresented: $showExportSheet) {
-            ExportFormatSheet(isPresented: $showExportSheet) { options in
+            ExportFormatSheet(isPresented: $showExportSheet, paywallReason: $paywallReason) { options in
                 startExport(options: options)
             }
         }
+        .paywall(reason: $paywallReason)
         .sheet(isPresented: $showExportProgressSheet) {
             ExportProgressSheet(
                 isNormalizing: isNormalizingExport,

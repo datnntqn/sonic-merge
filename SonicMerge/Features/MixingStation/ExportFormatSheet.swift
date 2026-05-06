@@ -13,14 +13,17 @@ struct ExportOptions: Sendable {
 
 /// Bottom sheet presented when user taps Export.
 /// User selects .m4a or .wav, then taps the Export button to begin.
+/// Free users are restricted to .wav; .m4a shows a PRO badge and triggers the paywall.
 struct ExportFormatSheet: View {
     @Binding var isPresented: Bool
+    @Binding var paywallReason: PaywallReason?
     let onExport: (ExportOptions) -> Void
 
-    @State private var selectedFormat: ExportFormat = .m4a
+    @State private var selectedFormat: ExportFormat = .wav
     @AppStorage("lufsNormalizationEnabled") private var lufsEnabled: Bool = false
 
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(EntitlementService.self) private var entitlements
 
     var body: some View {
         VStack(spacing: 24) {
@@ -35,11 +38,10 @@ struct ExportFormatSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.horizontal, 24)
 
-            Picker("Format", selection: $selectedFormat) {
-                Text(".m4a (AAC)").tag(ExportFormat.m4a)
-                Text(".wav (Lossless)").tag(ExportFormat.wav)
+            VStack(spacing: 8) {
+                formatRow(format: .wav, label: ".wav (Lossless)", isPro: false)
+                formatRow(format: .m4a, label: ".m4a (AAC)", isPro: !entitlements.isPro)
             }
-            .pickerStyle(.segmented)
             .padding(.horizontal, 24)
 
             // LUFS normalization toggle row
@@ -60,6 +62,10 @@ struct ExportFormatSheet: View {
             .padding(.horizontal, 24)
 
             Button("Export Audio") {
+                if !entitlements.isPro && selectedFormat != .wav {
+                    paywallReason = .watermarkExport
+                    return
+                }
                 isPresented = false
                 onExport(ExportOptions(format: selectedFormat, lufsNormalize: lufsEnabled))
             }
@@ -68,5 +74,37 @@ struct ExportFormatSheet: View {
             .padding(.bottom, 32)
         }
         .presentationDetents([.height(320)])
+    }
+
+    @ViewBuilder
+    private func formatRow(format: ExportFormat, label: String, isPro: Bool) -> some View {
+        Button {
+            if isPro {
+                paywallReason = .watermarkExport
+            } else {
+                selectedFormat = format
+            }
+        } label: {
+            HStack {
+                Image(systemName: selectedFormat == format ? "largecircle.fill.circle" : "circle")
+                    .foregroundStyle(Color(uiColor: semantic.accentAction))
+                Text(label)
+                    .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                Spacer()
+                if isPro {
+                    Text("PRO")
+                        .font(.caption2.weight(.heavy))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(Capsule().fill(LinearGradient(
+                            colors: semantic.accentAIGradientStops.map { Color(uiColor: $0) },
+                            startPoint: .leading, endPoint: .trailing
+                        )))
+                        .foregroundStyle(.white)
+                }
+            }
+            .padding(.vertical, 6)
+        }
+        .buttonStyle(.plain)
     }
 }

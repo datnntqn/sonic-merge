@@ -95,7 +95,10 @@ struct RootTabView: View {
         .preferredColorScheme(themePreference == .dark ? .dark : .light)
         .onAppear {
             if mixingStationViewModel == nil {
-                mixingStationViewModel = MixingStationViewModel(modelContext: modelContext)
+                mixingStationViewModel = MixingStationViewModel(
+                    modelContext: modelContext,
+                    entitlements: entitlementService
+                )
             }
             if storeKitClient == nil {
                 storeKitClient = StoreKitClient(entitlementService: entitlementService)

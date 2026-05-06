@@ -46,6 +46,7 @@ final class MixingStationViewModel {
     // MARK: - Private
 
     private let modelContext: ModelContext
+    private let entitlements: EntitlementService
     private let normalizationService = AudioNormalizationService()
     private let waveformService = WaveformService()
     private let mergerService = AudioMergerService()
@@ -54,8 +55,9 @@ final class MixingStationViewModel {
 
     // MARK: - Init
 
-    init(modelContext: ModelContext) {
+    init(modelContext: ModelContext, entitlements: EntitlementService = EntitlementService.shared) {
         self.modelContext = modelContext
+        self.entitlements = entitlements
     }
 
     // MARK: - Fetch
@@ -74,15 +76,22 @@ final class MixingStationViewModel {
 
     // MARK: - Import
 
-    func importFiles(_ urls: [URL]) {
+    @discardableResult
+    func importFiles(_ urls: [URL]) -> PaywallReason? {
         stopClipPreview()
-        isImporting = true
         importErrors = []
+        let alreadyHave = clips.count
+        let projectedTotal = alreadyHave + urls.count
+        if case .requiresPro(let reason) = entitlements.gate(.mergeClipCount(count: projectedTotal)) {
+            return reason
+        }
+        isImporting = true
         Task {
             await performImport(urls: urls)
             await fetchAll()
             isImporting = false
         }
+        return nil
     }
 
     /// Returns true if any currently-loaded clip has the given displayName.
