@@ -17,6 +17,7 @@ struct DenoiseSessionView: View {
     @Environment(\.sonicMergeSemantic) private var semantic
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(EntitlementService.self) private var entitlements
 
     @State private var viewModel: DenoiseSessionViewModel?
     @State private var session: DenoiseSession?
@@ -198,12 +199,14 @@ struct DenoiseSessionView: View {
         isNormalizingExport = options.lufsNormalize
 
         let mergerService = AudioMergerService()
+        let applyWatermark = !entitlements.isPro
         exportTask = Task {
             let stream = await mergerService.exportFile(
                 inputURL: sourceURL,
                 format: options.format,
                 destinationURL: destinationURL,
-                lufsNormalize: options.lufsNormalize
+                lufsNormalize: options.lufsNormalize,
+                applyWatermark: applyWatermark
             )
             for await p in stream {
                 guard !Task.isCancelled else { break }

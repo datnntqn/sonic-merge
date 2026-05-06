@@ -57,7 +57,8 @@ struct LUFSNormalizationServiceTests {
             transitions: [],
             format: .wav,
             destinationURL: destURL,
-            lufsNormalize: true   // NEW parameter — does not exist until Plan 04-02
+            lufsNormalize: true,   // NEW parameter — does not exist until Plan 04-02
+            applyWatermark: false
         )
         // Consume stream
         for await _ in stream {}

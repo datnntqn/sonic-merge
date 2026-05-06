@@ -271,7 +271,8 @@ final class MixingStationViewModel {
                 transitions: transitions,
                 format: format,
                 destinationURL: destURL,
-                lufsNormalize: options.lufsNormalize
+                lufsNormalize: options.lufsNormalize,
+                applyWatermark: !entitlements.isPro
             )
             for await progress in stream {
                 guard !Task.isCancelled else { break }

@@ -50,6 +50,9 @@ actor AudioMergerService {
     ///                   Defaults to nil — resolves via AppConstants.clipsDirectory().
     ///   - lufsNormalize: When true, measures integrated loudness and applies gain to reach -16 LUFS.
     ///                    Defaults to false — preserves existing behavior exactly.
+    ///   - applyWatermark: When true, appends the free-tier watermark voiceover to the composition tail.
+    ///                     Pass `!entitlements.isPro` at the call site; keep this service free of
+    ///                     EntitlementService dependency.
     /// - Returns: AsyncStream of progress values 0.0...1.0.
     func export(
         clips: [AudioClip],
@@ -57,7 +60,8 @@ actor AudioMergerService {
         format: ExportFormat,
         destinationURL: URL,
         clipsBaseURL: URL? = nil,
-        lufsNormalize: Bool = false
+        lufsNormalize: Bool = false,
+        applyWatermark: Bool
     ) -> AsyncStream<Float> {
         AsyncStream { continuation in
             Task {
@@ -67,6 +71,11 @@ actor AudioMergerService {
                         transitions: transitions,
                         clipsBaseURL: clipsBaseURL
                     )
+
+                    // Append free-tier watermark before export (no-op for Pro users).
+                    if let watermarkTrack = composition.tracks(withMediaType: .audio).first {
+                        await appendWatermarkIfNeeded(composition, audioTrack: watermarkTrack, applyWatermark: applyWatermark)
+                    }
 
                     // Compute LUFS gain scalar if normalization requested.
                     // For multi-clip export, measure LUFS on the first clip as a proxy
@@ -130,12 +139,16 @@ actor AudioMergerService {
     ///   - destinationURL: Output file path.
     ///   - lufsNormalize: When true, measures LUFS on inputURL and applies gain to reach -16 LUFS.
     ///                    Defaults to false — preserves existing behavior exactly.
+    ///   - applyWatermark: When true, appends the free-tier watermark voiceover to the composition tail.
+    ///                     Pass `!entitlements.isPro` at the call site; keep this service free of
+    ///                     EntitlementService dependency.
     /// - Returns: AsyncStream of progress values 0.0...1.0.
     func exportFile(
         inputURL: URL,
         format: ExportFormat,
         destinationURL: URL,
-        lufsNormalize: Bool = false
+        lufsNormalize: Bool = false,
+        applyWatermark: Bool
     ) -> AsyncStream<Float> {
         AsyncStream { continuation in
             Task {
@@ -160,6 +173,9 @@ actor AudioMergerService {
                         at: .zero
                     )
                     let audioMix = AVMutableAudioMix()
+
+                    // Append free-tier watermark before export (no-op for Pro users).
+                    await appendWatermarkIfNeeded(composition, audioTrack: track, applyWatermark: applyWatermark)
 
                     // Measure LUFS on the source file directly (single-file path is exact).
                     var lufsGainScalar: Float = 1.0
@@ -195,6 +211,43 @@ actor AudioMergerService {
                     continuation.finish()
                 }
             }
+        }
+    }
+
+    // MARK: - Watermark
+
+    /// Appends the free-tier watermark voiceover to the end of `composition`.
+    /// No-op if `applyWatermark` is false (Pro users) or the asset is missing
+    /// from the bundle (defensive: never block an export on a missing tag —
+    /// log + continue).
+    ///
+    /// Made `internal` rather than `private` so `AudioMergerWatermarkTests` can
+    /// invoke it directly via a minimal composition seam without a full SwiftData stack.
+    internal func appendWatermarkIfNeeded(
+        _ composition: AVMutableComposition,
+        audioTrack: AVMutableCompositionTrack,
+        applyWatermark: Bool
+    ) async {
+        guard applyWatermark else { return }
+        guard let url = Bundle.main.url(forResource: "watermark", withExtension: "m4a") else {
+            // Defensive: shouldn't happen in shipped builds. Log and let the
+            // export continue without the tag rather than fail the user's work.
+            print("[AudioMerger] watermark.m4a missing from bundle — skipping tag.")
+            return
+        }
+        let watermarkAsset = AVURLAsset(url: url)
+        do {
+            let watermarkTracks = try await watermarkAsset.loadTracks(withMediaType: .audio)
+            guard let watermarkTrack = watermarkTracks.first else { return }
+            let watermarkDuration = try await watermarkAsset.load(.duration)
+            let insertTime = composition.duration  // tail of existing content
+            try audioTrack.insertTimeRange(
+                CMTimeRange(start: .zero, duration: watermarkDuration),
+                of: watermarkTrack,
+                at: insertTime
+            )
+        } catch {
+            print("[AudioMerger] failed to append watermark: \(error.localizedDescription)")
         }
     }
 
