@@ -179,12 +179,7 @@ struct SmartCutHomeView: View {
         // Sub-project 2 gate: refuse if Free user exceeds 5-min length cap
         // or has hit today's 3-session quota. Cleanup the temp file we just
         // copied so we don't leak storage on rejected imports.
-        if case .requiresPro(let reason) = entitlements.gate(.smartCutLength(seconds: duration)) {
-            try? FileManager.default.removeItem(at: dir)
-            paywallReason = reason
-            return
-        }
-        if case .requiresPro(let reason) = entitlements.gate(.smartCutSession) {
+        if let reason = ImportDecision.gate(durationSeconds: duration, entitlements: entitlements) {
             try? FileManager.default.removeItem(at: dir)
             paywallReason = reason
             return
@@ -225,6 +220,27 @@ struct SmartCutHomeView: View {
         }
         modelContext.delete(session)
         try? modelContext.save()
+    }
+}
+
+// MARK: - ImportDecision
+
+extension SmartCutHomeView {
+    /// Pure decision: should we import this audio? Lifted out of `createSession`
+    /// so tests can verify gate routing without touching the file system.
+    struct ImportDecision {
+        static func gate(
+            durationSeconds: TimeInterval,
+            entitlements: EntitlementService
+        ) -> PaywallReason? {
+            if case .requiresPro(let reason) = entitlements.gate(.smartCutLength(seconds: durationSeconds)) {
+                return reason
+            }
+            if case .requiresPro(let reason) = entitlements.gate(.smartCutSession) {
+                return reason
+            }
+            return nil
+        }
     }
 }
 
