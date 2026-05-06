@@ -3,7 +3,7 @@
   "nonRenewingSubscriptions" : [],
   "products" : [
     {
-      "displayPrice" : "79.99",
+      "displayPrice" : "39.99",
       "familyShareable" : true,
       "internalID" : "com.cleancut.pro.lifetime.v2",
       "localizations" : [
@@ -33,7 +33,7 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "4.99",
+          "displayPrice" : "19.99",
           "familyShareable" : true,
           "groupNumber" : 1,
           "internalID" : "com.cleancut.pro.monthly.v2",
