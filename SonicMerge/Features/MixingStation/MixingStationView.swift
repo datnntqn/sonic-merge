@@ -153,7 +153,10 @@ struct MixingStationView: View {
             .sensoryFeedback(.impact(weight: .light), trigger: exportHaptic)
         }
         ToolbarItem(placement: .topBarTrailing) {
-            ThemeToggleButton()
+            HStack(spacing: 8) {
+                SettingsToolbarButton()
+                ThemeToggleButton()
+            }
         }
     }
 

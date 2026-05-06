@@ -34,7 +34,10 @@ struct DenoiseHomeView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                ThemeToggleButton()
+                HStack(spacing: 8) {
+                    SettingsToolbarButton()
+                    ThemeToggleButton()
+                }
             }
         }
         .fileImporter(
