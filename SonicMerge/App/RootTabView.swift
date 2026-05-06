@@ -27,6 +27,13 @@ struct RootTabView: View {
 
     @State private var fillerLibraryStore = FillerLibraryStore()
 
+    /// Subscription stack — created once at app root, shared via @Environment
+    /// to PaywallView + SettingsView. This is the SINGLE StoreKitClient
+    /// instance for the entire app lifetime.
+    @State private var entitlementService = EntitlementService()
+    @State private var paywallCoordinator = PaywallTriggerCoordinator()
+    @State private var storeKitClient: StoreKitClient?
+
     private var themePreference: ThemePreference {
         ThemePreference(rawValue: themePreferenceRaw) ?? .light
     }
@@ -81,17 +88,24 @@ struct RootTabView: View {
         }
         .tint(Color(uiColor: semantic.accentAction))
         .environment(\.fillerLibrary, fillerLibraryStore)
+        .environment(entitlementService)
+        .environment(paywallCoordinator)
+        .environment(\.storeKitClient, storeKitClient)
         .environment(\.sonicMergeSemantic, semantic)
         .preferredColorScheme(themePreference == .dark ? .dark : .light)
         .onAppear {
             if mixingStationViewModel == nil {
                 mixingStationViewModel = MixingStationViewModel(modelContext: modelContext)
             }
+            if storeKitClient == nil {
+                storeKitClient = StoreKitClient(entitlementService: entitlementService)
+            }
             handlePendingShareExtensionImport()
             handlePendingSmartCutOpenIfNeeded()
         }
         .onChange(of: scenePhase) { _, phase in
             guard phase == .active else { return }
+            paywallCoordinator.resetSession()
             handlePendingShareExtensionImport()
             handlePendingSmartCutOpenIfNeeded()
         }
