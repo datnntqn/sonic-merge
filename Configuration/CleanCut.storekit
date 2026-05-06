@@ -5,7 +5,7 @@
     {
       "displayPrice" : "79.99",
       "familyShareable" : true,
-      "internalID" : "com.cleancut.pro.lifetime",
+      "internalID" : "com.cleancut.pro.lifetime.v2",
       "localizations" : [
         {
           "description" : "Unlock all CleanCut Pro features forever — no recurring charge.",
@@ -13,7 +13,7 @@
           "locale" : "en_US"
         }
       ],
-      "productID" : "com.cleancut.pro.lifetime",
+      "productID" : "com.cleancut.pro.lifetime.v2",
       "referenceName" : "CleanCut Pro Lifetime",
       "type" : "NonConsumable"
     }
@@ -36,7 +36,7 @@
           "displayPrice" : "4.99",
           "familyShareable" : true,
           "groupNumber" : 1,
-          "internalID" : "com.cleancut.pro.monthly",
+          "internalID" : "com.cleancut.pro.monthly.v2",
           "introductoryOffer" : {
             "internalID" : "free-trial-7d-monthly",
             "paymentMode" : "free",
@@ -49,7 +49,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.cleancut.pro.monthly",
+          "productID" : "com.cleancut.pro.monthly.v2",
           "recurringSubscriptionPeriod" : "P1M",
           "referenceName" : "CleanCut Pro Monthly",
           "subscriptionGroupID" : "21384721",
@@ -61,7 +61,7 @@
           "displayPrice" : "39.99",
           "familyShareable" : true,
           "groupNumber" : 2,
-          "internalID" : "com.cleancut.pro.yearly",
+          "internalID" : "com.cleancut.pro.yearly.v2",
           "introductoryOffer" : {
             "internalID" : "free-trial-7d-yearly",
             "paymentMode" : "free",
@@ -74,7 +74,7 @@
               "locale" : "en_US"
             }
           ],
-          "productID" : "com.cleancut.pro.yearly",
+          "productID" : "com.cleancut.pro.yearly.v2",
           "recurringSubscriptionPeriod" : "P1Y",
           "referenceName" : "CleanCut Pro Yearly",
           "subscriptionGroupID" : "21384721",

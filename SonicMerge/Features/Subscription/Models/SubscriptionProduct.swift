@@ -37,8 +37,8 @@ struct SubscriptionProduct: Equatable, Identifiable, Sendable {
 
 /// Product IDs — match the App Store Connect IAP setup.
 enum SubscriptionProductID {
-    static let monthly = "com.cleancut.pro.monthly"
-    static let yearly = "com.cleancut.pro.yearly"
-    static let lifetime = "com.cleancut.pro.lifetime"
+    static let monthly = "com.cleancut.pro.monthly.v2"
+    static let yearly = "com.cleancut.pro.yearly.v2"
+    static let lifetime = "com.cleancut.pro.lifetime.v2"
     static let allIDs: [String] = [monthly, yearly, lifetime]
 }
