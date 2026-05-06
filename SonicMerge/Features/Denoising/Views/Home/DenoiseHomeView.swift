@@ -14,12 +14,14 @@ struct DenoiseHomeView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(EntitlementService.self) private var entitlements
 
     @Query(sort: \DenoiseSession.lastOpenedAt, order: .reverse, animation: .default)
     private var sessions: [DenoiseSession]
 
     @State private var showFileImporter = false
     @State private var importErrorMessage: String?
+    @State private var paywallReason: PaywallReason?
 
     var body: some View {
         ZStack {
@@ -47,6 +49,7 @@ struct DenoiseHomeView: View {
         ) { result in
             Task { await handleImport(result: result) }
         }
+        .paywall(reason: $paywallReason)
         .alert(
             "Couldn't import this file",
             isPresented: Binding(
@@ -160,6 +163,15 @@ struct DenoiseHomeView: View {
             return
         }
 
+        // Sub-project 2 gate: refuse if Free user exceeds 3-min length cap
+        // or has hit today's 3-session quota. Cleanup the temp file we just
+        // copied so we don't leak storage on rejected imports.
+        if let reason = ImportDecision.gate(durationSeconds: duration, entitlements: entitlements) {
+            try? FileManager.default.removeItem(at: dir)
+            paywallReason = reason
+            return
+        }
+
         let session = DenoiseSession(
             id: sessionId,
             name: basename,
@@ -174,6 +186,7 @@ struct DenoiseHomeView: View {
             importErrorMessage = "Couldn't save the session. \(error.localizedDescription)"
             return
         }
+        entitlements.recordDenoiseSession()
 
         onSelect(sessionId)
     }
@@ -184,6 +197,27 @@ struct DenoiseHomeView: View {
         }
         modelContext.delete(session)
         try? modelContext.save()
+    }
+}
+
+// MARK: - ImportDecision
+
+extension DenoiseHomeView {
+    /// Pure decision: should we import this audio? Lifted out of `createSession`
+    /// so tests can verify gate routing without touching the file system.
+    struct ImportDecision {
+        static func gate(
+            durationSeconds: TimeInterval,
+            entitlements: EntitlementService
+        ) -> PaywallReason? {
+            if case .requiresPro(let reason) = entitlements.gate(.denoiseLength(seconds: durationSeconds)) {
+                return reason
+            }
+            if case .requiresPro(let reason) = entitlements.gate(.denoiseSession) {
+                return reason
+            }
+            return nil
+        }
     }
 }
 
