@@ -30,7 +30,7 @@ struct RootTabView: View {
     /// Subscription stack — created once at app root, shared via @Environment
     /// to PaywallView + SettingsView. This is the SINGLE StoreKitClient
     /// instance for the entire app lifetime.
-    @State private var entitlementService = EntitlementService()
+    @State private var entitlementService = EntitlementService(usageTracker: DailyUsageTracker())
     @State private var paywallCoordinator = PaywallTriggerCoordinator()
     @State private var storeKitClient: StoreKitClient?
 
