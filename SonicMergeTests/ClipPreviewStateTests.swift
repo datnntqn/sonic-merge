@@ -14,7 +14,7 @@ struct ClipPreviewStateTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
         let context = ModelContext(container)
-        let vm = MixingStationViewModel(modelContext: context)
+        let vm = MixingStationViewModel(modelContext: context, entitlements: EntitlementService())
 
         let clip = AudioClip(
             displayName: "Missing",
@@ -57,7 +57,7 @@ struct ClipPreviewStateTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
         let context = ModelContext(container)
-        let vm = MixingStationViewModel(modelContext: context)
+        let vm = MixingStationViewModel(modelContext: context, entitlements: EntitlementService())
 
         let clip = AudioClip(displayName: "P", fileURLRelativePath: filename, duration: 0.1)
         clip.sortOrder = 0

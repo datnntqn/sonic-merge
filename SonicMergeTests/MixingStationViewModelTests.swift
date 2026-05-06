@@ -21,7 +21,7 @@ struct MixingStationViewModelTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
         let context = ModelContext(container)
-        let vm = MixingStationViewModel(modelContext: context)
+        let vm = MixingStationViewModel(modelContext: context, entitlements: EntitlementService())
 
         let clipA = AudioClip(displayName: "A", fileURLRelativePath: "a.m4a", duration: 1)
         clipA.sortOrder = 0
@@ -48,7 +48,7 @@ struct MixingStationViewModelTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
         let context = ModelContext(container)
-        let vm = MixingStationViewModel(modelContext: context)
+        let vm = MixingStationViewModel(modelContext: context, entitlements: EntitlementService())
 
         let clip = AudioClip(displayName: "ToDelete", fileURLRelativePath: "del.m4a", duration: 1)
         clip.sortOrder = 0
@@ -72,7 +72,7 @@ struct MixingStationViewModelTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
         let context = ModelContext(container)
-        let vm = MixingStationViewModel(modelContext: context)
+        let vm = MixingStationViewModel(modelContext: context, entitlements: EntitlementService())
 
         let clip = AudioClip(displayName: "ById", fileURLRelativePath: "byid.m4a", duration: 1)
         clip.sortOrder = 0
@@ -92,7 +92,7 @@ struct MixingStationViewModelTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
         let context = ModelContext(container)
-        let vm = MixingStationViewModel(modelContext: context)
+        let vm = MixingStationViewModel(modelContext: context, entitlements: EntitlementService())
 
         // Start an export (will fail fast since no clips) then cancel immediately
         vm.exportMerged(options: ExportOptions(format: .m4a, lufsNormalize: false))
@@ -121,7 +121,7 @@ struct MixingStationViewModelTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
         let context = ModelContext(container)
-        let vm = MixingStationViewModel(modelContext: context)
+        let vm = MixingStationViewModel(modelContext: context, entitlements: EntitlementService())
 
         // Simulate post-export state
         // Note: exportedFileURL and exportProgress are private(set) —
@@ -144,7 +144,7 @@ struct MixingStationViewModelTests {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
         let container = try ModelContainer(for: AudioClip.self, GapTransition.self, configurations: config)
         let context = ModelContext(container)
-        let vm = MixingStationViewModel(modelContext: context)
+        let vm = MixingStationViewModel(modelContext: context, entitlements: EntitlementService())
 
         // Pre-insert a clip with displayName "TestClip"
         let existing = AudioClip(displayName: "TestClip", fileURLRelativePath: "existing.m4a", duration: 1.0)
