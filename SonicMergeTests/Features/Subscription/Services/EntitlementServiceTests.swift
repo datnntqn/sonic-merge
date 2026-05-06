@@ -18,12 +18,11 @@ struct EntitlementServiceTests {
         #expect(svc.isPro == true)
     }
 
-    @Test func gateAlwaysAllowedInSubProject1() {
+    /// Sanity: with a fresh tracker (count == 0), `.smartCutSession` returns
+    /// `.allowed`. Length-cap and watermark removal are denied for free users
+    /// independent of usage state.
+    @Test func gateSmartCutSessionAllowedAtZeroUsage() {
         let svc = EntitlementService()
-        // Free user — but Sub-project 1 doesn't gate yet. Always .allowed.
-        // NOTE: Sub-project 2 has now wired real semantics, so this test
-        // documents that the old expectation was provisional. The new tests
-        // below verify correct behavior.
         #expect(svc.gate(.smartCutSession) == .allowed)
         #expect(svc.gate(.smartCutLength(seconds: 9999)) == .requiresPro(reason: .hitLengthCap))
         #expect(svc.gate(.removeWatermark) == .requiresPro(reason: .watermarkExport))
@@ -62,6 +61,22 @@ struct EntitlementServiceTests {
             tracker.increment(.smartCut)
         }
         #expect(svc.gate(.smartCutSession) == .requiresPro(reason: .hitDailyCap))
+    }
+
+    @Test func freeDenoiseSessionDailyCap() {
+        let suite = "EntitlementServiceTests-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suite)!
+        let tracker = DailyUsageTracker(
+            defaults: defaults,
+            calendar: Calendar(identifier: .gregorian),
+            dateProvider: { Date(timeIntervalSince1970: 1714824000) }
+        )
+        let svc = EntitlementService(usageTracker: tracker)
+        for _ in 0..<3 {
+            #expect(svc.gate(.denoiseSession) == .allowed)
+            tracker.increment(.denoise)
+        }
+        #expect(svc.gate(.denoiseSession) == .requiresPro(reason: .hitDailyCap))
     }
 
     @Test func freeSmartCutLengthCap() {

@@ -9,8 +9,11 @@ import Observation
 @Observable
 final class EntitlementService {
 
-    /// Process-wide singleton. Tests can construct fresh instances with
-    /// custom trackers; the app uses `RootTabView`'s @State-owned instance.
+    /// **Do not use in app code.** Kept for legacy callsites only — app code must
+    /// read the `@Environment(EntitlementService.self)` instance owned by
+    /// `RootTabView`. Calling `.shared.gate(...)` constructs a fresh
+    /// `DailyUsageTracker()` whose counter state will diverge from any
+    /// test-injected tracker on the @Environment instance.
     static let shared = EntitlementService()
 
     /// Free-tier caps. Single source of truth — gate() compares against
@@ -50,7 +53,7 @@ final class EntitlementService {
     /// Mirrors `gate(_:)` but always evaluates the Free-tier path. Used by
     /// debug tooling that wants to preview "what the Free user would see"
     /// while testing on a Pro account.
-    func gateFree(_ feature: ProFeature) -> GateResult {
+    private func gateFree(_ feature: ProFeature) -> GateResult {
         switch feature {
         case .smartCutSession:
             return usageTracker.count(for: .smartCut) >= FreeCap.smartCutSessionsPerDay
@@ -72,6 +75,9 @@ final class EntitlementService {
                 ? .requiresPro(reason: .hitLengthCap)
                 : .allowed
 
+        // .mergeClipCount intentionally shares .hitLengthCap until Sub-project 3
+        // adds a dedicated .hitClipCountCap to PaywallReason. Headline copy reads
+        // identically for both gates.
         case .mergeClipCount(let count):
             return count > FreeCap.mergeMaxClips
                 ? .requiresPro(reason: .hitLengthCap)
