@@ -17,12 +17,14 @@ struct SmartCutHomeView: View {
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(EntitlementService.self) private var entitlements
 
     @Query(sort: \SmartCutSession.lastOpenedAt, order: .reverse, animation: .default)
     private var sessions: [SmartCutSession]
 
     @State private var showFileImporter = false
     @State private var importErrorMessage: String?
+    @State private var paywallReason: PaywallReason?
 
     var body: some View {
         ZStack {
@@ -50,6 +52,7 @@ struct SmartCutHomeView: View {
         ) { result in
             Task { await handleImport(result: result) }
         }
+        .paywall(reason: $paywallReason)
         .alert(
             "Couldn't import this file",
             isPresented: Binding(
@@ -173,6 +176,20 @@ struct SmartCutHomeView: View {
             return
         }
 
+        // Sub-project 2 gate: refuse if Free user exceeds 5-min length cap
+        // or has hit today's 3-session quota. Cleanup the temp file we just
+        // copied so we don't leak storage on rejected imports.
+        if case .requiresPro(let reason) = entitlements.gate(.smartCutLength(seconds: duration)) {
+            try? FileManager.default.removeItem(at: dir)
+            paywallReason = reason
+            return
+        }
+        if case .requiresPro(let reason) = entitlements.gate(.smartCutSession) {
+            try? FileManager.default.removeItem(at: dir)
+            paywallReason = reason
+            return
+        }
+
         let sourceHash: String
         do {
             sourceHash = try await SourceHasher.sha256Hex(of: destURL)
@@ -197,6 +214,7 @@ struct SmartCutHomeView: View {
             importErrorMessage = "Couldn't save the session. \(error.localizedDescription)"
             return
         }
+        entitlements.recordSmartCutSession()
 
         onSelect(sessionId)
     }
