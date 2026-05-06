@@ -40,6 +40,7 @@ final class SmartCutViewModel: PlaybackParticipant {
     private let library: FillerLibrary
     private let service: SmartCutService
     private let cutter: AudioCutter
+    private let entitlements: EntitlementService
 
     // MARK: Players
     private var inputPlayer: AVAudioPlayer?
@@ -50,10 +51,12 @@ final class SmartCutViewModel: PlaybackParticipant {
 
     init(coordinator: PlaybackCoordinator,
          library: FillerLibrary,
+         entitlements: EntitlementService = .shared,
          service: SmartCutService? = nil,
          cutter: AudioCutter = AudioCutter()) {
         self.coordinator = coordinator
         self.library = library
+        self.entitlements = entitlements
         self.service = service ?? SmartCutService(library: library)
         self.cutter = cutter
         coordinator.register(self)
@@ -75,9 +78,10 @@ final class SmartCutViewModel: PlaybackParticipant {
         session: SmartCutSession,
         library: FillerLibrary,
         coordinator: PlaybackCoordinator,
+        entitlements: EntitlementService = .shared,
         modelContext: ModelContext
     ) {
-        self.init(coordinator: coordinator, library: library)
+        self.init(coordinator: coordinator, library: library, entitlements: entitlements)
 
         // Resolve source URL. App Group path first; fall back to a deterministic
         // tmp directory if the entitlement is missing. The sandbox path is only
@@ -220,6 +224,11 @@ final class SmartCutViewModel: PlaybackParticipant {
     }
 
     func scheduleBackgroundTranscription() {
+        // Free users get a silent skip — the foreground job continues; when the
+        // user backgrounds the app it pauses; on re-foreground it resumes.
+        // Surfacing a paywall here would feel like punishment for closing the app.
+        if case .requiresPro = entitlements.gate(.backgroundProcessing) { return }
+
         // Request notification authorization the first time the user opts into BG processing,
         // so the completion notification can actually surface. Permission is asked once
         // and cached by the OS — calling repeatedly is cheap and idempotent.

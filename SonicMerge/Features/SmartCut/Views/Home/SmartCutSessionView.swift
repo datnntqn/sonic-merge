@@ -189,6 +189,7 @@ struct SmartCutSessionView: View {
             session: fetched,
             library: libraryStore.library,
             coordinator: coordinator,
+            entitlements: entitlements,
             modelContext: modelContext
         )
         self.session = fetched

@@ -15,7 +15,9 @@ struct EditFillerListStudioSheet: View {
     @Binding var library: FillerLibrary
     @Environment(\.dismiss) private var dismiss
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(EntitlementService.self) private var entitlements
     @State private var newWord: String = ""
+    @State private var paywallReason: PaywallReason?
     /// Persisted via UserDefaults under the key TranscriptionService reads.
     /// Default false (on-device, privacy-preserving). Toggle takes effect on
     /// the next analyze run.
@@ -77,6 +79,7 @@ struct EditFillerListStudioSheet: View {
                 }
             }
             .presentationBackground(.ultraThinMaterial)
+            .paywall(reason: $paywallReason)
         }
     }
 
@@ -109,6 +112,10 @@ struct EditFillerListStudioSheet: View {
             TextField("Add a word…", text: $newWord)
                 .submitLabel(.done)
                 .onSubmit {
+                    if case .requiresPro(let reason) = entitlements.gate(.customFillerLibrary) {
+                        paywallReason = reason
+                        return
+                    }
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.7)) {
                         library.addCustom(newWord)
                     }
