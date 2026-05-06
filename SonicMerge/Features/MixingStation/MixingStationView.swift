@@ -10,7 +10,6 @@ import UniformTypeIdentifiers
 struct MixingStationView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
     @Environment(\.sonicMergeSemantic) private var semantic
-    @Environment(EntitlementService.self) private var entitlements
 
     /// Phase 10 (D-06): persists across launches once the user has ever imported a clip.
     /// Gates the LocalFirstTrustStrip render in MergeTimelineView.

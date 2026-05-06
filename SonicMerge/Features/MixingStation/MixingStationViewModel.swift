@@ -55,7 +55,7 @@ final class MixingStationViewModel {
 
     // MARK: - Init
 
-    init(modelContext: ModelContext, entitlements: EntitlementService = EntitlementService.shared) {
+    init(modelContext: ModelContext, entitlements: EntitlementService) {
         self.modelContext = modelContext
         self.entitlements = entitlements
     }
