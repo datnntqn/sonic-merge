@@ -139,10 +139,19 @@ struct RootTabView: View {
             // edge-case mid-onboarding scenario.
             if newValue {
                 selection = .smartCut
-                paywallReason = PostOnboardingTrigger.reasonOnCompletion(
+                // Defer the paywall sheet until .fullScreenCover dismiss
+                // animation completes. Presenting both transitions in the
+                // same runloop tick leaves the sheet's env tree partially
+                // resolved → @Environment(EntitlementService.self) lookup
+                // crashes inside PaywallView.
+                let reason = PostOnboardingTrigger.reasonOnCompletion(
                     previous: oldValue,
                     current: newValue
                 )
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    paywallReason = reason
+                }
             }
         }
         .onOpenURL { url in handleDeepLink(url) }
