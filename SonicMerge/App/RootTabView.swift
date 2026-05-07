@@ -89,6 +89,7 @@ struct RootTabView: View {
             .tabItem { Label("Merge", systemImage: "rectangle.stack") }
             .tag(Tab.merge)
         }
+        .paywall(reason: $paywallReason)
         .tint(Color(uiColor: semantic.accentAction))
         .environment(\.fillerLibrary, fillerLibraryStore)
         .environment(entitlementService)
@@ -100,7 +101,6 @@ struct RootTabView: View {
         .environment(\.storeKitClient, storeKitClient)
         .environment(\.sonicMergeSemantic, semantic)
         .environment(\.paywallCoordinator, paywallCoordinator)
-        .paywall(reason: $paywallReason)
         .preferredColorScheme(themePreference == .dark ? .dark : .light)
         .onAppear {
             if mixingStationViewModel == nil {
@@ -139,19 +139,10 @@ struct RootTabView: View {
             // edge-case mid-onboarding scenario.
             if newValue {
                 selection = .smartCut
-                // Defer the paywall sheet until .fullScreenCover dismiss
-                // animation completes. Presenting both transitions in the
-                // same runloop tick leaves the sheet's env tree partially
-                // resolved → @Environment(EntitlementService.self) lookup
-                // crashes inside PaywallView.
-                let reason = PostOnboardingTrigger.reasonOnCompletion(
+                paywallReason = PostOnboardingTrigger.reasonOnCompletion(
                     previous: oldValue,
                     current: newValue
                 )
-                Task { @MainActor in
-                    try? await Task.sleep(nanoseconds: 600_000_000)
-                    paywallReason = reason
-                }
             }
         }
         .onOpenURL { url in handleDeepLink(url) }

@@ -16,6 +16,7 @@ extension View {
 private struct PaywallTriggerModifier: ViewModifier {
     @Binding var reason: PaywallReason?
     @Environment(\.paywallCoordinator) private var coordinator
+    @Environment(EntitlementService.self) private var entitlementService
 
     func body(content: Content) -> some View {
         content
@@ -28,7 +29,13 @@ private struct PaywallTriggerModifier: ViewModifier {
                 }
             }
             .sheet(item: $reason) { actual in
+                // Explicit re-injection: SwiftUI's env bridging through .sheet
+                // is buggy for @Observable-style values, so PaywallView's
+                // @Environment(EntitlementService.self) lookup crashes without
+                // this explicit pass-through. Keypath-based env values
+                // (\.storeKitClient, \.sonicMergeSemantic) propagate fine.
                 PaywallView(reason: actual)
+                    .environment(entitlementService)
                     .interactiveDismissDisabled(false)
                     .onDisappear {
                         coordinator.recordDismiss(actual)
