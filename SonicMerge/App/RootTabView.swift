@@ -33,6 +33,7 @@ struct RootTabView: View {
     @State private var entitlementService = EntitlementService(usageTracker: DailyUsageTracker())
     @State private var paywallCoordinator = PaywallTriggerCoordinator()
     @State private var storeKitClient: StoreKitClient?
+    @State private var paywallReason: PaywallReason?
 
     private var themePreference: ThemePreference {
         ThemePreference(rawValue: themePreferenceRaw) ?? .light
@@ -93,6 +94,7 @@ struct RootTabView: View {
         .environment(\.storeKitClient, storeKitClient)
         .environment(\.sonicMergeSemantic, semantic)
         .environment(\.paywallCoordinator, paywallCoordinator)
+        .paywall(reason: $paywallReason)
         .preferredColorScheme(themePreference == .dark ? .dark : .light)
         .onAppear {
             if mixingStationViewModel == nil {
@@ -119,12 +121,16 @@ struct RootTabView: View {
         )) {
             OnboardingFlow()
         }
-        .onChange(of: hasOnboarded) { _, newValue in
+        .onChange(of: hasOnboarded) { oldValue, newValue in
             // Spec §5 Done flow step 2: explicitly land on Smart Cut tab when
             // onboarding completes, even if the user navigated tabs in some
             // edge-case mid-onboarding scenario.
             if newValue {
                 selection = .smartCut
+                paywallReason = PostOnboardingTrigger.reasonOnCompletion(
+                    previous: oldValue,
+                    current: newValue
+                )
             }
         }
         .onOpenURL { url in handleDeepLink(url) }
@@ -225,5 +231,15 @@ struct RootTabView: View {
         UserDefaults(suiteName: AppConstants.appGroupID)?
             .set(filename, forKey: "pendingImportFilename")
         selection = .merge
+    }
+
+    /// Pure decision: when `hasOnboarded` flips false → true, what paywall
+    /// reason (if any) should fire? Lifted out of `.onChange(of:)` so tests
+    /// can verify the trigger without instantiating the SwiftUI body.
+    enum PostOnboardingTrigger {
+        static func reasonOnCompletion(previous: Bool, current: Bool) -> PaywallReason? {
+            guard previous == false, current == true else { return nil }
+            return .endOfOnboarding
+        }
     }
 }
