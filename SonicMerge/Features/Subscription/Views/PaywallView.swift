@@ -81,6 +81,11 @@ struct PaywallView: View {
             }
             SmartCutMark(size: .hero)
                 .frame(width: 56, height: 56)
+            Text("Your audio never leaves your phone.")
+                .font(.system(.subheadline, design: .rounded, weight: .heavy))
+                .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                .multilineTextAlignment(.center)
+                .padding(.horizontal, 8)
             Text("CleanCut Pro")
                 .font(.system(.largeTitle, design: .rounded, weight: .heavy))
                 .foregroundStyle(LinearGradient(

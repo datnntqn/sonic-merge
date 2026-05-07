@@ -30,6 +30,13 @@ struct SmartCutStudioContainer: View {
     @Environment(\.sonicMergeSemantic) private var semantic
     @State private var openCategory: String?
     @State private var showEditFillerList: Bool = false
+    @State private var studioMode: StudioMode = .edit
+
+    enum StudioMode: String, CaseIterable, Identifiable {
+        case edit = "Edit"
+        case transcript = "Transcript"
+        var id: String { rawValue }
+    }
 
     var body: some View {
         Group {
@@ -56,6 +63,28 @@ struct SmartCutStudioContainer: View {
     // MARK: - Studio layout (.results / .applied)
 
     private func studioLayout(headerBanner: AnyView?) -> some View {
+        VStack(spacing: 12) {
+            Picker("Mode", selection: $studioMode) {
+                ForEach(StudioMode.allCases) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding(.horizontal, 4)
+
+            switch studioMode {
+            case .edit: editStudioBody(headerBanner: headerBanner)
+            case .transcript:
+                TranscriptCanvas(
+                    segments: vm.cachedSegments,
+                    enabledCutRanges: vm.editList.enabledCutRanges
+                )
+                .frame(minHeight: 360)
+            }
+        }
+    }
+
+    private func editStudioBody(headerBanner: AnyView?) -> some View {
         VStack(spacing: 12) {
             StudioSummaryCard(
                 fillerCount: vm.editList.fillers.count,
