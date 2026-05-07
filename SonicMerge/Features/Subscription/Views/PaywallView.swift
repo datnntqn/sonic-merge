@@ -70,6 +70,15 @@ struct PaywallView: View {
                 }
                 .accessibilityLabel("Close paywall")
             }
+            if reason == .endOfOnboarding {
+                Text("🎉 You're all set")
+                    .font(.system(.subheadline, design: .rounded, weight: .heavy))
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .background(Capsule().fill(Color(uiColor: semantic.accentAI).opacity(0.15)))
+                    .foregroundStyle(Color(uiColor: semantic.accentAI))
+                    .accessibilityIdentifier("PaywallView.celebratoryBadge")
+            }
             SmartCutMark(size: .hero)
                 .frame(width: 56, height: 56)
             Text("CleanCut Pro")
@@ -87,6 +96,10 @@ struct PaywallView: View {
     }
 
     private var reasonHeadline: String {
+        Self.headlineCopy(for: reason)
+    }
+
+    static func headlineCopy(for reason: PaywallReason) -> String {
         switch reason {
         case .endOfOnboarding: return "Cut fillers. Clean noise. No limits."
         case .hitDailyCap: return "You've used your daily free quota. Pro = unlimited."
