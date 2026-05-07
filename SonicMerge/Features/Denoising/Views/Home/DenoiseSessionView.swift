@@ -8,6 +8,7 @@
 import SwiftUI
 import SwiftData
 import AVFoundation
+import StoreKit
 
 struct DenoiseSessionView: View {
     let sessionId: UUID
@@ -18,6 +19,7 @@ struct DenoiseSessionView: View {
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(EntitlementService.self) private var entitlements
+    @Environment(ReviewPromptCoordinator.self) private var reviewCoordinator
 
     @State private var viewModel: DenoiseSessionViewModel?
     @State private var session: DenoiseSession?
@@ -31,6 +33,7 @@ struct DenoiseSessionView: View {
     @State private var exportedFileURL: URL? = nil
     @State private var isNormalizingExport = false
     @State private var paywallReason: PaywallReason?
+    @State private var showMoodCheckSheet = false
 
     @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
 
@@ -108,6 +111,9 @@ struct DenoiseSessionView: View {
             }
         }
         .paywall(reason: $paywallReason)
+        .moodCheckSheet(isPresented: $showMoodCheckSheet) { mood in
+            handleMood(mood)
+        }
         .sheet(isPresented: $showExportProgressSheet) {
             ExportProgressSheet(
                 isNormalizing: isNormalizingExport,
@@ -219,8 +225,20 @@ struct DenoiseSessionView: View {
                 if FileManager.default.fileExists(atPath: destinationURL.path) {
                     exportedFileURL = destinationURL
                     showShareSheet = true
+                    reviewCoordinator.recordExport()
+                    if reviewCoordinator.shouldPromptNow() {
+                        reviewCoordinator.markPrompted()
+                        showMoodCheckSheet = true
+                    }
                 }
             }
+        }
+    }
+
+    private func handleMood(_ mood: MoodCheckSheet.Mood) {
+        guard mood == .happy else { return }
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
         }
     }
 }

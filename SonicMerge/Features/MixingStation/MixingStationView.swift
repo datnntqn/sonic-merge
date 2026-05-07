@@ -6,10 +6,12 @@
 import SwiftUI
 import UIKit
 import UniformTypeIdentifiers
+import StoreKit
 
 struct MixingStationView: View {
     @Environment(MixingStationViewModel.self) private var viewModel
     @Environment(\.sonicMergeSemantic) private var semantic
+    @Environment(ReviewPromptCoordinator.self) private var reviewCoordinator
 
     /// Phase 10 (D-06): persists across launches once the user has ever imported a clip.
     /// Gates the LocalFirstTrustStrip render in MergeTimelineView.
@@ -18,6 +20,7 @@ struct MixingStationView: View {
     @State private var showDocumentPicker = false
     @State private var showExportSheet = false
     @State private var paywallReason: PaywallReason?
+    @State private var showMoodCheckSheet = false
 
     // POL-01: one trigger @State per toolbar button — prevents cross-firing
     @State private var exportHaptic = false
@@ -100,11 +103,22 @@ struct MixingStationView: View {
             }
         }
         .paywall(reason: $paywallReason)
+        .moodCheckSheet(isPresented: $showMoodCheckSheet) { mood in
+            handleMood(mood)
+        }
         .onChange(of: viewModel.clips.count) { _, newCount in
             // Phase 10 D-06: flip the first-launch trust-banner flag the first
             // time the user has any clips. Persists across launches via @AppStorage.
             if newCount > 0 && !hasImportedFirstClip {
                 hasImportedFirstClip = true
+            }
+        }
+        .onChange(of: viewModel.showShareSheet) { oldValue, newValue in
+            guard !oldValue, newValue else { return }
+            reviewCoordinator.recordExport()
+            if reviewCoordinator.shouldPromptNow() {
+                reviewCoordinator.markPrompted()
+                showMoodCheckSheet = true
             }
         }
         .task {
@@ -166,6 +180,13 @@ struct MixingStationView: View {
                 SettingsToolbarButton()
                 ThemeToggleButton()
             }
+        }
+    }
+
+    private func handleMood(_ mood: MoodCheckSheet.Mood) {
+        guard mood == .happy else { return }
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
         }
     }
 

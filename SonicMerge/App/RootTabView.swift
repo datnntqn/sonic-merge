@@ -32,6 +32,8 @@ struct RootTabView: View {
     /// instance for the entire app lifetime.
     @State private var entitlementService = EntitlementService(usageTracker: DailyUsageTracker())
     @State private var paywallCoordinator = PaywallTriggerCoordinator()
+    @State private var reviewMetricsStore = ReviewMetricsStore()
+    @State private var reviewPromptCoordinator: ReviewPromptCoordinator?
     @State private var storeKitClient: StoreKitClient?
     @State private var paywallReason: PaywallReason?
 
@@ -91,6 +93,10 @@ struct RootTabView: View {
         .environment(\.fillerLibrary, fillerLibraryStore)
         .environment(entitlementService)
         .environment(paywallCoordinator)
+        .environment(reviewPromptCoordinator ?? ReviewPromptCoordinator(
+            metrics: reviewMetricsStore,
+            paywallCoordinator: paywallCoordinator
+        ))
         .environment(\.storeKitClient, storeKitClient)
         .environment(\.sonicMergeSemantic, semantic)
         .environment(\.paywallCoordinator, paywallCoordinator)
@@ -105,6 +111,12 @@ struct RootTabView: View {
             }
             if storeKitClient == nil {
                 storeKitClient = StoreKitClient(entitlementService: entitlementService)
+            }
+            if reviewPromptCoordinator == nil {
+                reviewPromptCoordinator = ReviewPromptCoordinator(
+                    metrics: reviewMetricsStore,
+                    paywallCoordinator: paywallCoordinator
+                )
             }
             handlePendingShareExtensionImport()
             handlePendingSmartCutOpenIfNeeded()

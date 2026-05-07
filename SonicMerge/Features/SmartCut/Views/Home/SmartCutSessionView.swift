@@ -7,6 +7,7 @@
 
 import SwiftUI
 import SwiftData
+import StoreKit
 
 struct SmartCutSessionView: View {
     let sessionId: UUID
@@ -16,6 +17,7 @@ struct SmartCutSessionView: View {
     @Environment(\.fillerLibrary) private var libraryStore
     @Environment(\.sonicMergeSemantic) private var semantic
     @Environment(EntitlementService.self) private var entitlements
+    @Environment(ReviewPromptCoordinator.self) private var reviewCoordinator
 
     @State private var viewModel: SmartCutViewModel?
     @State private var session: SmartCutSession?
@@ -28,6 +30,7 @@ struct SmartCutSessionView: View {
     @State private var showShareSheet = false
     @State private var exportedFileURL: URL? = nil
     @State private var isNormalizingExport = false
+    @State private var showMoodCheckSheet = false
     @State private var paywallReason: PaywallReason?
 
     var body: some View {
@@ -75,6 +78,9 @@ struct SmartCutSessionView: View {
             }
         }
         .paywall(reason: $paywallReason)
+        .moodCheckSheet(isPresented: $showMoodCheckSheet) { mood in
+            handleMood(mood)
+        }
         .sheet(isPresented: $showExportProgressSheet) {
             ExportProgressSheet(
                 isNormalizing: isNormalizingExport,
@@ -238,8 +244,20 @@ struct SmartCutSessionView: View {
                 if FileManager.default.fileExists(atPath: destinationURL.path) {
                     exportedFileURL = destinationURL
                     showShareSheet = true
+                    reviewCoordinator.recordExport()
+                    if reviewCoordinator.shouldPromptNow() {
+                        reviewCoordinator.markPrompted()
+                        showMoodCheckSheet = true
+                    }
                 }
             }
+        }
+    }
+
+    private func handleMood(_ mood: MoodCheckSheet.Mood) {
+        guard mood == .happy else { return }
+        if let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
+            SKStoreReviewController.requestReview(in: scene)
         }
     }
 }
