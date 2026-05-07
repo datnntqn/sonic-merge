@@ -37,11 +37,13 @@ struct SonicMergeSemanticGradientTests {
         expectChannels(s.accentAIGradientStops[3], r: 111, g: 45, b: 189)
     }
 
-    @Test func accentActionIsDeepVioletInBothSchemes() {
+    @Test func accentActionIsBurntOrangeInBothSchemes() {
+        // Updated 2026-05-07: brand chrome swapped from deepViolet (#6F2DBD)
+        // to burntOrange (#EA580C) per user-driven "no purple" decision.
         let dark = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         let light = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
-        expectChannels(dark.accentAction, r: 111, g: 45, b: 189)
-        expectChannels(light.accentAction, r: 111, g: 45, b: 189)
+        expectChannels(dark.accentAction, r: 234, g: 88, b: 12)
+        expectChannels(light.accentAction, r: 234, g: 88, b: 12)
     }
 
     @Test func accentAIIsMagentaFlat() {

@@ -141,24 +141,24 @@ struct SonicMergeThemeTests {
         #expect(abs(Double(b) - (110.0 / 255.0)) < 0.01)
     }
 
-    @Test func lightSemantic_accentGradientEnd_isDeepViolet() {
-        // Updated 2026-05-04 (CleanCut rebrand): accentGradientEnd changed from #AF52DE to #6F2DBD
+    @Test func lightSemantic_accentGradientEnd_isBurntOrange() {
+        // Updated 2026-05-07: chrome swapped from deepViolet (#6F2DBD) to burntOrange (#EA580C).
         let semantic = SonicMergeSemantic.resolved(colorScheme: .light, preference: .light)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentGradientEnd.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (111.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (45.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (189.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (234.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (88.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (12.0 / 255.0)) < 0.01)
     }
 
-    @Test func darkSemantic_accentGradientEnd_isDeepViolet() {
-        // Updated 2026-05-04 (CleanCut rebrand): accentGradientEnd changed from #AF52DE to #6F2DBD
+    @Test func darkSemantic_accentGradientEnd_isBurntOrange() {
+        // Updated 2026-05-07: chrome swapped from deepViolet (#6F2DBD) to burntOrange (#EA580C).
         let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentGradientEnd.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (111.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (45.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (189.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (234.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (88.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (12.0 / 255.0)) < 0.01)
     }
 
     @Test func darkSemantic_hasDeepNavyBase() {
@@ -171,14 +171,14 @@ struct SonicMergeThemeTests {
         #expect(abs(Double(b) - (24.0 / 255.0)) < 0.01)
     }
 
-    @Test func darkSemantic_hasDeepVioletAccent() {
-        // Updated 2026-05-04 (CleanCut rebrand): accentAction changed from indigo #5856D6 to deepViolet #6F2DBD
+    @Test func darkSemantic_hasBurntOrangeAccent() {
+        // Updated 2026-05-07: accentAction swapped from deepViolet (#6F2DBD) to burntOrange (#EA580C).
         let semantic = SonicMergeSemantic.resolved(colorScheme: .dark, preference: .dark)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         #expect(semantic.accentAction.getRed(&r, green: &g, blue: &b, alpha: &a))
-        #expect(abs(Double(r) - (111.0 / 255.0)) < 0.01)
-        #expect(abs(Double(g) - (45.0 / 255.0)) < 0.01)
-        #expect(abs(Double(b) - (189.0 / 255.0)) < 0.01)
+        #expect(abs(Double(r) - (234.0 / 255.0)) < 0.01)
+        #expect(abs(Double(g) - (88.0 / 255.0)) < 0.01)
+        #expect(abs(Double(b) - (12.0 / 255.0)) < 0.01)
     }
 
     @Test func darkSemantic_surfaceCardIsDeepNavyCard() {
