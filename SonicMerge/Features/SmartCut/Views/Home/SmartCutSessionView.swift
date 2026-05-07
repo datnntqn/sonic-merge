@@ -31,6 +31,7 @@ struct SmartCutSessionView: View {
     @State private var exportedFileURL: URL? = nil
     @State private var isNormalizingExport = false
     @State private var showMoodCheckSheet = false
+    @State private var showTranscriptSheet = false
     @State private var paywallReason: PaywallReason?
 
     var body: some View {
@@ -81,6 +82,9 @@ struct SmartCutSessionView: View {
         .moodCheckSheet(isPresented: $showMoodCheckSheet) { mood in
             handleMood(mood)
         }
+        .sheet(isPresented: $showTranscriptSheet) {
+            TranscriptSheet(segments: viewModel?.cachedSegments ?? [])
+        }
         .sheet(isPresented: $showExportProgressSheet) {
             ExportProgressSheet(
                 isNormalizing: isNormalizingExport,
@@ -109,6 +113,14 @@ struct SmartCutSessionView: View {
 
     @ToolbarContentBuilder
     private var toolbarContent: some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Button {
+                showTranscriptSheet = true
+            } label: {
+                Label("Transcript", systemImage: "doc.text")
+            }
+            .disabled(viewModel?.cachedSegments.isEmpty ?? true)
+        }
         ToolbarItem(placement: .topBarTrailing) {
             Button {
                 showExportSheet = true
