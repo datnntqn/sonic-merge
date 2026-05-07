@@ -92,6 +92,7 @@ struct RootTabView: View {
         .environment(paywallCoordinator)
         .environment(\.storeKitClient, storeKitClient)
         .environment(\.sonicMergeSemantic, semantic)
+        .environment(\.paywallCoordinator, paywallCoordinator)
         .preferredColorScheme(themePreference == .dark ? .dark : .light)
         .onAppear {
             if mixingStationViewModel == nil {
