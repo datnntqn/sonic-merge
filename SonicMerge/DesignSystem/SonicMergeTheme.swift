@@ -57,8 +57,11 @@ enum SonicMergeTheme {
         /// Magenta — fire-gradient stop 3, also flat `accentAI` (replaces lime green)
         static let magentaAccent = UIColor(red: 240 / 255, green: 80 / 255, blue: 110 / 255, alpha: 1)
 
-        /// Deep violet — fire-gradient stop 4, also `accentAction` (replaces deep indigo)
+        /// Deep violet — fire-gradient stop 4 only (was `accentAction` pre-2026-05-07)
         static let deepViolet = UIColor(red: 111 / 255, green: 45 / 255, blue: 189 / 255, alpha: 1)
+
+        /// Burnt orange — `accentAction` + chrome (post-2026-05-07: replaces deep violet to drop purple from the brand)
+        static let burntOrange = UIColor(red: 234 / 255, green: 88 / 255, blue: 12 / 255, alpha: 1)
 
         /// Deep navy — dark-mode `surfaceBase` (replaces pure black)
         static let deepNavy = UIColor(red: 10 / 255, green: 10 / 255, blue: 24 / 255, alpha: 1)

@@ -80,16 +80,16 @@ struct SonicMergeSemantic {
             surfaceBase: SonicMergeTheme.ColorPalette.canvasBackground,       // #FBFBFC (unchanged)
             surfaceSlot: SonicMergeTheme.ColorPalette.cardSurface,            // #FFFFFF (unchanged)
             surfaceElevated: UIColor.white,
-            accentAction: SonicMergeTheme.ColorPalette.deepViolet,            // #6F2DBD (was #5856D6)
-            accentWaveform: SonicMergeTheme.ColorPalette.deepViolet,          // #6F2DBD (was #5856D6)
+            accentAction: SonicMergeTheme.ColorPalette.burntOrange,           // #EA580C (was #6F2DBD)
+            accentWaveform: SonicMergeTheme.ColorPalette.burntOrange,         // #EA580C (was #6F2DBD)
             textPrimary: SonicMergeTheme.ColorPalette.primaryText,
             textSecondary: UIColor(red: 0.235, green: 0.235, blue: 0.263, alpha: 0.6),
-            trustIcon: SonicMergeTheme.ColorPalette.deepViolet,               // #6F2DBD (was #5856D6)
+            trustIcon: SonicMergeTheme.ColorPalette.burntOrange,              // #EA580C (was #6F2DBD)
             accentAI: SonicMergeTheme.ColorPalette.magentaAccent,             // #F0506E (was lime #A7C957)
             accentGlow: SonicMergeTheme.ColorPalette.magentaAccent,           // #F0506E (was indigo)
             surfaceCard: SonicMergeTheme.ColorPalette.cardSurface,            // #FFFFFF (unchanged)
             surfaceGlass: UIColor(red: 251 / 255, green: 251 / 255, blue: 252 / 255, alpha: 0.6),
-            accentGradientEnd: SonicMergeTheme.ColorPalette.deepViolet,       // #6F2DBD (was #AF52DE)
+            accentGradientEnd: SonicMergeTheme.ColorPalette.burntOrange,      // #EA580C (was #6F2DBD)
             accentAIGradientStops: [
                 SonicMergeTheme.ColorPalette.emberRed,                        // #FF4E50
                 SonicMergeTheme.ColorPalette.emberOrange,                     // #F9A66C
@@ -106,16 +106,16 @@ struct SonicMergeSemantic {
             surfaceBase: SonicMergeTheme.ColorPalette.deepNavy,               // #0A0A18 (was #000000)
             surfaceSlot: SonicMergeTheme.ColorPalette.deepNavyCard,           // #15172B (was #0F0F0F)
             surfaceElevated: SonicMergeTheme.ColorPalette.deepNavyCard,       // #15172B (was #0F0F0F)
-            accentAction: SonicMergeTheme.ColorPalette.deepViolet,            // #6F2DBD (was #5856D6)
-            accentWaveform: SonicMergeTheme.ColorPalette.deepViolet,          // #6F2DBD (was #5856D6)
+            accentAction: SonicMergeTheme.ColorPalette.burntOrange,           // #EA580C (was #6F2DBD)
+            accentWaveform: SonicMergeTheme.ColorPalette.burntOrange,         // #EA580C (was #6F2DBD)
             textPrimary: SonicMergeTheme.ColorPalette.darkTextPrimary,
             textSecondary: SonicMergeTheme.ColorPalette.darkTextSecondary,
-            trustIcon: SonicMergeTheme.ColorPalette.deepViolet,               // #6F2DBD (was #5856D6)
+            trustIcon: SonicMergeTheme.ColorPalette.burntOrange,              // #EA580C (was #6F2DBD)
             accentAI: SonicMergeTheme.ColorPalette.magentaAccent,             // #F0506E (was lime)
             accentGlow: SonicMergeTheme.ColorPalette.magentaAccent,           // #F0506E (was indigo)
             surfaceCard: SonicMergeTheme.ColorPalette.deepNavyCard,           // #15172B (was #0F0F0F)
             surfaceGlass: UIColor(red: 10 / 255, green: 10 / 255, blue: 24 / 255, alpha: 0.7), // deep navy @ 0.7
-            accentGradientEnd: SonicMergeTheme.ColorPalette.deepViolet,       // #6F2DBD (was #AF52DE)
+            accentGradientEnd: SonicMergeTheme.ColorPalette.burntOrange,      // #EA580C (was #6F2DBD)
             accentAIGradientStops: [
                 SonicMergeTheme.ColorPalette.emberRed,
                 SonicMergeTheme.ColorPalette.emberOrange,
