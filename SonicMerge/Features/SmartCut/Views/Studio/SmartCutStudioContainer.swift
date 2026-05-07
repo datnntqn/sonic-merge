@@ -187,10 +187,6 @@ struct SmartCutStudioContainer: View {
                     .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(PillButtonStyle(variant: .filled, size: .regular, tint: .ai))
-
-                Text("Reads from: denoised audio")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
             }
             .padding()
         }

@@ -118,14 +118,26 @@ private struct IdleFillerCard: View {
                     }
 
                     Button(action: onEdit) {
-                        HStack(spacing: 4) {
+                        HStack(spacing: 6) {
                             Image(systemName: "pencil")
+                                .font(.subheadline.weight(.bold))
                             Text("Edit list")
-                            Image(systemName: "chevron.right")
-                                .font(.caption2.weight(.semibold))
+                                .font(.subheadline.weight(.semibold))
                         }
-                        .font(.subheadline.weight(.semibold))
                         .foregroundStyle(Color(uiColor: semantic.accentAction))
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            Capsule()
+                                .fill(Color(uiColor: semantic.accentAction).opacity(0.10))
+                        )
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(
+                                    Color(uiColor: semantic.accentAction).opacity(0.30),
+                                    lineWidth: 1
+                                )
+                        )
                     }
                     .buttonStyle(.plain)
                     .accessibilityLabel("Edit filler list")

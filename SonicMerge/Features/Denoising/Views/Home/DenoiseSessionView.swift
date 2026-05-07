@@ -46,7 +46,7 @@ struct DenoiseSessionView: View {
 
     private var shouldShowWaveformSection: Bool {
         guard let viewModel else { return false }
-        return !viewModel.waveformPeaks.isEmpty || viewModel.isProcessing
+        return !viewModel.waveformPeaks.isEmpty
     }
 
     var body: some View {
@@ -316,20 +316,12 @@ private struct DenoiseStudioBody: View {
     private var waveformSection: some View {
         SquircleCard(glassEnabled: false, glowEnabled: false) {
             GeometryReader { _ in
-                ZStack {
-                    if !viewModel.waveformPeaks.isEmpty {
-                        WaveformPathView(
-                            peaks: viewModel.waveformPeaks,
-                            verticalInset: 6,
-                            shadowRadius: 8
-                        )
-                        .padding(.horizontal, SonicMergeTheme.Spacing.sm)
-                    } else if viewModel.isProcessing {
-                        Text("Processing\u{2026}")
-                            .font(.caption)
-                            .foregroundStyle(Color(uiColor: semantic.textSecondary))
-                    }
-                }
+                WaveformPathView(
+                    peaks: viewModel.waveformPeaks,
+                    verticalInset: 6,
+                    shadowRadius: 8
+                )
+                .padding(.horizontal, SonicMergeTheme.Spacing.sm)
             }
             .padding(-SonicMergeTheme.Spacing.md)
             .padding(SonicMergeTheme.Spacing.sm)
