@@ -47,6 +47,23 @@ actor TranscriptionService {
     /// the device. Default false (privacy-preserving on-device path).
     static let useCloudRecognitionDefaultsKey = "SmartCut.useCloudRecognition"
 
+    /// Reads the "Better filler detection" toggle. The toggle is **default-on**
+    /// because on-device SFSpeechRecognizer often returns zero-valued per-word
+    /// timestamps and drops disfluencies as noise — both of which break Smart
+    /// Cut's filler detection and pause cutting. Cloud recognition gives the
+    /// timestamps and disfluencies we need. Users who explicitly disable the
+    /// toggle (privacy preference) get on-device behavior.
+    ///
+    /// Returns `true` when the key is unset (fresh installs / users who never
+    /// touched the toggle), AND when the user has explicitly turned it on.
+    /// Returns `false` only when the user has explicitly stored `false`.
+    static func useCloudRecognitionDefault() -> Bool {
+        guard let stored = UserDefaults.standard.object(forKey: useCloudRecognitionDefaultsKey) as? Bool else {
+            return true
+        }
+        return stored
+    }
+
     private let chunkDurationSeconds: TimeInterval
     private let stateStore: TranscriptionStateStore
     private let locale: Locale
@@ -90,7 +107,7 @@ actor TranscriptionService {
                     // on/off doesn't reuse stale segments from a prior on-device
                     // run (and vice versa). Each mode gets its own persisted
                     // transcript per source.
-                    let useCloud = UserDefaults.standard.bool(forKey: Self.useCloudRecognitionDefaultsKey)
+                    let useCloud = Self.useCloudRecognitionDefault()
                     let sourceHash = "\(rawSourceHash)#\(useCloud ? "cloud" : "local")"
                     let asset = AVURLAsset(url: input)
                     let totalDuration = try await asset.load(.duration).seconds
@@ -151,7 +168,7 @@ actor TranscriptionService {
         // Read the user's "use cloud recognition" preference at request-build
         // time so changes take effect on the next analyze without app restart.
         // bool(forKey:) returns false for unset keys → on-device default.
-        let useCloud = UserDefaults.standard.bool(forKey: Self.useCloudRecognitionDefaultsKey)
+        let useCloud = Self.useCloudRecognitionDefault()
         request.requiresOnDeviceRecognition = !useCloud
         request.shouldReportPartialResults = false
         // .dictation preserves verbal hesitations (um, uh, ah, er) in the

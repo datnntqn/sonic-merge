@@ -19,10 +19,13 @@ struct EditFillerListStudioSheet: View {
     @State private var newWord: String = ""
     @State private var paywallReason: PaywallReason?
     /// Persisted via UserDefaults under the key TranscriptionService reads.
-    /// Default false (on-device, privacy-preserving). Toggle takes effect on
-    /// the next analyze run.
+    /// Default true: on-device SFSpeechRecognizer returns zero-valued per-word
+    /// timestamps for many configurations, which breaks Smart Cut's filler
+    /// detection and long-pause cutting. Cloud recognition fixes both. Users
+    /// who care about strict on-device privacy can still toggle off — and
+    /// `TranscriptionService.useCloudRecognitionDefault()` mirrors this default.
     @AppStorage(TranscriptionService.useCloudRecognitionDefaultsKey)
-    private var useCloudRecognition: Bool = false
+    private var useCloudRecognition: Bool = true
 
     private var removedCount: Int { library.removedDefaults.count }
 
