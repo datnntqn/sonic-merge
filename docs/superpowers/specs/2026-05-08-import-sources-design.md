@@ -92,13 +92,13 @@ The work is shaped to mirror the existing `CircularImportButton` pattern: one sh
 **AudioRecorderService (`@MainActor final class`, `ObservableObject`):**
 - Not an actor — it publishes state via `@Published` to the SwiftUI sheet, which requires `ObservableObject` (class). `AVAudioRecorder` is also single-threaded; main-actor isolation matches both Apple's API contract and the SwiftUI consumption pattern.
 - Wraps `AVAudioRecorder`. Output settings: linear PCM input internally for power readings, but final file is **AAC `.m4a` at 44.1 kHz, mono, 128 kbps** to match the rest of the app's export defaults and stay compatible with `AVAsset` decode.
-- **Initializer takes `RecordPermissionProvider` via DI** — `init(permissions: RecordPermissionProvider = .system)`. Production uses the system implementation that calls `AVAudioSession.sharedInstance().requestRecordPermission`. Tests pass a stub. Matches the existing `TranscriptionService(stateStore:)` DI pattern.
+- **Initializer takes `RecordPermissionProvider` via DI** — `init(permissions: any RecordPermissionProvider = SystemRecordPermissionProvider())`. Production uses `SystemRecordPermissionProvider`, which calls `AVAudioApplication.requestRecordPermission` (the iOS 17+ replacement for the deprecated session-level call). Tests pass a stub. Matches the existing `TranscriptionService(stateStore:)` DI pattern.
 - Public surface:
   - `start() async throws` — calls `permissions.request()`, configures `AVAudioSession` category `.playAndRecord` with options `[.defaultToSpeaker, .allowBluetooth]`, starts the recorder, writes to `FileManager.default.temporaryDirectory.appendingPathComponent("recording-\(UUID()).m4a")`.
-  - `stop() async throws -> URL` — stops, returns the file URL.
+  - `stop() -> URL?` — stops, returns the file URL (nil if not recording).
   - `cancel()` — stops and deletes the temp file.
-  - `@Published var elapsedSeconds: TimeInterval` — driven by a `Timer` polling `recorder.currentTime` at 10 Hz.
-  - `@Published var levelNormalized: Float` — driven by `recorder.averagePower(forChannel:)` at 20 Hz, mapped from dB to [0, 1] via the same `pow(10, dB/20)` curve `WaveformService` uses.
+  - `@Published var elapsedSeconds: TimeInterval` and `@Published var levelNormalized: Float` — driven by a single `Task.sleep` poll loop at 20 Hz (50 ms ticks). One timer drives both — the difference between 10 Hz and 20 Hz timer ticks isn't user-perceptible at this scale, so consolidating simplifies the service. Level is `recorder.averagePower(forChannel: 0)` mapped from dB to [0, 1] via `pow(10, max(dB, -50) / 20)` (floor at -50 dB so anything quieter renders as 0).
+- Permission API: uses `AVAudioApplication.requestRecordPermission` (the iOS 17+ replacement for the deprecated `AVAudioSession.sharedInstance().requestRecordPermission(_:)`). Project's deployment floor is iOS 17.0 — no fallback needed.
 - Permission flow: if the user previously denied mic access, `requestRecordPermission` returns `false` immediately — the service throws `RecorderError.micPermissionDenied`, the sheet renders the Settings deep-link state.
 
 **VideoAudioExtractor (new):**
@@ -191,7 +191,7 @@ This is the existing contract; the new sources just feed it. We do NOT introduce
 
   `ImportSourceSheet` owns a `ImportSourceDispatcher`; row taps call `dispatch(.files | .record | .photos)`. Tests verify each `ImportSourceAction` value invokes exactly its closure once. No view-tree introspection.
 
-- `AudioRecorderServiceTests.swift` — start → stop → returns valid m4a; cancel → temp file deleted; permission denied path throws `.micPermissionDenied`. Mic permission status mocked via a `RecordPermissionProvider` protocol seam (passed in via the service's initializer — see DI note below).
+- `AudioRecorderServiceTests.swift` — permission-denied path throws `.micPermissionDenied`. Mic permission status mocked via a `RecordPermissionProvider` protocol seam (passed in via the service's initializer — see DI note below). Save / cancel / temp-file-cleanup paths are exercised by manual QA only — the test host lacks the microphone entitlement and `AVAudioSession.setActive(true)` is unreliable from a Swift Testing process.
 - `VideoAudioExtractorTests.swift` — extract from fixture video → returns m4a, duration matches video; extract from fixture silent video → throws `.noAudioTrack`. Use a 2-second test video committed to `SonicMergeTests/Fixtures/`.
 - Extend the existing `SonicMergeTests/Features/SmartCut/ImportDecisionTests.swift` (and the analogous Denoise test file) with one case each: a recorded URL with duration > 5 min hits the paywall via the same gate. No new gate logic, just verifying the funnel from the new sources is identical to the file path.
 
