@@ -17,12 +17,6 @@
 
 import SwiftUI
 
-/// Adapter for the SegmentedPill A/B picker. SegmentedPill requires
-/// Hashable & CaseIterable; the VM stores isPlayingCleaned: Bool.
-enum PlaybackTrack: Hashable, CaseIterable {
-    case original, cleaned
-}
-
 struct SmartCutStudioContainer: View {
     @Bindable var vm: SmartCutViewModel
     @Binding var library: FillerLibrary
@@ -95,13 +89,6 @@ struct SmartCutStudioContainer: View {
 
             if let headerBanner { headerBanner }
 
-            SegmentedPill(
-                selection: playbackTrackBinding,
-                label: { $0 == .original ? "Original" : "Cleaned" },
-                selectedTint: .accent,
-                unselectedTint: .accent
-            )
-
             Text("Tap a card to review occurrences. Toggle ✓ to skip a word.")
                 .font(.caption)
                 .foregroundStyle(Color(uiColor: semantic.textSecondary))
@@ -155,18 +142,6 @@ struct SmartCutStudioContainer: View {
                 onToggleCategory: { enabled in vm.setCategory(sheetCategory.rawValue, enabled: enabled) }
             )
         }
-    }
-
-    private var playbackTrackBinding: Binding<PlaybackTrack> {
-        Binding<PlaybackTrack>(
-            get: { vm.isPlayingCleaned ? .cleaned : .original },
-            set: { newValue in
-                let wantsCleaned = newValue == .cleaned
-                if wantsCleaned != vm.isPlayingCleaned {
-                    vm.toggleCleaned()
-                }
-            }
-        )
     }
 
     private func appliedBanner(saved: TimeInterval) -> some View {

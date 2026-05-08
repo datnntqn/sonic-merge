@@ -33,7 +33,6 @@ final class SmartCutViewModel: PlaybackParticipant {
         return snapshot != editList
     }
     var pauseThreshold: TimeInterval = 1.5
-    var isPlayingCleaned: Bool = false
 
     // MARK: Dependencies
     private let coordinator: PlaybackCoordinator
@@ -41,11 +40,6 @@ final class SmartCutViewModel: PlaybackParticipant {
     private let service: SmartCutService
     private let cutter: AudioCutter
     private let entitlements: EntitlementService
-
-    // MARK: Players
-    private var inputPlayer: AVAudioPlayer?
-    private var outputPlayer: AVAudioPlayer?
-    private var previewEngine: AVAudioEngine?
 
     private var analysisTask: Task<Void, Never>?
 
@@ -149,8 +143,6 @@ final class SmartCutViewModel: PlaybackParticipant {
         cachedSegments = []
         cachedDuration = 0
         outputURL = nil
-        inputPlayer = nil
-        outputPlayer = nil
         state = .idle
     }
 
@@ -313,18 +305,12 @@ final class SmartCutViewModel: PlaybackParticipant {
         session.lastOpenedAt = .now
     }
 
-    // MARK: Playback (A/B) — STUB; actual audio plumbing deferred to manual integration in sc-t19/sc-t20
+    // MARK: Playback
 
-    func toggleCleaned() {
-        isPlayingCleaned.toggle()
-        coordinator.notifyPlaying(participant: self)
-    }
-
-    func pauseAll() {
-        inputPlayer?.pause()
-        outputPlayer?.pause()
-        previewEngine?.pause()
-    }
+    /// PlaybackParticipant requirement. Smart Cut has no in-tab audio playback
+    /// today — preview was deferred and the surface dropped. No-op stub keeps
+    /// us conformant so the coordinator can broadcast pause to other tabs.
+    func pauseAll() {}
 
     // MARK: Test seam — internal but injectable for unit tests
 
