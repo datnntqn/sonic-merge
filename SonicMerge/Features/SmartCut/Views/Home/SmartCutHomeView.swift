@@ -24,6 +24,7 @@ struct SmartCutHomeView: View {
 
     @State private var showFileImporter = false
     @State private var showSourceSheet = false
+    @State private var showRecorder = false
     @State private var pendingAction: ImportSourceAction?
     @State private var importErrorMessage: String?
     @State private var paywallReason: PaywallReason?
@@ -56,8 +57,7 @@ struct SmartCutHomeView: View {
                 case .files:
                     showFileImporter = true
                 case .record:
-                    // Wired in Chunk 2.
-                    print("[ImportSourceSheet] record tapped — wiring lands in Chunk 2")
+                    showRecorder = true
                 case .photos:
                     // Wired in Chunk 3.
                     print("[ImportSourceSheet] photos tapped — wiring lands in Chunk 3")
@@ -72,6 +72,18 @@ struct SmartCutHomeView: View {
             allowsMultipleSelection: false
         ) { result in
             Task { await handleImport(result: result) }
+        }
+        .sheet(isPresented: $showRecorder) {
+            RecorderSheet { url in
+                Task {
+                    await createSession(from: url)
+                    // Recording is the only source where we own the URL outright,
+                    // so we delete the /tmp file after createSession's copy. Files
+                    // and Photos paths come from system pickers and are best left
+                    // to the OS reaper.
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
         }
         .paywall(reason: $paywallReason)
         .alert(
