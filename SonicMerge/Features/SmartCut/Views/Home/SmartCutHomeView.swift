@@ -23,6 +23,8 @@ struct SmartCutHomeView: View {
     private var sessions: [SmartCutSession]
 
     @State private var showFileImporter = false
+    @State private var showSourceSheet = false
+    @State private var pendingAction: ImportSourceAction?
     @State private var importErrorMessage: String?
     @State private var paywallReason: PaywallReason?
 
@@ -44,6 +46,25 @@ struct SmartCutHomeView: View {
                     ThemeToggleButton()
                 }
             }
+        }
+        .sheet(
+            isPresented: $showSourceSheet,
+            onDismiss: {
+                guard let action = pendingAction else { return }
+                pendingAction = nil
+                switch action {
+                case .files:
+                    showFileImporter = true
+                case .record:
+                    // Wired in Chunk 2.
+                    print("[ImportSourceSheet] record tapped — wiring lands in Chunk 2")
+                case .photos:
+                    // Wired in Chunk 3.
+                    print("[ImportSourceSheet] photos tapped — wiring lands in Chunk 3")
+                }
+            }
+        ) {
+            ImportSourceSheet(pendingAction: $pendingAction)
         }
         .fileImporter(
             isPresented: $showFileImporter,
@@ -91,7 +112,7 @@ struct SmartCutHomeView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
-            CircularImportButton(size: .hero) { showFileImporter = true }
+            CircularImportButton(size: .hero) { showSourceSheet = true }
         }
     }
 
@@ -101,7 +122,7 @@ struct SmartCutHomeView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                CircularImportButton(size: .pinned) { showFileImporter = true }
+                CircularImportButton(size: .pinned) { showSourceSheet = true }
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
