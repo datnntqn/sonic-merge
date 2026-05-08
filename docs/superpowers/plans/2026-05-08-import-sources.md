@@ -1187,4 +1187,1080 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 ---
 
-**End of Chunk 2.** Stop here for plan-document review before continuing to Chunk 3.
+**End of Chunk 2.** Reviewed and approved 2026-05-08.
+
+---
+
+## Chunk 3: Photos & Videos source
+
+**Why this chunk:** Wire the third source (extract audio from a video picked via PHPicker). After this, all three Smart Cut import sources work end to end.
+
+**At the end of this chunk:** Tapping "Photos & Videos" on Smart Cut presents `PHPickerViewController`. Picking a video copies it to a temp file, extracts the audio track to an `.m4a`, and funnels the result into the existing `createSession(from:)` path. Picking a silent video shows an alert "This video has no audio to import." Picking a video that fails to extract shows an alert with the underlying error.
+
+**New files:**
+- `SonicMerge/Services/VideoAudioExtractor.swift`
+- `SonicMerge/Features/Photos/PHPickerWrapper.swift`
+- `SonicMergeTests/Services/VideoAudioExtractorTests.swift`
+- `SonicMergeTests/Fixtures/silent-video.mp4` (a 1-second silent video committed as test fixture)
+- `SonicMergeTests/Fixtures/audible-video.mp4` (a 2-second video with a 440 Hz sine tone)
+
+**Modified files:**
+- `SonicMerge/Features/SmartCut/Views/Home/SmartCutHomeView.swift` — replace the Photos stub
+
+### Task 3.1: `VideoAudioExtractor` service + tests
+
+**Files:**
+- Create: `SonicMerge/Services/VideoAudioExtractor.swift`
+- Test: `SonicMergeTests/Services/VideoAudioExtractorTests.swift`
+- Create: `SonicMergeTests/Fixtures/silent-video.mp4`
+- Create: `SonicMergeTests/Fixtures/audible-video.mp4`
+
+- [ ] **Step 3.1.1: Generate the test fixtures**
+
+The fixtures are small (≪ 100 KB each) and deterministic so they can be checked in without bloating the repo. Generate via `ffmpeg` (Homebrew or system install):
+
+```bash
+mkdir -p SonicMergeTests/Fixtures
+
+# Silent 1s video — black frame, no audio track
+ffmpeg -y -f lavfi -i color=c=black:s=64x64:d=1 \
+  -c:v h264 -pix_fmt yuv420p \
+  SonicMergeTests/Fixtures/silent-video.mp4
+
+# 2s video with a 440 Hz sine tone audio track
+ffmpeg -y -f lavfi -i color=c=black:s=64x64:d=2 \
+       -f lavfi -i sine=frequency=440:duration=2 \
+  -c:v h264 -pix_fmt yuv420p \
+  -c:a aac -b:a 64k -shortest \
+  SonicMergeTests/Fixtures/audible-video.mp4
+
+# Sanity check
+ffprobe -v error -show_streams \
+  SonicMergeTests/Fixtures/audible-video.mp4 | grep codec_type
+ffprobe -v error -show_streams \
+  SonicMergeTests/Fixtures/silent-video.mp4 | grep codec_type
+```
+
+Expected `ffprobe` output:
+- `audible-video.mp4` — two `codec_type=` lines (one `video`, one `audio`).
+- `silent-video.mp4` — one `codec_type=video` line, no audio.
+
+If `ffmpeg` is unavailable, alternate path: write a one-shot SwiftPM script that uses `AVAssetWriter` to synthesize the same fixtures. Skipped here for brevity — `ffmpeg` is the standard.
+
+- [ ] **Step 3.1.2: Write the failing tests**
+
+Create `SonicMergeTests/Services/VideoAudioExtractorTests.swift`:
+
+```swift
+// SonicMergeTests/Services/VideoAudioExtractorTests.swift
+import Testing
+import Foundation
+import AVFoundation
+@testable import SonicMerge
+
+@MainActor
+struct VideoAudioExtractorTests {
+
+    private func fixture(_ name: String) -> URL {
+        let bundle = Bundle(for: BundleToken.self)
+        guard let url = bundle.url(forResource: name, withExtension: nil) else {
+            fatalError("Missing test fixture: \(name)")
+        }
+        return url
+    }
+
+    @Test func extractFromAudibleVideoReturnsM4A() async throws {
+        let src = fixture("audible-video.mp4")
+        let out = try await VideoAudioExtractor.extractAudio(from: src)
+        defer { try? FileManager.default.removeItem(at: out) }
+
+        #expect(out.pathExtension == "m4a")
+        #expect(FileManager.default.fileExists(atPath: out.path))
+
+        // Decoded duration should be in the same ballpark as the source
+        // (within 50 ms — encoder bookends sometimes drop a few samples).
+        let asset = AVURLAsset(url: out)
+        let dur = try await asset.load(.duration).seconds
+        #expect(abs(dur - 2.0) < 0.05)
+    }
+
+    @Test func extractFromSilentVideoThrowsNoAudioTrack() async {
+        let src = fixture("silent-video.mp4")
+        await #expect(throws: VideoAudioExtractor.ExtractError.noAudioTrack) {
+            _ = try await VideoAudioExtractor.extractAudio(from: src)
+        }
+    }
+}
+
+/// Marker class used to resolve the test bundle for fixture loading.
+private final class BundleToken {}
+```
+
+- [ ] **Step 3.1.3: Run the test — verify build error**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -parallel-testing-enabled NO \
+  -only-testing:SonicMergeTests/VideoAudioExtractorTests test 2>&1 | tail -10
+```
+
+Expected: build error `cannot find 'VideoAudioExtractor' in scope`.
+
+- [ ] **Step 3.1.4: Implement the extractor**
+
+Create `SonicMerge/Services/VideoAudioExtractor.swift`:
+
+```swift
+// SonicMerge/Services/VideoAudioExtractor.swift
+//
+// Extract the audio track from a video file and export it as a standalone
+// .m4a. Used by the Photos & Videos import source.
+//
+
+import AVFoundation
+import Foundation
+
+enum VideoAudioExtractor {
+
+    enum ExtractError: Error, Equatable {
+        case noAudioTrack
+        case exportFailed(String)  // wraps the underlying error description
+        case unsupportedFile
+    }
+
+    /// Extracts the audio track from `videoURL` and writes it to a temp .m4a.
+    /// The caller owns the returned URL and is responsible for moving or
+    /// deleting it once consumed.
+    static func extractAudio(from videoURL: URL) async throws -> URL {
+        let asset = AVURLAsset(url: videoURL)
+        let audioTracks = try await asset.loadTracks(withMediaType: .audio)
+        guard !audioTracks.isEmpty else { throw ExtractError.noAudioTrack }
+
+        guard let session = AVAssetExportSession(asset: asset,
+                                                 presetName: AVAssetExportPresetAppleM4A) else {
+            throw ExtractError.unsupportedFile
+        }
+
+        let outURL = FileManager.default
+            .temporaryDirectory
+            .appendingPathComponent("extracted-\(UUID().uuidString).m4a")
+
+        session.outputURL = outURL
+        session.outputFileType = .m4a
+
+        // iOS 17 compatible: bare `export()` async overload is iOS 18+.
+        // Mirror the pattern in AudioMergerService.swift:418-428.
+        try await withCheckedThrowingContinuation { (cont: CheckedContinuation<Void, Error>) in
+            session.exportAsynchronously {
+                switch session.status {
+                case .completed:
+                    cont.resume()
+                case .failed, .cancelled:
+                    cont.resume(throwing: ExtractError.exportFailed(
+                        session.error?.localizedDescription ?? "unknown"))
+                default:
+                    cont.resume(throwing: ExtractError.exportFailed(
+                        "unexpected status: \(session.status.rawValue)"))
+                }
+            }
+        }
+        return outURL
+    }
+}
+```
+
+- [ ] **Step 3.1.5: Add the fixtures to the test target**
+
+Synchronized folder groups pick up `.swift` files automatically, but **resource files (`.mp4`) need to be declared as resources in the test target**. Verify the fixtures are bundled by:
+
+```bash
+# Build for testing, then check the test bundle contains the fixtures
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build-for-testing 2>&1 | tail -3
+
+# Find the test xctest bundle and list its resources
+TEST_BUNDLE=$(find ~/Library/Developer/Xcode/DerivedData/SonicMerge-* \
+  -name "SonicMergeTests.xctest" -type d 2>/dev/null | head -1)
+echo "Test bundle: $TEST_BUNDLE"
+ls "$TEST_BUNDLE"/*.mp4 2>/dev/null
+```
+
+Expected: `audible-video.mp4` and `silent-video.mp4` listed under the test bundle.
+
+If they're missing, the synchronized folder group does NOT include `.mp4` for the test target by default. Open `SonicMerge.xcodeproj` in Xcode → SonicMergeTests target → Build Phases → "Copy Bundle Resources" → drag the two fixtures in. Re-run the build-for-testing and re-check.
+
+> **Why this manual step:** Xcode synchronized folder groups auto-include source files matching the target's `.swift`/`.m`/`.h` patterns, but resource extensions like `.mp4` typically require an explicit Build Phase entry. This is a one-time per-fixture project edit; once added, the files persist via path reference.
+
+- [ ] **Step 3.1.6: Run the tests — verify they pass**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -parallel-testing-enabled NO \
+  -only-testing:SonicMergeTests/VideoAudioExtractorTests test 2>&1 | tail -10
+```
+
+Expected: `** TEST SUCCEEDED **` with 2 tests passing.
+
+- [ ] **Step 3.1.7: Commit**
+
+```bash
+git add SonicMerge/Services/VideoAudioExtractor.swift \
+        SonicMergeTests/Services/VideoAudioExtractorTests.swift \
+        SonicMergeTests/Fixtures/silent-video.mp4 \
+        SonicMergeTests/Fixtures/audible-video.mp4
+git commit -m "feat(import): VideoAudioExtractor
+
+Pure-function helper that extracts the audio track from a video into a
+standalone .m4a via AVAssetExportSession. Throws .noAudioTrack on silent
+videos, .exportFailed otherwise. Tests use a 1s silent fixture and a 2s
+sine-tone fixture (~30 KB total).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 3.2: `PHPickerWrapper` UIViewControllerRepresentable
+
+**Files:**
+- Create: `SonicMerge/Features/Photos/PHPickerWrapper.swift`
+
+The wrapper presents `PHPickerViewController` filtered to videos and hands the picked URL to a callback. The host view chains the result into `VideoAudioExtractor.extractAudio` and then `createSession`.
+
+- [ ] **Step 3.2.1: Write the wrapper**
+
+Create `SonicMerge/Features/Photos/PHPickerWrapper.swift`:
+
+```swift
+// SonicMerge/Features/Photos/PHPickerWrapper.swift
+//
+// SwiftUI bridge over PHPickerViewController for the Photos & Videos
+// import source. Filter is video-only, single-selection. The picked
+// asset is loaded as a file representation and handed back as a URL.
+//
+// PHPickerViewController is Apple-mediated and runs out-of-process, so
+// no NSPhotoLibraryUsageDescription is required.
+//
+
+import PhotosUI
+import SwiftUI
+import UniformTypeIdentifiers
+
+struct PHPickerWrapper: UIViewControllerRepresentable {
+
+    enum PickError: LocalizedError, Equatable {
+        case loadFailed(String)
+        case missingFile
+
+        var errorDescription: String? {
+            switch self {
+            case .loadFailed(let msg):
+                return "Couldn't load this video. \(msg)"
+            case .missingFile:
+                return "Couldn't read the picked video."
+            }
+        }
+    }
+
+    let onPickResult: (Result<URL, Error>) -> Void
+    let onCancel: () -> Void
+
+    func makeUIViewController(context: Context) -> PHPickerViewController {
+        var config = PHPickerConfiguration()
+        config.filter = .videos
+        config.selectionLimit = 1
+        config.preferredAssetRepresentationMode = .current
+        let picker = PHPickerViewController(configuration: config)
+        picker.delegate = context.coordinator
+        return picker
+    }
+
+    func updateUIViewController(_: PHPickerViewController, context _: Context) {}
+
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPickResult: onPickResult, onCancel: onCancel)
+    }
+
+    final class Coordinator: NSObject, PHPickerViewControllerDelegate {
+        let onPickResult: (Result<URL, Error>) -> Void
+        let onCancel: () -> Void
+
+        init(onPickResult: @escaping (Result<URL, Error>) -> Void,
+             onCancel: @escaping () -> Void) {
+            self.onPickResult = onPickResult
+            self.onCancel = onCancel
+        }
+
+        func picker(_ picker: PHPickerViewController,
+                    didFinishPicking results: [PHPickerResult]) {
+            picker.dismiss(animated: true)
+
+            guard let result = results.first else {
+                onCancel()
+                return
+            }
+
+            let provider = result.itemProvider
+            // Prefer the most specific UTI the asset advertises; fall back to
+            // generic movie. PHPicker exposes whatever the asset has.
+            let typeId = provider.registeredTypeIdentifiers.first(where: {
+                UTType($0)?.conforms(to: .movie) == true
+            }) ?? UTType.movie.identifier
+
+            provider.loadFileRepresentation(forTypeIdentifier: typeId) { [weak self] tempURL, error in
+                guard let self else { return }
+                if let error {
+                    DispatchQueue.main.async {
+                        self.onPickResult(.failure(PickError.loadFailed(error.localizedDescription)))
+                    }
+                    return
+                }
+                guard let tempURL else {
+                    DispatchQueue.main.async {
+                        self.onPickResult(.failure(PickError.missingFile))
+                    }
+                    return
+                }
+                // Defensive copy: tempURL is invalidated when this closure
+                // returns. Mirror the pattern in ShareExtensionViewController.
+                let copyURL = FileManager.default
+                    .temporaryDirectory
+                    .appendingPathComponent("phpicker-\(UUID().uuidString).\(tempURL.pathExtension)")
+                do {
+                    try FileManager.default.copyItem(at: tempURL, to: copyURL)
+                    DispatchQueue.main.async {
+                        self.onPickResult(.success(copyURL))
+                    }
+                } catch {
+                    DispatchQueue.main.async {
+                        self.onPickResult(.failure(PickError.loadFailed(error.localizedDescription)))
+                    }
+                }
+            }
+        }
+    }
+}
+```
+
+- [ ] **Step 3.2.2: Build**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build 2>&1 | tail -5
+```
+
+Expected: `** BUILD SUCCEEDED **`.
+
+- [ ] **Step 3.2.3: Commit**
+
+```bash
+git add SonicMerge/Features/Photos/PHPickerWrapper.swift
+git commit -m "feat(import): PHPickerWrapper for video selection
+
+SwiftUI bridge over PHPickerViewController. Video-only filter, single
+selection, defensive temp-file copy because PHPicker invalidates the
+provider URL when the load callback returns. No photo-library usage
+description needed — PHPicker runs out-of-process.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 3.3: Wire Photos source onto `SmartCutHomeView`
+
+**Files:**
+- Modify: `SonicMerge/Features/SmartCut/Views/Home/SmartCutHomeView.swift`
+
+Replace the Photos stub with a `.sheet` presenting `PHPickerWrapper`. The picker callback chains: `loadFileRepresentation` → `VideoAudioExtractor.extractAudio` → `createSession(from:)` → temp cleanup.
+
+- [ ] **Step 3.3.1: Add `showPhotoPicker` state and wire the photo path**
+
+In `SmartCutHomeView.swift`, locate the `@State private var showRecorder = false` line from Chunk 2. Add immediately after:
+
+```swift
+@State private var showPhotoPicker = false
+@State private var photoExtractError: String?
+@State private var photoLoading = false
+```
+
+In the existing `.sheet(isPresented: $showSourceSheet, onDismiss: { ... })` block, replace the `case .photos:` arm. The whole `case .photos:` should now read in full:
+
+```swift
+case .photos:
+    showPhotoPicker = true
+```
+
+Verify no `print("[ImportSourceSheet] photos tapped...")` line remains anywhere in the file (search for `photos tapped`).
+
+Then add a new `.sheet` modifier on the same view chain (next to the recorder sheet):
+
+```swift
+.sheet(isPresented: $showPhotoPicker) {
+    PHPickerWrapper(
+        onPickResult: { result in
+            showPhotoPicker = false
+            Task { await handlePhotoPickResult(result) }
+        },
+        onCancel: { showPhotoPicker = false }
+    )
+}
+.alert(
+    "Couldn't import this video",
+    isPresented: Binding(
+        get: { photoExtractError != nil },
+        set: { if !$0 { photoExtractError = nil } }
+    )
+) {
+    Button("OK") {}
+} message: {
+    Text(photoExtractError ?? "")
+}
+.overlay {
+    // iCloud-resident videos can take seconds to load; PHPicker silently
+    // hangs without a hint. Show an indeterminate spinner overlay only if
+    // loading runs longer than 500ms, so resident videos don't flash one.
+    if photoLoading {
+        VStack(spacing: 12) {
+            ProgressView().controlSize(.large)
+            Text("Loading video…")
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
+        .padding(28)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+    }
+}
+```
+
+Add the new private method `handlePhotoPickResult` to the view (place it next to the existing `createSession(from:)` private method):
+
+```swift
+private func handlePhotoPickResult(_ result: Result<URL, Error>) async {
+    // Schedule the loading overlay to appear only if work runs > 500ms.
+    let overlayTask = Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(500))
+        if !Task.isCancelled { photoLoading = true }
+    }
+    defer {
+        overlayTask.cancel()
+        photoLoading = false
+    }
+
+    switch result {
+    case .success(let videoURL):
+        defer { try? FileManager.default.removeItem(at: videoURL) }
+        do {
+            let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
+            await createSession(from: audioURL)
+            try? FileManager.default.removeItem(at: audioURL)
+        } catch VideoAudioExtractor.ExtractError.noAudioTrack {
+            photoExtractError = "This video has no audio to import."
+        } catch {
+            photoExtractError = "Couldn't extract audio. \(error.localizedDescription)"
+        }
+    case .failure(let error):
+        photoExtractError = error.localizedDescription
+    }
+}
+```
+
+- [ ] **Step 3.3.2: Build**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build 2>&1 | tail -5
+```
+
+Expected: `** BUILD SUCCEEDED **`.
+
+- [ ] **Step 3.3.3: Run full suite — confirm `FAIL=5` baseline preserved**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -parallel-testing-enabled NO test 2>&1 | tee /tmp/test.log | tail -3
+echo "FAIL=$(grep -E '✘ Test [a-zA-Z_]+\(\) failed' /tmp/test.log | grep -oE 'Test [a-zA-Z_]+\(\)' | sort -u | wc -l)"
+```
+
+Expected: `FAIL=5`. Two new tests (`VideoAudioExtractorTests`) pushed the total up further.
+
+- [ ] **Step 3.3.4: Manual smoke test on the simulator**
+
+The simulator's Photos library starts empty; you need to seed at least one video before testing.
+
+```bash
+# Drag a small mp4 into the simulator's Photos to seed it, OR via CLI:
+xcrun simctl addmedia booted SonicMergeTests/Fixtures/audible-video.mp4
+xcrun simctl addmedia booted SonicMergeTests/Fixtures/silent-video.mp4
+```
+
+Then in the app:
+
+- Tap import button → tap "Photos & Videos" → PHPicker appears.
+- Pick `audible-video.mp4` → picker dismisses → after a moment, navigation pushes into a new Smart Cut session with the extracted 2-second m4a.
+- Tap import again → tap "Photos & Videos" → pick `silent-video.mp4` → alert "This video has no audio to import." dismisses cleanly with OK.
+- Tap import again → tap "Photos & Videos" → tap Cancel in the picker → returns to home with no error.
+- **iCloud progress overlay (best-effort manual check):** if you have access to an iCloud Photos library with a non-resident video, sign in on the simulator (Settings → Apple ID), wait for Photos to populate, then pick a video that hasn't been downloaded yet. Expected: after ~500ms the "Loading video…" overlay appears, dismisses when the audio extraction completes. Resident videos should NOT flash the overlay.
+
+- [ ] **Step 3.3.5: Commit**
+
+```bash
+git add SonicMerge/Features/SmartCut/Views/Home/SmartCutHomeView.swift
+git commit -m "feat(import): wire Photos & Videos onto Smart Cut home
+
+Tapping 'Photos & Videos' on the source sheet now presents PHPicker.
+Picked video → VideoAudioExtractor extracts audio → createSession.
+Silent videos surface a friendly alert. Both temp files (the picker
+copy and the extracted m4a) are cleaned up after createSession. iCloud
+videos: a 'Loading video…' overlay appears after 500ms so the user has
+visual feedback while a non-resident asset downloads.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+**End of Chunk 3.** Reviewed and approved 2026-05-08.
+
+---
+
+## Chunk 4: Roll out to Denoise + Merge tabs
+
+**Why this chunk:** Smart Cut already has all three sources (Chunks 1-3). This chunk replicates the same source-sheet wiring on Denoise and Merge, using each tab's existing import target. Denoise mirrors Smart Cut exactly (single-URL → `createSession(from:)`, with its own `ImportDecision.gate`). Merge has two views with their own source sheets (per the spec's "two entry points, each owns its own showSourceSheet" decision); both funnel into `MixingStationViewModel.importFiles([URL])` with no length/quota gate.
+
+**At the end of this chunk:** Every Import button on every tab opens the same Source Picker sheet. Files / Record / Photos all work end to end on Smart Cut, Denoise, and Merge. Full suite still at `FAIL=5` baseline.
+
+**Modified files only — no new files:**
+- `SonicMerge/Features/Denoising/Views/Home/DenoiseHomeView.swift`
+- `SonicMerge/Features/MixingStation/MixingStationView.swift`
+- `SonicMerge/Features/MixingStation/MergeTimelineView.swift`
+
+### Task 4.1: Wire all three sources onto `DenoiseHomeView`
+
+`DenoiseHomeView` mirrors `SmartCutHomeView` almost exactly — single empty + loaded state, two `CircularImportButton` callsites (line 86 hero, line 94 pinned), one `.fileImporter` (line 45), one private `createSession(from:)` method (line 129). The diff shape is identical to Tasks 1.3, 2.5, and 3.3 combined.
+
+**Files:**
+- Modify: `SonicMerge/Features/Denoising/Views/Home/DenoiseHomeView.swift`
+
+- [ ] **Step 4.1.1: Add the new state vars**
+
+Locate the existing `@State private var showFileImporter = false` line. Add:
+
+```swift
+@State private var showSourceSheet = false
+@State private var pendingAction: ImportSourceAction?
+@State private var showRecorder = false
+@State private var showPhotoPicker = false
+@State private var photoExtractError: String?
+@State private var photoLoading = false
+```
+
+- [ ] **Step 4.1.2: Repoint both `CircularImportButton` callsites**
+
+Find the `CircularImportButton(size: .hero) { showFileImporter = true }` (line 86) and `CircularImportButton(size: .pinned) { showFileImporter = true }` (line 94). Change both closures to `{ showSourceSheet = true }`.
+
+- [ ] **Step 4.1.3: Add the source sheet, recorder sheet, photo picker, alert, and overlay modifiers**
+
+On the same view chain that holds the existing `.fileImporter` (line 45), add — immediately above the `.fileImporter`:
+
+```swift
+.sheet(
+    isPresented: $showSourceSheet,
+    onDismiss: {
+        guard let action = pendingAction else { return }
+        pendingAction = nil
+        switch action {
+        case .files:
+            showFileImporter = true
+        case .record:
+            showRecorder = true
+        case .photos:
+            showPhotoPicker = true
+        }
+    }
+) {
+    ImportSourceSheet(pendingAction: $pendingAction)
+}
+.sheet(isPresented: $showRecorder) {
+    RecorderSheet { url in
+        Task {
+            await createSession(from: url)
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+}
+.sheet(isPresented: $showPhotoPicker) {
+    PHPickerWrapper(
+        onPickResult: { result in
+            showPhotoPicker = false
+            Task { await handlePhotoPickResult(result) }
+        },
+        onCancel: { showPhotoPicker = false }
+    )
+}
+.alert(
+    "Couldn't import this video",
+    isPresented: Binding(
+        get: { photoExtractError != nil },
+        set: { if !$0 { photoExtractError = nil } }
+    )
+) {
+    Button("OK") {}
+} message: {
+    Text(photoExtractError ?? "")
+}
+.overlay {
+    if photoLoading {
+        VStack(spacing: 12) {
+            ProgressView().controlSize(.large)
+            Text("Loading video…")
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
+        .padding(28)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+    }
+}
+```
+
+- [ ] **Step 4.1.4: Add `handlePhotoPickResult` next to the existing `createSession(from:)`**
+
+Place this private method right after `createSession(from:)` ends:
+
+```swift
+private func handlePhotoPickResult(_ result: Result<URL, Error>) async {
+    let overlayTask = Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(500))
+        if !Task.isCancelled { photoLoading = true }
+    }
+    defer {
+        overlayTask.cancel()
+        photoLoading = false
+    }
+
+    switch result {
+    case .success(let videoURL):
+        defer { try? FileManager.default.removeItem(at: videoURL) }
+        do {
+            let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
+            await createSession(from: audioURL)
+            try? FileManager.default.removeItem(at: audioURL)
+        } catch VideoAudioExtractor.ExtractError.noAudioTrack {
+            photoExtractError = "This video has no audio to import."
+        } catch {
+            photoExtractError = "Couldn't extract audio. \(error.localizedDescription)"
+        }
+    case .failure(let error):
+        photoExtractError = error.localizedDescription
+    }
+}
+```
+
+> **Symmetry note:** the wiring on `DenoiseHomeView` is byte-for-byte the same as `SmartCutHomeView`, just on a different `createSession(from:)` and a different `ImportDecision.gate(...)`. Resist the urge to extract a shared "ImportablePicker" view modifier — there are exactly two callers of this pattern (Smart Cut + Denoise) and the rule of three says don't extract yet. If a fourth caller appears, that's the time to abstract.
+
+- [ ] **Step 4.1.5: Build**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build 2>&1 | tail -5
+```
+
+Expected: `** BUILD SUCCEEDED **`.
+
+- [ ] **Step 4.1.6: Run Denoise gating tests — confirm no regression**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -parallel-testing-enabled NO \
+  -only-testing:SonicMergeTests/DenoiseHomeViewGatingTests test 2>&1 | tail -10
+```
+
+Expected: all tests in `DenoiseHomeViewGatingTests` pass — the gate logic is unchanged.
+
+- [ ] **Step 4.1.7: Commit**
+
+```bash
+git add SonicMerge/Features/Denoising/Views/Home/DenoiseHomeView.swift
+git commit -m "feat(import): three-source sheet on Denoise home
+
+Mirrors the Smart Cut home wiring: tapping the import button opens the
+source sheet; Files / Record / Photos all funnel into the existing
+DenoiseHomeView.createSession(from:) path so the per-tab ImportDecision
+gate stays intact.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 4.2: Wire all three sources onto `MixingStationView` (Merge tab)
+
+Merge has two views with their own importers per the spec; this task handles `MixingStationView`. The downstream target is `viewModel.importFiles([URL])` rather than a `createSession(from:)`.
+
+**Files:**
+- Modify: `SonicMerge/Features/MixingStation/MixingStationView.swift`
+
+- [ ] **Step 4.2.1: Add the new state vars**
+
+Locate the existing `@State private var showDocumentPicker = false` line (line 20). Add:
+
+```swift
+@State private var showSourceSheet = false
+@State private var pendingAction: ImportSourceAction?
+@State private var showRecorder = false
+@State private var showPhotoPicker = false
+@State private var photoExtractError: String?
+@State private var photoLoading = false
+```
+
+- [ ] **Step 4.2.2: Repoint both `CircularImportButton` callsites**
+
+Find both `CircularImportButton(...) { showDocumentPicker = true }` callsites (line 39 in the loaded state, and the corresponding one in `emptyState` — search for `CircularImportButton(size: .hero)` to find it). Change both closures to `{ showSourceSheet = true }`.
+
+- [ ] **Step 4.2.3: Add the source sheet, recorder sheet, photo picker, alert, and overlay**
+
+On the same view chain that holds the existing `.fileImporter` (line 78), add **immediately above** the `.fileImporter`:
+
+```swift
+.sheet(
+    isPresented: $showSourceSheet,
+    onDismiss: {
+        guard let action = pendingAction else { return }
+        pendingAction = nil
+        switch action {
+        case .files:
+            showDocumentPicker = true
+        case .record:
+            showRecorder = true
+        case .photos:
+            showPhotoPicker = true
+        }
+    }
+) {
+    ImportSourceSheet(pendingAction: $pendingAction)
+}
+.sheet(isPresented: $showRecorder) {
+    RecorderSheet { url in
+        Task {
+            // Merge has no per-tab gate; importFiles handles paywall reasons.
+            if let reason = viewModel.importFiles([url]) {
+                paywallReason = reason
+            }
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+}
+.sheet(isPresented: $showPhotoPicker) {
+    PHPickerWrapper(
+        onPickResult: { result in
+            showPhotoPicker = false
+            Task { await handleMergePhotoResult(result) }
+        },
+        onCancel: { showPhotoPicker = false }
+    )
+}
+.alert(
+    "Couldn't import this video",
+    isPresented: Binding(
+        get: { photoExtractError != nil },
+        set: { if !$0 { photoExtractError = nil } }
+    )
+) {
+    Button("OK") {}
+} message: {
+    Text(photoExtractError ?? "")
+}
+.overlay {
+    if photoLoading {
+        VStack(spacing: 12) {
+            ProgressView().controlSize(.large)
+            Text("Loading video…")
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
+        .padding(28)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+    }
+}
+```
+
+- [ ] **Step 4.2.4: Add `handleMergePhotoResult` private method**
+
+Place this near the existing helper methods on `MixingStationView`:
+
+```swift
+private func handleMergePhotoResult(_ result: Result<URL, Error>) async {
+    let overlayTask = Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(500))
+        if !Task.isCancelled { photoLoading = true }
+    }
+    defer {
+        overlayTask.cancel()
+        photoLoading = false
+    }
+
+    switch result {
+    case .success(let videoURL):
+        defer { try? FileManager.default.removeItem(at: videoURL) }
+        do {
+            let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
+            if let reason = viewModel.importFiles([audioURL]) {
+                paywallReason = reason
+            }
+            try? FileManager.default.removeItem(at: audioURL)
+        } catch VideoAudioExtractor.ExtractError.noAudioTrack {
+            photoExtractError = "This video has no audio to import."
+        } catch {
+            photoExtractError = "Couldn't extract audio. \(error.localizedDescription)"
+        }
+    case .failure(let error):
+        photoExtractError = error.localizedDescription
+    }
+}
+```
+
+- [ ] **Step 4.2.5: Build**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build 2>&1 | tail -5
+```
+
+Expected: `** BUILD SUCCEEDED **`.
+
+- [ ] **Step 4.2.6: Commit**
+
+```bash
+git add SonicMerge/Features/MixingStation/MixingStationView.swift
+git commit -m "feat(import): three-source sheet on Merge (MixingStationView)
+
+Merge tab's primary entry points (empty + loaded states) now open the
+shared source sheet. Files keeps its existing multi-select fileImporter;
+Record + Photos add single clips via viewModel.importFiles([url]).
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 4.3: Wire all three sources onto `MergeTimelineView` (junction-insert path)
+
+`MergeTimelineView` is the second Merge entry point — used when the user taps a junction between clips to insert a new one. It has its own `@State showInsertPicker` and `.fileImporter`.
+
+**Files:**
+- Modify: `SonicMerge/Features/MixingStation/MergeTimelineView.swift`
+
+- [ ] **Step 4.3.1: Add the new state vars**
+
+Locate the existing `@State private var showInsertPicker = false` declaration. Add:
+
+```swift
+@State private var showSourceSheet = false
+@State private var pendingAction: ImportSourceAction?
+@State private var showRecorder = false
+@State private var showPhotoPicker = false
+@State private var photoExtractError: String?
+@State private var photoLoading = false
+```
+
+- [ ] **Step 4.3.2: Find and repoint the junction-insert trigger**
+
+`MergeTimelineView` uses `showInsertPicker = true` to trigger the existing fileImporter from junction taps. Search for that line (likely inside a `JunctionView` callback or a sheet binding). Replace the value flip with `showSourceSheet = true`.
+
+After the change, search the file again for `showInsertPicker = true` — there should be **zero remaining occurrences**.
+
+- [ ] **Step 4.3.3: Add the source sheet, recorder sheet, photo picker, alert, and overlay**
+
+On the same view chain that holds the existing `.fileImporter` (line 70), add immediately above:
+
+```swift
+.sheet(
+    isPresented: $showSourceSheet,
+    onDismiss: {
+        guard let action = pendingAction else { return }
+        pendingAction = nil
+        switch action {
+        case .files:
+            showInsertPicker = true
+        case .record:
+            showRecorder = true
+        case .photos:
+            showPhotoPicker = true
+        }
+    }
+) {
+    ImportSourceSheet(pendingAction: $pendingAction)
+}
+.sheet(isPresented: $showRecorder) {
+    RecorderSheet { url in
+        Task {
+            // Junction-insert path: pendingInsert was set by the junction tap
+            // before the source sheet appeared — it's still valid here. The
+            // existing onChange(of: clips.count) hook will move the new clip
+            // to the requested position.
+            viewModel.importFiles([url])
+            try? FileManager.default.removeItem(at: url)
+        }
+    }
+}
+.sheet(isPresented: $showPhotoPicker) {
+    PHPickerWrapper(
+        onPickResult: { result in
+            showPhotoPicker = false
+            Task { await handleTimelinePhotoResult(result) }
+        },
+        onCancel: { showPhotoPicker = false }
+    )
+}
+.alert(
+    "Couldn't import this video",
+    isPresented: Binding(
+        get: { photoExtractError != nil },
+        set: { if !$0 { photoExtractError = nil } }
+    )
+) {
+    Button("OK") {}
+} message: {
+    Text(photoExtractError ?? "")
+}
+.overlay {
+    if photoLoading {
+        VStack(spacing: 12) {
+            ProgressView().controlSize(.large)
+            Text("Loading video…")
+                .font(.system(.subheadline, design: .rounded))
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
+        .padding(28)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+    }
+}
+```
+
+- [ ] **Step 4.3.4: Add `handleTimelinePhotoResult` private method**
+
+Place this near the existing helper methods on `MergeTimelineView`:
+
+```swift
+private func handleTimelinePhotoResult(_ result: Result<URL, Error>) async {
+    let overlayTask = Task { @MainActor in
+        try? await Task.sleep(for: .milliseconds(500))
+        if !Task.isCancelled { photoLoading = true }
+    }
+    defer {
+        overlayTask.cancel()
+        photoLoading = false
+    }
+
+    switch result {
+    case .success(let videoURL):
+        defer { try? FileManager.default.removeItem(at: videoURL) }
+        do {
+            let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
+            viewModel.importFiles([audioURL])
+            try? FileManager.default.removeItem(at: audioURL)
+        } catch VideoAudioExtractor.ExtractError.noAudioTrack {
+            photoExtractError = "This video has no audio to import."
+        } catch {
+            photoExtractError = "Couldn't extract audio. \(error.localizedDescription)"
+        }
+    case .failure(let error):
+        photoExtractError = error.localizedDescription
+    }
+}
+```
+
+> **Re junction-insert ordering:** the existing `pendingInsert` state on `MergeTimelineView` is set by the `JunctionView` tap before `showSourceSheet = true` is set. The `onChange(of: viewModel.clips.count)` hook (line 86) re-orders any newly-imported clips to the junction position regardless of which source produced them. Recording and Photos go through the same `viewModel.importFiles(...)` call, so the same hook handles their reordering automatically. No new ordering logic needed here.
+
+- [ ] **Step 4.3.5: Build**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build 2>&1 | tail -5
+```
+
+Expected: `** BUILD SUCCEEDED **`.
+
+- [ ] **Step 4.3.6: Commit**
+
+```bash
+git add SonicMerge/Features/MixingStation/MergeTimelineView.swift
+git commit -m "feat(import): three-source sheet on Merge timeline junctions
+
+Tapping a junction between clips to insert a new one now goes through
+the shared source sheet. Files / Record / Photos all funnel into
+viewModel.importFiles([url]); the existing pendingInsert + onChange
+ordering hook handles repositioning the new clip to the junction.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 4.4: Final manual QA across all three tabs + full suite
+
+This task is verification only.
+
+- [ ] **Step 4.4.1: Run the full suite — confirm `FAIL=5` baseline preserved**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -parallel-testing-enabled NO test 2>&1 | tee /tmp/test.log | tail -3
+echo "FAIL=$(grep -E '✘ Test [a-zA-Z_]+\(\) failed' /tmp/test.log | grep -oE 'Test [a-zA-Z_]+\(\)' | sort -u | wc -l)"
+```
+
+Expected: `FAIL=5` exactly. Total tests = baseline + 4 (`ImportSourceDispatcherTests`) + 1 (`AudioRecorderServiceTests`) + 2 (`VideoAudioExtractorTests`) = baseline + 7.
+
+- [ ] **Step 4.4.2: Manual QA — Smart Cut tab (full re-test)**
+
+Already verified in Chunks 1-3, but re-confirm now that the ImportSourceSheet is shared with the other tabs and nothing diverged:
+- Tap Smart Cut import → source sheet appears.
+- All three rows route correctly: Files presents the document picker, Record presents the recorder, Photos presents PHPicker.
+- One end-to-end Smart Cut session created from each source.
+
+- [ ] **Step 4.4.3: Manual QA — Denoise tab**
+
+- Switch to Denoise tab. Tap import button (hero or pinned) → source sheet appears, identical to Smart Cut's.
+- Tap Files → pick an audio file → Denoise session is created (existing behavior unchanged).
+- Tap Record → recorder appears → record 3 seconds → Save → Denoise session is created.
+- Tap Photos → pick `audible-video.mp4` → Denoise session created from extracted m4a.
+- Tap Photos → pick `silent-video.mp4` → "This video has no audio to import." alert.
+
+- [ ] **Step 4.4.4: Manual QA — Merge tab**
+
+- Switch to Merge tab. Empty state → tap import → source sheet appears.
+- Tap Files → pick **two** audio files (multi-select still works) → both clips appear in the timeline.
+- Pinned import button (with clips present) → source sheet appears.
+- Tap Record → record → Save → recording appears as a new clip at the end of the timeline.
+- Tap Photos → pick a video → extracted audio appears as a new clip at the end.
+- Tap a junction between two clips → source sheet appears (this is the `MergeTimelineView` path).
+- From the junction sheet: tap Files → pick one audio file → it inserts at the junction position.
+- From the junction sheet: tap Record → record → Save → the new recording inserts at the junction position (verifies the `pendingInsert` + `onChange(of: clips.count)` reordering hook).
+- From the junction sheet: tap Photos → pick a video → extracted audio inserts at the junction position.
+
+- [ ] **Step 4.4.5: Manual QA — sheet-chain stability**
+
+Stress-test the dismiss-then-present chain:
+- Tap import → source sheet appears → tap Record → recorder appears.
+- Cancel the recorder → recorder dismisses, source sheet does NOT reappear.
+- Tap import again immediately → source sheet appears with a fresh state (no leftover `pendingAction`).
+- Repeat with Photos: tap import → source sheet → Photos → Cancel in PHPicker → returns to home cleanly.
+
+- [ ] **Step 4.4.6: No commit needed**
+
+This task is verification only. If any step fails, fix in the relevant prior task and re-run.
+
+---
+
+**End of Chunk 4.** Plan complete.
