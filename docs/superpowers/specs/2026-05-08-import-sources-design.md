@@ -89,7 +89,8 @@ The work is shaped to mirror the existing `CircularImportButton` pattern: one sh
 - Cancel → discards the temp file and dismisses.
 - Permission denied path (mic): show inline "Enable microphone in Settings" with a Settings deep-link button, replacing the recorder controls.
 
-**AudioRecorderService (new actor):**
+**AudioRecorderService (`@MainActor final class`, `ObservableObject`):**
+- Not an actor — it publishes state via `@Published` to the SwiftUI sheet, which requires `ObservableObject` (class). `AVAudioRecorder` is also single-threaded; main-actor isolation matches both Apple's API contract and the SwiftUI consumption pattern.
 - Wraps `AVAudioRecorder`. Output settings: linear PCM input internally for power readings, but final file is **AAC `.m4a` at 44.1 kHz, mono, 128 kbps** to match the rest of the app's export defaults and stay compatible with `AVAsset` decode.
 - **Initializer takes `RecordPermissionProvider` via DI** — `init(permissions: RecordPermissionProvider = .system)`. Production uses the system implementation that calls `AVAudioSession.sharedInstance().requestRecordPermission`. Tests pass a stub. Matches the existing `TranscriptionService(stateStore:)` DI pattern.
 - Public surface:
@@ -192,7 +193,7 @@ This is the existing contract; the new sources just feed it. We do NOT introduce
 
 - `AudioRecorderServiceTests.swift` — start → stop → returns valid m4a; cancel → temp file deleted; permission denied path throws `.micPermissionDenied`. Mic permission status mocked via a `RecordPermissionProvider` protocol seam (passed in via the service's initializer — see DI note below).
 - `VideoAudioExtractorTests.swift` — extract from fixture video → returns m4a, duration matches video; extract from fixture silent video → throws `.noAudioTrack`. Use a 2-second test video committed to `SonicMergeTests/Fixtures/`.
-- `ImportDecisionGatingTests.swift` — extend existing tests so a mocked recorded URL with duration > 5 min hits the paywall (no new gate logic, just verifying the funnel).
+- Extend the existing `SonicMergeTests/Features/SmartCut/ImportDecisionTests.swift` (and the analogous Denoise test file) with one case each: a recorded URL with duration > 5 min hits the paywall via the same gate. No new gate logic, just verifying the funnel from the new sources is identical to the file path.
 
 **No regression of `FAIL=5` baseline.** The five known-failing tests on `main` are all unrelated (AudioMerger crossfade, Share Extension entitlement-gated, A/B playback flake) — none touch the import surface.
 
