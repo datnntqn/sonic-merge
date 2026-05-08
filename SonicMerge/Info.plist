@@ -64,6 +64,9 @@
 	<!-- Smart Cut: Speech.framework on-device transcription consent (sc-t13) -->
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>CleanCut uses on-device speech recognition to detect filler words and long silences in your audio. Recognition runs entirely on your device — your audio is never uploaded.</string>
+	<!-- Recording: AVAudioRecorder mic capture for in-app voice recording -->
+	<key>NSMicrophoneUsageDescription</key>
+	<string>CleanCut records voice using the microphone so you can capture and clean audio without leaving the app. Recordings stay on your device.</string>
 	<!-- Smart Cut: BGProcessingTask identifier — must match BackgroundTranscriptionTask.identifier (sc-t13) -->
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>

@@ -23,6 +23,12 @@ struct SmartCutHomeView: View {
     private var sessions: [SmartCutSession]
 
     @State private var showFileImporter = false
+    @State private var showSourceSheet = false
+    @State private var showRecorder = false
+    @State private var showPhotoPicker = false
+    @State private var photoExtractError: String?
+    @State private var photoLoading = false
+    @State private var pendingAction: ImportSourceAction?
     @State private var importErrorMessage: String?
     @State private var paywallReason: PaywallReason?
 
@@ -45,12 +51,76 @@ struct SmartCutHomeView: View {
                 }
             }
         }
+        .sheet(
+            isPresented: $showSourceSheet,
+            onDismiss: {
+                guard let action = pendingAction else { return }
+                pendingAction = nil
+                switch action {
+                case .files:
+                    showFileImporter = true
+                case .record:
+                    showRecorder = true
+                case .photos:
+                    showPhotoPicker = true
+                }
+            }
+        ) {
+            ImportSourceSheet(pendingAction: $pendingAction)
+        }
         .fileImporter(
             isPresented: $showFileImporter,
             allowedContentTypes: UTType.audioImportTypes,
             allowsMultipleSelection: false
         ) { result in
             Task { await handleImport(result: result) }
+        }
+        .sheet(isPresented: $showRecorder) {
+            RecorderSheet { url in
+                Task {
+                    await createSession(from: url)
+                    // Recording is the only source where we own the URL outright,
+                    // so we delete the /tmp file after createSession's copy. Files
+                    // and Photos paths come from system pickers and are best left
+                    // to the OS reaper.
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+        }
+        .sheet(isPresented: $showPhotoPicker) {
+            PHPickerWrapper(
+                onPickResult: { result in
+                    showPhotoPicker = false
+                    Task { await handlePhotoPickResult(result) }
+                },
+                onCancel: { showPhotoPicker = false }
+            )
+        }
+        .alert(
+            "Couldn't import this video",
+            isPresented: Binding(
+                get: { photoExtractError != nil },
+                set: { if !$0 { photoExtractError = nil } }
+            )
+        ) {
+            Button("OK") {}
+        } message: {
+            Text(photoExtractError ?? "")
+        }
+        .overlay {
+            // iCloud-resident videos can take seconds to load; PHPicker silently
+            // hangs without a hint. Show an indeterminate spinner overlay only if
+            // loading runs longer than 500ms, so resident videos don't flash one.
+            if photoLoading {
+                VStack(spacing: 12) {
+                    ProgressView().controlSize(.large)
+                    Text("Loading video…")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                }
+                .padding(28)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+            }
         }
         .paywall(reason: $paywallReason)
         .alert(
@@ -91,7 +161,7 @@ struct SmartCutHomeView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
-            CircularImportButton(size: .hero) { showFileImporter = true }
+            CircularImportButton(size: .hero) { showSourceSheet = true }
         }
     }
 
@@ -101,7 +171,7 @@ struct SmartCutHomeView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                CircularImportButton(size: .pinned) { showFileImporter = true }
+                CircularImportButton(size: .pinned) { showSourceSheet = true }
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -135,6 +205,34 @@ struct SmartCutHomeView: View {
             await createSession(from: pickedURL)
         case .failure(let error):
             importErrorMessage = error.localizedDescription
+        }
+    }
+
+    private func handlePhotoPickResult(_ result: Result<URL, Error>) async {
+        // Schedule the loading overlay to appear only if work runs > 500ms.
+        let overlayTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            if !Task.isCancelled { photoLoading = true }
+        }
+        defer {
+            overlayTask.cancel()
+            photoLoading = false
+        }
+
+        switch result {
+        case .success(let videoURL):
+            defer { try? FileManager.default.removeItem(at: videoURL) }
+            do {
+                let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
+                await createSession(from: audioURL)
+                try? FileManager.default.removeItem(at: audioURL)
+            } catch VideoAudioExtractor.ExtractError.noAudioTrack {
+                photoExtractError = "This video has no audio to import."
+            } catch {
+                photoExtractError = "Couldn't extract audio. \(error.localizedDescription)"
+            }
+        case .failure(let error):
+            photoExtractError = error.localizedDescription
         }
     }
 

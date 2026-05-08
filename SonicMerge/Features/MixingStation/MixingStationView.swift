@@ -18,6 +18,12 @@ struct MixingStationView: View {
     @AppStorage("sonicMerge.hasImportedFirstClip") private var hasImportedFirstClip: Bool = false
 
     @State private var showDocumentPicker = false
+    @State private var showSourceSheet = false
+    @State private var pendingAction: ImportSourceAction?
+    @State private var showRecorder = false
+    @State private var showPhotoPicker = false
+    @State private var photoExtractError: String?
+    @State private var photoLoading = false
     @State private var showExportSheet = false
     @State private var paywallReason: PaywallReason?
     @State private var showMoodCheckSheet = false
@@ -36,7 +42,7 @@ struct MixingStationView: View {
                     VStack(spacing: 0) {
                         HStack {
                             Spacer()
-                            CircularImportButton(size: .pinned) { showDocumentPicker = true }
+                            CircularImportButton(size: .pinned) { showSourceSheet = true }
                         }
                         .padding(.horizontal, 16)
                         .padding(.top, 12)
@@ -73,6 +79,66 @@ struct MixingStationView: View {
                         activityItems: [url],
                         onDismiss: { viewModel.dismissShareSheet() }
                     )
+                }
+            }
+            .sheet(
+                isPresented: $showSourceSheet,
+                onDismiss: {
+                    guard let action = pendingAction else { return }
+                    pendingAction = nil
+                    switch action {
+                    case .files:
+                        showDocumentPicker = true
+                    case .record:
+                        showRecorder = true
+                    case .photos:
+                        showPhotoPicker = true
+                    }
+                }
+            ) {
+                ImportSourceSheet(pendingAction: $pendingAction)
+            }
+            .sheet(isPresented: $showRecorder) {
+                RecorderSheet { url in
+                    Task {
+                        // Merge has no per-tab gate; importFiles handles paywall reasons.
+                        if let reason = viewModel.importFiles([url]) {
+                            paywallReason = reason
+                        }
+                        try? FileManager.default.removeItem(at: url)
+                    }
+                }
+            }
+            .sheet(isPresented: $showPhotoPicker) {
+                PHPickerWrapper(
+                    onPickResult: { result in
+                        showPhotoPicker = false
+                        Task { await handleMergePhotoResult(result) }
+                    },
+                    onCancel: { showPhotoPicker = false }
+                )
+            }
+            .alert(
+                "Couldn't import this video",
+                isPresented: Binding(
+                    get: { photoExtractError != nil },
+                    set: { if !$0 { photoExtractError = nil } }
+                )
+            ) {
+                Button("OK") {}
+            } message: {
+                Text(photoExtractError ?? "")
+            }
+            .overlay {
+                if photoLoading {
+                    VStack(spacing: 12) {
+                        ProgressView().controlSize(.large)
+                        Text("Loading video…")
+                            .font(.system(.subheadline, design: .rounded))
+                            .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                    }
+                    .padding(28)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
                 }
             }
             .fileImporter(
@@ -159,7 +225,7 @@ struct MixingStationView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
-            CircularImportButton(size: .hero) { showDocumentPicker = true }
+            CircularImportButton(size: .hero) { showSourceSheet = true }
         }
     }
 
@@ -180,6 +246,35 @@ struct MixingStationView: View {
                 SettingsToolbarButton()
                 ThemeToggleButton()
             }
+        }
+    }
+
+    private func handleMergePhotoResult(_ result: Result<URL, Error>) async {
+        let overlayTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            if !Task.isCancelled { photoLoading = true }
+        }
+        defer {
+            overlayTask.cancel()
+            photoLoading = false
+        }
+
+        switch result {
+        case .success(let videoURL):
+            defer { try? FileManager.default.removeItem(at: videoURL) }
+            do {
+                let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
+                if let reason = viewModel.importFiles([audioURL]) {
+                    paywallReason = reason
+                }
+                try? FileManager.default.removeItem(at: audioURL)
+            } catch VideoAudioExtractor.ExtractError.noAudioTrack {
+                photoExtractError = "This video has no audio to import."
+            } catch {
+                photoExtractError = "Couldn't extract audio. \(error.localizedDescription)"
+            }
+        case .failure(let error):
+            photoExtractError = error.localizedDescription
         }
     }
 

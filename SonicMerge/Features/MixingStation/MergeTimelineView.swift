@@ -27,6 +27,12 @@ struct MergeTimelineView: View {
     /// after the reorder fires, on cancel, or on a delta <= 0 import result.
     @State private var pendingInsert: (index: Int, oldCount: Int)?
     @State private var showInsertPicker: Bool = false
+    @State private var showSourceSheet = false
+    @State private var pendingAction: ImportSourceAction?
+    @State private var showRecorder = false
+    @State private var showPhotoPicker = false
+    @State private var photoExtractError: String?
+    @State private var photoLoading = false
 
     let onExportTap: () -> Void
 
@@ -67,6 +73,67 @@ struct MergeTimelineView: View {
             }
         }
         .background(Color(uiColor: semantic.surfaceBase))
+        .sheet(
+            isPresented: $showSourceSheet,
+            onDismiss: {
+                guard let action = pendingAction else { return }
+                pendingAction = nil
+                switch action {
+                case .files:
+                    showInsertPicker = true
+                case .record:
+                    showRecorder = true
+                case .photos:
+                    showPhotoPicker = true
+                }
+            }
+        ) {
+            ImportSourceSheet(pendingAction: $pendingAction)
+        }
+        .sheet(isPresented: $showRecorder) {
+            RecorderSheet { url in
+                Task {
+                    // Junction-insert path: pendingInsert was set by the junction tap
+                    // before the source sheet appeared — it's still valid here. The
+                    // existing onChange(of: clips.count) hook will move the new clip
+                    // to the requested position.
+                    viewModel.importFiles([url])
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+        }
+        .sheet(isPresented: $showPhotoPicker) {
+            PHPickerWrapper(
+                onPickResult: { result in
+                    showPhotoPicker = false
+                    Task { await handleTimelinePhotoResult(result) }
+                },
+                onCancel: { showPhotoPicker = false }
+            )
+        }
+        .alert(
+            "Couldn't import this video",
+            isPresented: Binding(
+                get: { photoExtractError != nil },
+                set: { if !$0 { photoExtractError = nil } }
+            )
+        ) {
+            Button("OK") {}
+        } message: {
+            Text(photoExtractError ?? "")
+        }
+        .overlay {
+            if photoLoading {
+                VStack(spacing: 12) {
+                    ProgressView().controlSize(.large)
+                    Text("Loading video…")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                }
+                .padding(28)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
+            }
+        }
         .fileImporter(
             isPresented: $showInsertPicker,
             allowedContentTypes: UTType.audioImportTypes,
@@ -174,7 +241,7 @@ struct MergeTimelineView: View {
                         // position index + 1 (uses moveClip's "insert before
                         // this offset" semantic).
                         pendingInsert = (index: index + 1, oldCount: viewModel.clips.count)
-                        showInsertPicker = true
+                        showSourceSheet = true
                     }
                 )
                 .padding(.vertical, 6)
@@ -236,5 +303,32 @@ struct MergeTimelineView: View {
         let n = viewModel.clips.count
         let dur = ClipDurationFormatting.mmss(from: totalDuration)
         return "\(n) clip\(n == 1 ? "" : "s") · ~\(dur)"
+    }
+
+    private func handleTimelinePhotoResult(_ result: Result<URL, Error>) async {
+        let overlayTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            if !Task.isCancelled { photoLoading = true }
+        }
+        defer {
+            overlayTask.cancel()
+            photoLoading = false
+        }
+
+        switch result {
+        case .success(let videoURL):
+            defer { try? FileManager.default.removeItem(at: videoURL) }
+            do {
+                let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
+                viewModel.importFiles([audioURL])
+                try? FileManager.default.removeItem(at: audioURL)
+            } catch VideoAudioExtractor.ExtractError.noAudioTrack {
+                photoExtractError = "This video has no audio to import."
+            } catch {
+                photoExtractError = "Couldn't extract audio. \(error.localizedDescription)"
+            }
+        case .failure(let error):
+            photoExtractError = error.localizedDescription
+        }
     }
 }

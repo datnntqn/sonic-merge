@@ -20,6 +20,12 @@ struct DenoiseHomeView: View {
     private var sessions: [DenoiseSession]
 
     @State private var showFileImporter = false
+    @State private var showSourceSheet = false
+    @State private var pendingAction: ImportSourceAction?
+    @State private var showRecorder = false
+    @State private var showPhotoPicker = false
+    @State private var photoExtractError: String?
+    @State private var photoLoading = false
     @State private var importErrorMessage: String?
     @State private var paywallReason: PaywallReason?
 
@@ -40,6 +46,63 @@ struct DenoiseHomeView: View {
                     SettingsToolbarButton()
                     ThemeToggleButton()
                 }
+            }
+        }
+        .sheet(
+            isPresented: $showSourceSheet,
+            onDismiss: {
+                guard let action = pendingAction else { return }
+                pendingAction = nil
+                switch action {
+                case .files:
+                    showFileImporter = true
+                case .record:
+                    showRecorder = true
+                case .photos:
+                    showPhotoPicker = true
+                }
+            }
+        ) {
+            ImportSourceSheet(pendingAction: $pendingAction)
+        }
+        .sheet(isPresented: $showRecorder) {
+            RecorderSheet { url in
+                Task {
+                    await createSession(from: url)
+                    try? FileManager.default.removeItem(at: url)
+                }
+            }
+        }
+        .sheet(isPresented: $showPhotoPicker) {
+            PHPickerWrapper(
+                onPickResult: { result in
+                    showPhotoPicker = false
+                    Task { await handlePhotoPickResult(result) }
+                },
+                onCancel: { showPhotoPicker = false }
+            )
+        }
+        .alert(
+            "Couldn't import this video",
+            isPresented: Binding(
+                get: { photoExtractError != nil },
+                set: { if !$0 { photoExtractError = nil } }
+            )
+        ) {
+            Button("OK") {}
+        } message: {
+            Text(photoExtractError ?? "")
+        }
+        .overlay {
+            if photoLoading {
+                VStack(spacing: 12) {
+                    ProgressView().controlSize(.large)
+                    Text("Loading video…")
+                        .font(.system(.subheadline, design: .rounded))
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                }
+                .padding(28)
+                .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             }
         }
         .fileImporter(
@@ -83,7 +146,7 @@ struct DenoiseHomeView: View {
                 .multilineTextAlignment(.center)
                 .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
-            CircularImportButton(size: .hero) { showFileImporter = true }
+            CircularImportButton(size: .hero) { showSourceSheet = true }
         }
     }
 
@@ -91,7 +154,7 @@ struct DenoiseHomeView: View {
         VStack(spacing: 0) {
             HStack {
                 Spacer()
-                CircularImportButton(size: .pinned) { showFileImporter = true }
+                CircularImportButton(size: .pinned) { showSourceSheet = true }
             }
             .padding(.horizontal, 16)
             .padding(.top, 12)
@@ -189,6 +252,33 @@ struct DenoiseHomeView: View {
         entitlements.recordDenoiseSession()
 
         onSelect(sessionId)
+    }
+
+    private func handlePhotoPickResult(_ result: Result<URL, Error>) async {
+        let overlayTask = Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(500))
+            if !Task.isCancelled { photoLoading = true }
+        }
+        defer {
+            overlayTask.cancel()
+            photoLoading = false
+        }
+
+        switch result {
+        case .success(let videoURL):
+            defer { try? FileManager.default.removeItem(at: videoURL) }
+            do {
+                let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
+                await createSession(from: audioURL)
+                try? FileManager.default.removeItem(at: audioURL)
+            } catch VideoAudioExtractor.ExtractError.noAudioTrack {
+                photoExtractError = "This video has no audio to import."
+            } catch {
+                photoExtractError = "Couldn't extract audio. \(error.localizedDescription)"
+            }
+        case .failure(let error):
+            photoExtractError = error.localizedDescription
+        }
     }
 
     private func delete(_ session: DenoiseSession) {
