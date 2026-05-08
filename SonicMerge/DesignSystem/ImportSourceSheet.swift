@@ -8,6 +8,15 @@
 
 import SwiftUI
 
+/// One of three import sources the user can pick from the bottom sheet.
+/// Written into a `@Binding` by the sheet; read by the host view's
+/// `.sheet(onDismiss:)` to chain to the appropriate presenter.
+enum ImportSourceAction {
+    case files
+    case record
+    case photos
+}
+
 struct ImportSourceSheet: View {
 
     @Binding var pendingAction: ImportSourceAction?
@@ -64,6 +73,7 @@ struct ImportSourceSheet: View {
                     .font(.system(size: 20, weight: .semibold))
                     .foregroundStyle(Color(uiColor: semantic.accentAction))
                     .frame(width: 36, height: 36)
+                    .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
                         .font(.system(.body, design: .rounded, weight: .medium))
@@ -76,6 +86,7 @@ struct ImportSourceSheet: View {
                 Image(systemName: "chevron.right")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color(uiColor: semantic.textSecondary).opacity(0.5))
+                    .accessibilityHidden(true)
             }
             .padding(.horizontal, 16)
             .padding(.vertical, 12)
