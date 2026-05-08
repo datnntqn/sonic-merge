@@ -125,10 +125,14 @@ final class AudioRecorderService: ObservableObject {
         isRecording = false
         elapsedSeconds = 0
         levelNormalized = 0
+        // Restore the prior category so subsequent playback uses the right one,
+        // but DO NOT call setActive(false). On the simulator, deactivating the
+        // shared session knocks SFSpeechRecognizer offline for several seconds —
+        // the next Smart Cut analyze fails with isAvailable=false. iOS handles
+        // implicit deactivation cleanly when no audio resources are in use.
         if let prev = previousSessionCategory {
             try? AVAudioSession.sharedInstance().setCategory(prev, options: previousSessionOptions)
         }
-        try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
         previousSessionCategory = nil
         previousSessionOptions = []
     }

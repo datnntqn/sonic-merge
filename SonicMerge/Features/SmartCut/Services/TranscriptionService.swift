@@ -23,10 +23,21 @@ extension TranscriptionService: TranscriptionServicing {}
 
 actor TranscriptionService {
 
-    enum TranscriptionError: Error {
+    enum TranscriptionError: LocalizedError {
         case recognizerUnavailable
         case onDeviceUnsupported
         case recognitionFailed(Error)
+
+        var errorDescription: String? {
+            switch self {
+            case .recognizerUnavailable:
+                return "Speech recognition is unavailable right now. Please try again in a moment."
+            case .onDeviceUnsupported:
+                return "On-device speech recognition isn't supported on this device."
+            case .recognitionFailed(let underlying):
+                return "Recognition failed. \(underlying.localizedDescription)"
+            }
+        }
     }
 
     /// UserDefaults key for the "use cloud recognition" toggle. When true,
@@ -54,9 +65,21 @@ actor TranscriptionService {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    guard let recognizer = SFSpeechRecognizer(locale: locale),
-                          recognizer.isAvailable else {
+                    guard let recognizer = SFSpeechRecognizer(locale: locale) else {
                         throw TranscriptionError.recognizerUnavailable
+                    }
+                    // SFSpeechRecognizer.isAvailable can flicker false transiently —
+                    // notably right after AVAudioSession churn (e.g. an in-app
+                    // recording just ended). Give the recognizer up to ~3s to come
+                    // back online before failing.
+                    if !recognizer.isAvailable {
+                        for _ in 0..<6 {
+                            try await Task.sleep(for: .milliseconds(500))
+                            if recognizer.isAvailable { break }
+                        }
+                        if !recognizer.isAvailable {
+                            throw TranscriptionError.recognizerUnavailable
+                        }
                     }
                     guard recognizer.supportsOnDeviceRecognition else {
                         throw TranscriptionError.onDeviceUnsupported
