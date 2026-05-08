@@ -59,12 +59,15 @@ The work is shaped to mirror the existing `CircularImportButton` pattern: one sh
                         │                           │                            │ → VideoAudioExtractor
                         │                           │                            │   .extract(...) → URL (m4a)
                         ▼                           ▼                            ▼
-                                ┌────────────────────────────────────────┐
-                                │  Per-tab callback: (URL) -> Void        │
-                                │   · SmartCutHomeView → createSession    │
-                                │   · DenoiseHomeView  → createSession    │
-                                │   · Merge (timeline) → append clip      │
-                                └────────────────────────────────────────┘
+                  ┌──────────────────────────────────────────────────────────────┐
+                  │  Per-tab callback: (URL) -> Void                              │
+                  │   · SmartCutHomeView           → createSession(from:)         │
+                  │   · DenoiseHomeView            → createSession(from:)         │
+                  │   · MixingStationView          → existing add-clip closure   │
+                  │   · MergeTimelineView          → existing add-clip closure   │
+                  │     (both Merge views call the same closure that backs       │
+                  │      their existing .fileImporter today)                      │
+                  └──────────────────────────────────────────────────────────────┘
 ```
 
 ### Key behaviors
@@ -88,8 +91,9 @@ The work is shaped to mirror the existing `CircularImportButton` pattern: one sh
 
 **AudioRecorderService (new actor):**
 - Wraps `AVAudioRecorder`. Output settings: linear PCM input internally for power readings, but final file is **AAC `.m4a` at 44.1 kHz, mono, 128 kbps** to match the rest of the app's export defaults and stay compatible with `AVAsset` decode.
+- **Initializer takes `RecordPermissionProvider` via DI** — `init(permissions: RecordPermissionProvider = .system)`. Production uses the system implementation that calls `AVAudioSession.sharedInstance().requestRecordPermission`. Tests pass a stub. Matches the existing `TranscriptionService(stateStore:)` DI pattern.
 - Public surface:
-  - `start() async throws` — requests `AVAudioSession.sharedInstance().requestRecordPermission`, configures category `.playAndRecord` with options `[.defaultToSpeaker, .allowBluetooth]`, starts the recorder, writes to `FileManager.default.temporaryDirectory.appendingPathComponent("recording-\(UUID()).m4a")`.
+  - `start() async throws` — calls `permissions.request()`, configures `AVAudioSession` category `.playAndRecord` with options `[.defaultToSpeaker, .allowBluetooth]`, starts the recorder, writes to `FileManager.default.temporaryDirectory.appendingPathComponent("recording-\(UUID()).m4a")`.
   - `stop() async throws -> URL` — stops, returns the file URL.
   - `cancel()` — stops and deletes the temp file.
   - `@Published var elapsedSeconds: TimeInterval` — driven by a `Timer` polling `recorder.currentTime` at 10 Hz.
@@ -115,7 +119,10 @@ The work is shaped to mirror the existing `CircularImportButton` pattern: one sh
 **Per-tab wiring:**
 - `SmartCutHomeView` — already has `createSession(from: URL) async`. Source sheet's three callbacks all funnel into the existing `createSession`. Zero changes to downstream session creation.
 - `DenoiseHomeView` — same: existing `createSession(from:)` is the funnel.
-- `MergeTimelineView` / `MixingStationView` — both currently route file picks into the clips list via the existing add-clip code path. The three callbacks funnel there.
+- **Merge tab — TWO entry points, each owns its own sheet state:**
+  - `MixingStationView` (empty + loaded states, line 78 today) — owns `@State private var showSourceSheet: Bool`, mounts its own `ImportSourceSheet`. All three callbacks funnel into the existing add-clip code path (the same closure that backs its current `.fileImporter` and `.onDrop`).
+  - `MergeTimelineView` (line 70 today) — same shape, owns its own `@State private var showSourceSheet: Bool`, mounts its own `ImportSourceSheet`. Funnels to the same add-clip path.
+  - We deliberately do NOT centralize the sheet state in `MixingStationViewModel` — it would couple the two views' presentation timing through the model and break the simple per-view-state pattern the rest of the codebase uses. Two sheets, both backed by the same closure, is the right shape.
 
 In each tab the change is a thin diff: replace `showFileImporter = true` with `showSourceSheet = true`, add the `ImportSourceSheet` modifier with three closures (one of which is the existing file-import action it had before).
 
@@ -150,23 +157,40 @@ The existing `importErrorMessage: String?` alert plumbing in each home view is r
   > *"CleanCut records voice using the microphone so you can capture and clean audio without leaving the app. Recordings stay on your device."*
 - **`NSPhotoLibraryUsageDescription`** is **NOT required** because `PHPickerViewController` runs out-of-process and doesn't request library access. (Confirmed: WWDC 2020 "Meet the new Photos picker.")
 - **`AVAudioSession`** is configured per-recording, not persistent — restored after `stop()` so background playback in other parts of the app isn't affected.
+- **Info.plist target verified:** the main app uses a checked-in `SonicMerge/Info.plist` (per `INFOPLIST_FILE = SonicMerge/Info.plist` at `project.pbxproj` line 622, 668), not `INFOPLIST_KEY_*` build settings. Edit the .plist file directly.
 
 ### Free-tier gates
 
-Recording and Photos extraction both produce a finished URL with a known duration (post-stop or post-extract). They flow through the **same** `ImportDecision.gate(durationSeconds:entitlements:)` call the file picker already uses:
+`ImportDecision.gate(durationSeconds:entitlements:)` is **per-tab and tab-local** in the existing code: there's a copy inside `SmartCutHomeView.swift:231` and another inside `DenoiseHomeView.swift:208`. Merge has no equivalent — clip imports today don't go through any length/quota gate.
 
-- Free user records 6 minutes → gate triggers paywall (5-min cap).
-- Free user already used 3 Smart Cut sessions today → gate triggers paywall (quota).
-- Free user picks a 30-second video → fine, Smart Cut session created.
+This spec preserves that asymmetry deliberately. After we obtain the URL from any source:
 
-`entitlements.recordSmartCutSession()` (existing) is called after a successful recording too — recording counts as a session.
+- **Smart Cut tab** — calls existing `SmartCutHomeView.ImportDecision.gate(...)`. A 6-min recording → paywall (5-min cap). Already used 3 sessions today → paywall (quota). 30-second video → fine, session created. `entitlements.recordSmartCutSession()` called on success.
+- **Denoise tab** — calls existing `DenoiseHomeView.ImportDecision.gate(...)` with the analogous Denoise-specific gate logic.
+- **Merge tab** — no length/quota gate, matching today's behavior. Recordings and extracted-from-video audio become clips in the timeline the same way file picks do.
+
+This is the existing contract; the new sources just feed it. We do NOT introduce a unified gate or move gating up — that's out of scope and would require its own spec.
 
 ### Testing
 
-**Swift Testing (`@Test`, `#expect`) per project convention.** New test files:
+**Swift Testing (`@Test`, `#expect`) per project convention.** The project does NOT use ViewInspector or any view-tree introspection library — existing `SonicMergeTests/DesignSystem/` tests verify model/data surfaces only (e.g. `FloatingActionBarTests`, `SegmentedPillTests`). New tests follow that same pattern:
 
-- `ImportSourceSheetTests.swift` — verify each row's tap dispatches the correct callback (use closures + flags). View-level test using SwiftUI's `Inspector` pattern already in the project.
-- `AudioRecorderServiceTests.swift` — start → stop → returns valid m4a; cancel → temp file deleted; permission denied path throws `.micPermissionDenied`. Mic permission status mocked via a `RecordPermissionProvider` protocol seam.
+- `ImportSourceSheetTests.swift` — to keep tests data-only, the dispatch is extracted into a tiny pure helper:
+
+  ```swift
+  enum ImportSourceAction { case files, record, photos }
+
+  struct ImportSourceDispatcher {
+      let onFiles: () -> Void
+      let onRecord: () -> Void
+      let onPhotos: () -> Void
+      func dispatch(_ action: ImportSourceAction) { /* one-line switch */ }
+  }
+  ```
+
+  `ImportSourceSheet` owns a `ImportSourceDispatcher`; row taps call `dispatch(.files | .record | .photos)`. Tests verify each `ImportSourceAction` value invokes exactly its closure once. No view-tree introspection.
+
+- `AudioRecorderServiceTests.swift` — start → stop → returns valid m4a; cancel → temp file deleted; permission denied path throws `.micPermissionDenied`. Mic permission status mocked via a `RecordPermissionProvider` protocol seam (passed in via the service's initializer — see DI note below).
 - `VideoAudioExtractorTests.swift` — extract from fixture video → returns m4a, duration matches video; extract from fixture silent video → throws `.noAudioTrack`. Use a 2-second test video committed to `SonicMergeTests/Fixtures/`.
 - `ImportDecisionGatingTests.swift` — extend existing tests so a mocked recorded URL with duration > 5 min hits the paywall (no new gate logic, just verifying the funnel).
 
@@ -213,4 +237,4 @@ Recording and Photos extraction both produce a finished URL with a known duratio
 - `SonicMerge/Features/MixingStation/MergeTimelineView.swift` (same shape; ~30 line diff)
 - `SonicMerge/Info.plist` (add `NSMicrophoneUsageDescription`)
 
-**Total estimated:** ~700 LOC new, ~120 LOC modified, 3 new test files.
+**Total estimated:** roughly 700 LOC new, 120 LOC modified, 3 new test files. Per-file numbers are upper-bound guides — the planner shouldn't pad to hit them; the recorder service in particular may come in well under 200 LOC if AVAudioRecorder is configured plainly.
