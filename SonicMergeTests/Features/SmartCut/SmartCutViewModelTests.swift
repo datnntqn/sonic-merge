@@ -137,4 +137,17 @@ struct SmartCutViewModelSetPauseThresholdTests {
         #expect(vm.editList.pauses.first?.timeRange == 4.0...6.0)
         #expect(vm.editList.pauses.first?.isEnabled == false)
     }
+
+    // MARK: Output playback
+
+    @Test("togglePlayOutput is a no-op when outputURL is nil")
+    func togglePlayOutput_noOpWhenOutputURLIsNil() {
+        let vm = SmartCutViewModel(coordinator: PlaybackCoordinator(),
+                                   library: FillerLibrary(defaults: UserDefaults(suiteName: "vm-\(UUID())")!),
+                                   entitlements: EntitlementService())
+        #expect(vm.outputURL == nil)
+        #expect(vm.isPlayingOutput == false)
+        vm.togglePlayOutput()
+        #expect(vm.isPlayingOutput == false, "no outputURL → toggle stays false")
+    }
 }

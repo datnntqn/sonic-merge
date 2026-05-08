@@ -34,12 +34,19 @@ final class SmartCutViewModel: PlaybackParticipant {
     }
     var pauseThreshold: TimeInterval = 1.5
 
+    /// True while the post-Apply output file is playing. Drives the studio
+    /// applied-state Play/Pause button.
+    private(set) var isPlayingOutput: Bool = false
+
     // MARK: Dependencies
     private let coordinator: PlaybackCoordinator
     private let library: FillerLibrary
     private let service: SmartCutService
     private let cutter: AudioCutter
     private let entitlements: EntitlementService
+
+    // MARK: Output playback (post-Apply preview)
+    private var outputPlayer: AVAudioPlayer?
 
     private var analysisTask: Task<Void, Never>?
 
@@ -143,6 +150,9 @@ final class SmartCutViewModel: PlaybackParticipant {
         cachedSegments = []
         cachedDuration = 0
         outputURL = nil
+        outputPlayer?.stop()
+        outputPlayer = nil
+        isPlayingOutput = false
         state = .idle
     }
 
@@ -305,12 +315,33 @@ final class SmartCutViewModel: PlaybackParticipant {
         session.lastOpenedAt = .now
     }
 
-    // MARK: Playback
+    // MARK: Output playback (post-Apply preview)
 
-    /// PlaybackParticipant requirement. Smart Cut has no in-tab audio playback
-    /// today — preview was deferred and the surface dropped. No-op stub keeps
-    /// us conformant so the coordinator can broadcast pause to other tabs.
-    func pauseAll() {}
+    /// Play / pause the cleaned output file. No-op when no output exists yet.
+    func togglePlayOutput() {
+        guard let outputURL else { return }
+        if isPlayingOutput {
+            outputPlayer?.pause()
+            isPlayingOutput = false
+            return
+        }
+        coordinator.notifyPlaying(participant: self)
+        if outputPlayer == nil {
+            outputPlayer = try? AVAudioPlayer(contentsOf: outputURL)
+            outputPlayer?.prepareToPlay()
+        }
+        PlaybackAudioSession.activateIfNeeded()
+        if let player = outputPlayer, player.play() {
+            isPlayingOutput = true
+        }
+    }
+
+    /// PlaybackParticipant requirement: pause anything we own when another
+    /// participant (e.g. Denoise) starts playing.
+    func pauseAll() {
+        outputPlayer?.pause()
+        isPlayingOutput = false
+    }
 
     // MARK: Test seam — internal but injectable for unit tests
 

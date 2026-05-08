@@ -147,12 +147,25 @@ struct SmartCutStudioContainer: View {
     private func appliedBanner(saved: TimeInterval) -> some View {
         // Preserves the prior .applied-state "Applied · Xs saved" affordance
         // (SmartCutCardView.swift:115-116) so users still get a visible
-        // confirmation that the cuts landed.
-        Label("Applied · \(formatDuration(saved)) saved", systemImage: "checkmark.circle.fill")
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(.green)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
+        // confirmation that the cuts landed. Adds a Play/Pause button so the
+        // user can preview the cleaned output without leaving the app.
+        HStack(spacing: 12) {
+            Label("Applied · \(formatDuration(saved)) saved", systemImage: "checkmark.circle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.green)
+            Spacer()
+            Button {
+                vm.togglePlayOutput()
+            } label: {
+                Image(systemName: vm.isPlayingOutput ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 30, weight: .regular))
+                    .foregroundStyle(Color(uiColor: semantic.accentAction))
+                    .accessibilityLabel(vm.isPlayingOutput ? "Pause cleaned audio" : "Play cleaned audio")
+            }
+            .buttonStyle(.plain)
+            .disabled(vm.outputURL == nil)
+        }
+        .padding(.horizontal, 4)
     }
 
     // MARK: - Non-results scaffolds (preserve all prior SmartCutCardView features)
