@@ -1346,44 +1346,77 @@ In `SmartCutStudioContainer`, find the existing `@State private var openCategory
 
 - [ ] **Step 3.3.2: Wire the pill into the container's outer layout**
 
-Locate the studio container's `body` — it's a top-level `VStack` that switches on `vm.state` to render different scaffolds. Wrap the existing body content with the LanguagePill and the LocalePicker sheet at the OUTER VStack level (so the pill is visible in every state).
-
-Insert the pill above the existing state-switch content:
+The studio container's `body` is currently shaped as:
 
 ```swift
-        VStack(spacing: 12) {
-            LanguagePill(
-                localeIdentifier: vm.currentLocale.identifier,
-                onTap: { showLocalePicker = true },
-                isDisabled: {
-                    if case .analyzing = vm.state { return true }
-                    return false
-                }()
-            )
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 4)
-
-            // ... existing state-switch content here ...
+var body: some View {
+    Group {
+        switch vm.state {
+        case .idle: idleScaffold
+        case .analyzing(let progress): analyzingScaffold(progress: progress)
+        // ...
         }
-        .sheet(isPresented: $showLocalePicker) {
-            LocalePicker(
-                currentIdentifier: vm.currentLocale.identifier,
-                onPick: { identifier in
-                    vm.setLocale(identifier, on: session)
-                }
-            )
-        }
+    }
+    .sheet(isPresented: $showEditFillerList) { ... }
+}
 ```
 
-> **Important:** `setLocale(_:on:)` requires `session: SmartCutSession`. The container needs access to it. If the container doesn't already receive a `SmartCutSession`, **add it as a parameter** on `SmartCutStudioContainer.init` and update the single callsite in `SmartCutSessionView` (the only caller).
+— a `Group` containing a `switch`, with sheet modifiers attached. **It is NOT a top-level VStack today** — Step 3.3.2 promotes it to one, with `LanguagePill` at the top, the existing state-switch content below.
+
+> **Deliberate deviation from spec §9:** The spec requested per-state placement (e.g. "between description and IdleSettingsCards in `.idle`, above `StudioSummaryCard` in `.results`"). This plan instead renders the pill **above every scaffold uniformly** for implementation simplicity — one outer-VStack wrap instead of injecting the pill into five separate per-state scaffolds. The UX impact is small: in `.idle` the pill sits above the "Remove fillers and trim long silences" description rather than between description and `IdleSettingsCards`. If manual QA in Chunk 4 finds the placement reads poorly, threading per-scaffold is a follow-up — the per-scaffold version takes ~5x more LOC and risks layout drift across states.
+
+The replacement body:
+
+```swift
+var body: some View {
+    VStack(spacing: 12) {
+        LanguagePill(
+            localeIdentifier: vm.currentLocale.identifier,
+            onTap: { showLocalePicker = true },
+            isDisabled: isAnalyzing
+        )
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, 4)
+
+        Group {
+            switch vm.state {
+            case .idle: idleScaffold
+            // ... preserve all existing case arms verbatim ...
+            }
+        }
+    }
+    .sheet(isPresented: $showEditFillerList) {
+        EditFillerListStudioSheet(library: $library, locale: vm.currentLocale)
+    }
+    .sheet(isPresented: $showLocalePicker) {
+        LocalePicker(
+            currentIdentifier: vm.currentLocale.identifier,
+            onPick: { identifier in
+                vm.setLocale(identifier, on: session)
+            }
+        )
+    }
+}
+
+private var isAnalyzing: Bool {
+    if case .analyzing = vm.state { return true }
+    return false
+}
+```
+
+(Note: the `EditFillerListStudioSheet(library:locale:)` change is part of Task 3.4 — by Step 3.3.2's own ordering, that sheet may not yet take a `locale:` parameter. If you do 3.3 before 3.4, leave the existing `EditFillerListStudioSheet(library: $library)` call here and update it in 3.4. Either order works; 3.4 is the simpler one to do first.)
+
+> **Important:** `setLocale(_:on:)` requires `session: SmartCutSession`. The container needs access to it. The container's current init is synthesized from `@Bindable var vm` + `@Binding var library` — add a third stored property:
 >
-> The view file `SmartCutSessionView.swift` instantiates the container — search:
->
-> ```bash
-> grep -rn "SmartCutStudioContainer(" /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge --include="*.swift"
+> ```swift
+> let session: SmartCutSession
 > ```
 >
-> Pass the session: `SmartCutStudioContainer(vm: vm, library: $library, session: session)`.
+> Update the single call site in `SmartCutSessionView.swift:42`. The session is already in scope as a non-optional inside the `if let viewModel, let session { ... }` block at `SmartCutSessionView.swift:40`:
+>
+> ```swift
+> SmartCutStudioContainer(vm: viewModel, library: libraryStore.binding, session: session)
+> ```
 
 - [ ] **Step 3.3.3: Build**
 
@@ -1460,7 +1493,23 @@ Find the end of the sheet body (likely a `VStack` or `List`). Add this footer:
 
 - [ ] **Step 3.4.4: Update the sheet's callsite**
 
-Find the place where `EditFillerListStudioSheet` is presented (it's mounted from inside `SmartCutStudioContainer.editStudioBody` based on existing code). Pass `locale: vm.currentLocale`.
+The sheet is mounted at `SmartCutStudioContainer.swift:52-54`:
+
+```swift
+.sheet(isPresented: $showEditFillerList) {
+    EditFillerListStudioSheet(library: $library)
+}
+```
+
+Change to:
+
+```swift
+.sheet(isPresented: $showEditFillerList) {
+    EditFillerListStudioSheet(library: $library, locale: vm.currentLocale)
+}
+```
+
+(If you did Task 3.3 first, the sheet modifier already lives at the new outer-VStack level and the body diff in 3.3.2 already shows the `locale:` argument. In that case just confirm it's there.)
 
 - [ ] **Step 3.4.5: Build**
 
@@ -1557,7 +1606,7 @@ If false-positive rate > 50% for either word, remove it from the curated list:
 
 - [ ] **Step 4.1.5: Document findings**
 
-Append to `docs/superpowers/specs/2026-05-09-multi-language-smart-cut-design.md` under a new "Empirical Verification" section:
+Create (or append to) `docs/superpowers/qa/2026-05-09-multi-language-smart-cut-manual-qa.md` — the project's documented convention for QA artifacts (per CLAUDE.md "## Workflow artifacts", QA notes go under `docs/superpowers/qa/` rather than mutating immutable design specs):
 
 ```markdown
 ## Empirical Verification (Manual QA)
@@ -1580,7 +1629,7 @@ Resulting curated list shipped:
 ```bash
 # only if changes were made
 git add SonicMerge/Features/SmartCut/Models/FillerLibrary.swift \
-        docs/superpowers/specs/2026-05-09-multi-language-smart-cut-design.md
+        docs/superpowers/qa/2026-05-09-multi-language-smart-cut-manual-qa.md
 git commit -m "fix(smart-cut): trim Spanish curated list per empirical QA
 
 <words> removed because <reason — e.g. high false-positive rate, never
