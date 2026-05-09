@@ -477,7 +477,9 @@ Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 
 **Why this chunk:** Plumbs locale through the analyze pipeline. After this chunk, the existing analyze flow works with a session locale (defaulting to nil → en-US, so legacy sessions are unaffected). UI still has no language picker — that's Chunk 3.
 
-**At end of chunk:** Build green. Existing `SmartCutHomeViewGatingTests` and `SmartCutServicePauseThresholdTests` still pass. New `TranscriptionServiceLocaleTests` verifies the supportedLocales fallback. Manual smoke: open an existing English session, analyze, get the same result as before.
+**At end of chunk:** Main app target builds green. **Test target still has one outstanding break: `EditFillerListStudioSheet.swift` reads the deleted `library.allWords` no-arg accessor.** That sheet is fixed in Chunk 3 / Task 3.4. Step 2.5 runs the gating tests and `TranscriptionServiceLocaleTests` to confirm the work in this chunk doesn't regress anything reachable; the full-suite `FAIL=5` baseline check is deferred to Task 3.4.
+
+If you need a clean build at the end of Chunk 2 for any reason (e.g. shipping the partial branch), you can do Task 3.4 ahead of the rest of Chunk 3 — it's order-independent from 3.1–3.3.
 
 ### Task 2.1: `SmartCutService.analyze(... locale:)` threads locale to TranscriptionService + FillerDetector
 
