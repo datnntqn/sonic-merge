@@ -46,11 +46,12 @@ struct SmartCutServicePauseThresholdTests {
             duration: 4.0
         )
         let library = FillerLibrary(defaults: UserDefaults(suiteName: "test-\(UUID())")!)
-        let service = SmartCutService(library: library, transcriptionService: stub)
+        let service = SmartCutService(library: library, transcriptionServiceFactory: { _ in stub })
 
         var resolvedEditList: EditList?
         for try await update in await service.analyze(input: URL(fileURLWithPath: "/dev/null"),
-                                                      pauseThreshold: 1.5) {
+                                                      pauseThreshold: 1.5,
+                                                      locale: Locale(identifier: "en-US")) {
             if case .completed(let list, _, _) = update {
                 resolvedEditList = list
             }
@@ -67,11 +68,12 @@ struct SmartCutServicePauseThresholdTests {
             duration: 4.0
         )
         let library = FillerLibrary(defaults: UserDefaults(suiteName: "test-\(UUID())")!)
-        let service = SmartCutService(library: library, transcriptionService: stub)
+        let service = SmartCutService(library: library, transcriptionServiceFactory: { _ in stub })
 
         var resolvedEditList: EditList?
         for try await update in await service.analyze(input: URL(fileURLWithPath: "/dev/null"),
-                                                      pauseThreshold: 2.5) {
+                                                      pauseThreshold: 2.5,
+                                                      locale: Locale(identifier: "en-US")) {
             if case .completed(let list, _, _) = update {
                 resolvedEditList = list
             }
