@@ -187,6 +187,7 @@ struct SmartCutStudioContainer: View {
                 IdleSettingsCards(
                     viewModel: vm,
                     library: $library,
+                    locale: vm.currentLocale,
                     onEditFillerList: { showEditFillerList = true }
                 )
 
