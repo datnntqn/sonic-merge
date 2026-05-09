@@ -75,7 +75,10 @@ enum BackgroundTranscriptionTask {
                     return
                 }
 
-                let service = TranscriptionService()
+                let resumedLocale: Locale = state.localeIdentifier
+                    .flatMap { Locale(identifier: $0) }
+                    ?? Locale(identifier: "en-US")
+                let service = TranscriptionService(locale: resumedLocale)
                 for try await update in await service.transcribe(input: inputURL) {
                     state = update
                     if cancelBox.isCancelled { return }
