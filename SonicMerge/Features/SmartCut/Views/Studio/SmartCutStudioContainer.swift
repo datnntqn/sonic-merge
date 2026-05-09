@@ -50,7 +50,7 @@ struct SmartCutStudioContainer: View {
             }
         }
         .sheet(isPresented: $showEditFillerList) {
-            EditFillerListStudioSheet(library: $library)
+            EditFillerListStudioSheet(library: $library, locale: vm.currentLocale)
         }
     }
 
