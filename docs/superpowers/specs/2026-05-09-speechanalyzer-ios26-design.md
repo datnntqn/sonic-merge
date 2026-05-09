@@ -9,7 +9,7 @@
 
 Today the Smart Cut transcription pipeline runs on `SFSpeechRecognizer` against 30-second WAV chunks (see `Features/SmartCut/Services/TranscriptionService.swift`). On iOS 26 that engine is superseded by `SpeechAnalyzer` + `SpeechTranscriber`, which support long-form streaming with near-real-time output and on-device multilingual auto-detection. This spec adds `SpeechAnalyzer` as a parallel engine on iOS 26+ behind the existing `TranscriptionServicing` protocol; iOS 17–25 keeps the chunked `SFSpeechRecognizer` path unchanged.
 
-A new `Services/SpeechAnalyzerTranscriptionService.swift` actor implements the iOS 26 path and is selected by a new `Services/TranscriptionServiceFactory.swift` based on `#available(iOS 26, *)` and a new `"auto"` locale sentinel. `TranscriptionState` gains an `engine` discriminator and a `completedRecognizedDuration` field so `BackgroundTranscriptionTask` can resume on the correct engine. Three small UI changes accompany the engine: a pinned **Auto-detect (multilingual)** row at the top of `LocalePicker` on iOS 26, the existing "Better filler detection (cloud)" toggle hidden in `EditFillerListStudioSheet` on iOS 26, and an expandable **Live transcript** disclosure pane in `SmartCutStudioContainer.analyzingScaffold(progress:)` on iOS 26.
+A new `Services/SpeechAnalyzerTranscriptionService.swift` actor implements the iOS 26 path and is selected by a new `Services/TranscriptionServiceFactory.swift` based on `#available(iOS 26, *)` and a new `"auto"` locale sentinel. `TranscriptionState` gains an `engine` discriminator and a `completedRecognizedDuration` field so `BackgroundTranscriptionTask` can resume on the correct engine; `progressFraction` becomes engine-aware so the existing "Transcribing X%" UI keeps working on iOS 26. `SmartCutService.transcriptionServiceFactory` flips from `(Locale) -> any TranscriptionServicing` to `(String) -> any TranscriptionServicing` so the `"auto"` sentinel can flow through unmodified. Three small UI changes accompany the engine: a pinned **Auto-detect (multilingual)** row at the top of `LocalePicker` on iOS 26, the existing "Better filler detection (cloud)" toggle hidden in `EditFillerListStudioSheet` on iOS 26, and an expandable **Live transcript** disclosure pane in `SmartCutStudioContainer.analyzingScaffold(progress:)` on iOS 26.
 
 ## Goals
 
@@ -89,7 +89,7 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
 
 Internal flow inside `transcribe(input:)`:
 
-1. Load or create initial `TranscriptionState` keyed by source SHA-256 (same `SourceHasher` as today). Set `engine = .speechAnalyzer`, `localeIdentifier = locale?.identifier ?? "auto"`.
+1. Compute `sourceHash = "\(rawSourceHashHex)#analyzer"` — namespaced like the SF service's `"#cloud"` / `"#local"` keys (`TranscriptionService.swift:130`) so cached SF and SpeechAnalyzer states never collide. Load or create initial `TranscriptionState`. Set `engine = .speechAnalyzer`. Write `localeIdentifier` as the **literal sentinel** `"auto"` when `locale == nil` (not a resolved identifier — the factory's resume path keys on this exact string), otherwise `locale!.identifier`.
 2. Build a `SpeechAnalyzer` with a `SpeechTranscriber` module configured for the requested locale (or auto-detect when `locale == nil`).
 3. Feed audio into the analyzer's input stream by reading the source asset as `AVAudioPCMBuffer`s via `AVAssetReader`, **starting at `state.completedRecognizedDuration`** (resume from snapshot). No chunked WAV export, no temp files.
 4. Subscribe to the transcriber's results `AsyncSequence`. For each finalized segment:
@@ -122,20 +122,31 @@ enum TranscriptionServiceFactory {
 }
 ```
 
-Single entry point used by `SmartCutViewModel` and `BackgroundTranscriptionTask`. The only `#available` site for engine selection.
+Single entry point used by `SmartCutService` (via the injected factory closure — see Component 5) and `BackgroundTranscriptionTask`. The only `#available` site for engine selection.
 
 ### 3. `Models/TranscriptionState.swift` *(small change)*
 
-Add three fields and one nested enum:
+Add three fields, one nested enum, and update `progressFraction` to be engine-aware. The new fields are defaulted in the memberwise init so existing call sites (e.g. `TranscriptionService.swift:135`) compile without modification.
 
 ```swift
 struct TranscriptionState: Hashable, Codable {
     enum Engine: String, Codable { case sfSpeechRecognizer, speechAnalyzer }
 
     // …existing fields…
-    let engine: Engine                              // NEW. defaults to .sfSpeechRecognizer when decoding pre-migration JSON
+    let engine: Engine                              // NEW. defaulted in init; defaults again at decode time
     var completedRecognizedDuration: TimeInterval   // NEW. used by SpeechAnalyzer engine for resume; SF engine leaves at 0
     var liveTranscriptText: String                  // NEW. populated only by SpeechAnalyzer engine
+
+    init(sourceHash: String,
+         sourceDuration: TimeInterval,
+         chunkDurationSeconds: TimeInterval,
+         completedChunkCount: Int,
+         recognizedSegments: [RecognizedSegment],
+         isComplete: Bool,
+         localeIdentifier: String? = nil,
+         engine: Engine = .sfSpeechRecognizer,                 // NEW
+         completedRecognizedDuration: TimeInterval = 0,        // NEW
+         liveTranscriptText: String = "")                      // NEW
 }
 ```
 
@@ -151,15 +162,67 @@ init(from decoder: Decoder) throws {
 }
 ```
 
-### 4. `Services/TranscriptionService.swift` *(unchanged behavior, one writer change)*
+`progressFraction` becomes engine-aware so the existing `SmartCutService.analyze` → `.progress(state.progressFraction)` → `analyzingScaffold` "Transcribing X%" pipeline keeps working unchanged on iOS 26:
 
-Sets `state.engine = .sfSpeechRecognizer` when constructing the initial state (today the field doesn't exist). Everything else — chunking, cloud toggle read, `.dictation` task hint, `resolveSupportedLocale` — is byte-for-byte identical.
+```swift
+var progressFraction: Double {
+    guard sourceDuration > 0 else { return 0 }
+    switch engine {
+    case .sfSpeechRecognizer:
+        return min(1.0, Double(completedChunkCount) * chunkDurationSeconds / sourceDuration)
+    case .speechAnalyzer:
+        return min(1.0, completedRecognizedDuration / sourceDuration)
+    }
+}
+```
 
-### 5. `Services/BackgroundTranscriptionTask.swift` *(small change)*
+### 4. `Services/TranscriptionService.swift` *(unchanged behavior; default-driven field add)*
 
-Replace the existing `TranscriptionService(locale: resumedLocale)` call with `TranscriptionServiceFactory.make(localeIdentifier: state.localeIdentifier ?? "en-US")`. The factory routes to the same engine that wrote the snapshot. Everything else (notification, source-locator lookup, expiration handling) unchanged.
+The `engine` field on `TranscriptionState` defaults to `.sfSpeechRecognizer` in the new init signature, so the existing state-construction call site (`TranscriptionService.swift:135`) compiles unchanged. Everything else — chunking, cloud toggle read, `.dictation` task hint, `resolveSupportedLocale`, the `"\(rawSourceHash)#\(useCloud ? "cloud" : "local")"` cache-key namespacing — is byte-for-byte identical.
 
-### 6. `Views/Studio/LocalePicker.swift` *(small change)*
+### 5. `Services/SmartCutService.swift` *(small change)*
+
+Today's signature `transcriptionServiceFactory: (Locale) -> any TranscriptionServicing` cannot represent the `"auto"` sentinel because `Locale(identifier: "auto")` is meaningless. The factory closure and `analyze` parameter both flip from `Locale` to `String`:
+
+```swift
+actor SmartCutService {
+    private let transcriptionServiceFactory: (String) -> any TranscriptionServicing  // CHANGED
+
+    init(library: FillerLibrary,
+         transcriptionServiceFactory: @escaping (String) -> any TranscriptionServicing
+            = { TranscriptionServiceFactory.make(localeIdentifier: $0) }) { … }      // CHANGED default
+
+    func analyze(input: URL,
+                 pauseThreshold: TimeInterval,
+                 localeIdentifier: String) -> AsyncThrowingStream<Update, Error>      // RENAMED from `locale: Locale`
+}
+```
+
+Inside `analyze`, the existing `library.allWords(for: locale)` call needs a `Locale` to look up filler defaults. Two cases:
+
+- `localeIdentifier != "auto"`: `library.allWords(for: Locale(identifier: localeIdentifier))` — same behavior as today.
+- `localeIdentifier == "auto"` (iOS 26 only): use a new `library.allWordsAcrossCuratedLocales()` (see Component 6) which returns the union of every curated locale's filler list. Rationale: a bilingual session legitimately contains fillers from multiple languages; users on `"auto"` should get filler detection for all of them. False positives from cross-language collisions are rare and overridable through the existing custom-word UI.
+
+`SmartCutViewModel.analyze()` (line 216) updates its call site from `service.analyze(..., locale: currentLocale)` to `service.analyze(..., localeIdentifier: session.localeIdentifier ?? currentLocale.identifier)`. `currentLocale` stays in the VM for the rest of its uses (`LanguagePill` display, `library.allWords(for:)` previews); only the analyze call site changes.
+
+### 6. `Models/FillerLibrary.swift` *(small change)*
+
+Add one method:
+
+```swift
+/// Union of curated default-off words across all locales the library curates.
+/// Used when SpeechAnalyzer runs in auto-detect ("auto") mode and we cannot
+/// pre-pick a single language.
+func allWordsAcrossCuratedLocales() -> [String]
+```
+
+Iterates the existing internal locale → words map, deduplicates (case-insensitive), and returns the union. Pure read-only; no side effects.
+
+### 7. `Services/BackgroundTranscriptionTask.swift` *(small change)*
+
+Replace the existing `TranscriptionService(locale: resumedLocale)` call with `TranscriptionServiceFactory.make(localeIdentifier: state.localeIdentifier ?? "en-US")`. The factory routes to the same engine that wrote the snapshot (driven by `state.engine`, not `localeIdentifier`). Everything else (notification, source-locator lookup, expiration handling) unchanged.
+
+### 8. `Views/Studio/LocalePicker.swift` *(small change)*
 
 On iOS 26, prepend a pinned "Auto-detect (multilingual)" row above the "Suggested" section. Selecting it calls `onPick("auto")`. Existing locale rows render unchanged; the `currentIdentifier == "auto"` case shows the checkmark on the pinned row.
 
@@ -177,11 +240,11 @@ var body: some View {
 }
 ```
 
-### 7. `Views/Studio/EditFillerListStudioSheet.swift` *(small change)*
+### 9. `Views/Studio/EditFillerListStudioSheet.swift` *(small change)*
 
 Wrap the existing "Better filler detection (cloud)" toggle row in `if #unavailable(iOS 26, *) { … toggle … }`. iOS 26 users don't see the row. The underlying `TranscriptionService.useCloudRecognitionDefaultsKey` is left in place — SpeechAnalyzer simply ignores it.
 
-### 8. `Views/Studio/SmartCutStudioContainer.swift` + new `Views/Studio/LiveTranscriptPane.swift` *(small change + ~80 LOC)*
+### 10. `Views/Studio/SmartCutStudioContainer.swift` + new `Views/Studio/LiveTranscriptPane.swift` *(small change + ~80 LOC)*
 
 `analyzingScaffold(progress:)` gets a new child below the existing `ProgressView`, gated `if #available(iOS 26, *)`:
 
@@ -193,11 +256,11 @@ if #available(iOS 26, *) {
 
 `LiveTranscriptPane` is a SwiftUI `DisclosureGroup` titled "Live transcript". Body is a `ScrollViewReader`-wrapped `Text` that auto-scrolls to the bottom on each text update. Default collapsed. Renders `EmptyView` when `text.isEmpty`. Reads `\.sonicMergeSemantic` for colors per the project's two-color discipline (chrome → indigo, AI moments → lime — the live transcript is "AI is doing something now," so the disclosure header uses `accentAI`).
 
-`SmartCutViewModel` gets one new `@Published var liveTranscriptText: String = ""` populated from each yielded `TranscriptionState.liveTranscriptText` during `analyze()`.
+`SmartCutViewModel` is `@Observable` (Swift 6 macro), so a plain stored `var liveTranscriptText: String = ""` is automatically observed by SwiftUI — no `@Published` needed. The VM populates it from each yielded `TranscriptionState.liveTranscriptText` during `analyze()`.
 
 ### Out of scope (no code change)
 
-`AudioRecorderService`, `OnboardingFlow`, `FillerLibrary`, `FillerDetector`, `PauseDetector`, `AudioCutter`, `SmartCutService`, `TranscriptionStateStore`, `SmartCutSourceLocator`. They consume the unchanged protocol/data shape only.
+`AudioRecorderService`, `OnboardingFlow` (subject to the auth verification below — see Assumptions), `FillerDetector`, `PauseDetector`, `AudioCutter`, `TranscriptionStateStore`, `SmartCutSourceLocator`. They consume the unchanged protocol/data shape only.
 
 ## Data flow
 
@@ -206,17 +269,24 @@ if #available(iOS 26, *) {
 ```
 User taps Analyze in SmartCutSessionView
   → SmartCutViewModel.analyze()
-  → reads session.localeIdentifier ("en-US" or "auto")
-  → TranscriptionServiceFactory.make(localeIdentifier:) → SpeechAnalyzerTranscriptionService
+  → reads session.localeIdentifier ("en-US" or "auto") and passes the raw String
+  → SmartCutService.analyze(input:, pauseThreshold:, localeIdentifier:)
+      → transcriptionServiceFactory(localeIdentifier)
+          → TranscriptionServiceFactory.make(localeIdentifier:)
+              → SpeechAnalyzerTranscriptionService(locale:)
   → for try await state in service.transcribe(input: sourceURL):
       ├─ AVAssetReader streams PCM buffers → analyzer.input
       ├─ analyzer.results AsyncSequence emits finalized segments
       ├─ each segment → state.recognizedSegments.append + state.liveTranscriptText += " \(text)"
-      │                  → vm.liveTranscriptText = state.liveTranscriptText (live transcript pane)
+      │                  → SmartCutService yields .progress(state.progressFraction) [progressFraction is now engine-aware]
+      │                  → SmartCutViewModel mirrors state.liveTranscriptText to vm.liveTranscriptText (live transcript pane)
       ├─ every ~30s recognized → stateStore.save(state)
       └─ yield state
-  → final state.isComplete=true → vm transitions to .results
-  → FillerDetector.detect(...) over state.recognizedSegments [UNCHANGED]
+  → final state.isComplete=true → SmartCutService runs FillerDetector + PauseDetector
+      ├─ filler word source: localeIdentifier == "auto" ? library.allWordsAcrossCuratedLocales()
+      │                                                 : library.allWords(for: Locale(identifier: localeIdentifier))
+      └─ continuation.yield(.completed(editList, segments, duration))
+  → vm transitions to .results [UNCHANGED]
 ```
 
 ### Snapshot + BG resume
@@ -286,7 +356,7 @@ Decoding-only.
 
 ### `SpeechAnalyzerTranscriptionServiceTests` *(new, ~4 cases, `@available(iOS 26, *)`)*
 
-Real audio. Reuses an existing fixture from the SmartCut tests.
+Real audio. Reuses `smart_cut_60s.wav` (the same fixture loaded by `SmartCutServiceIntegrationTests` via `Bundle(for: BundleMarker.self).url(forResource:withExtension:)`).
 
 - Streaming yields at least one `TranscriptionState` update before completion.
 - Final `state.recognizedSegments` is non-empty for the known-good fixture.
@@ -311,20 +381,24 @@ Seed a `TranscriptionState` JSON with `engine == .speechAnalyzer` and verify the
 - Live transcript pane: starts collapsed; expanding shows growing text; auto-scrolls to bottom.
 - Cancel mid-stream preserves partial state; tapping Analyze again resumes (does not restart).
 
-## Assumptions to verify in implementation
+## Assumptions to verify before implementation
 
-Per the Karpathy "surface assumptions" rule, two assumptions to confirm during the first implementation step rather than block the spec on:
+Per the Karpathy "surface assumptions" rule, two assumptions to confirm in the very first implementation step (literally: read the iOS 26 `Speech` framework headers / Apple docs before writing any new Swift). Both have a defined fallback in this spec, so neither blocks the design — but both are load-bearing for the iOS 26 path and must be settled before the rest of the plan is executed.
 
-1. **SpeechAnalyzer is on-device-only with no network/cloud variant.** This is the basis for hiding the cloud toggle on iOS 26. If `SpeechAnalyzer` exposes a `requiresOnDeviceRecognition`-equivalent flag, revisit §2 component 7 (the toggle hide) before merging the implementation.
-2. **`SFSpeechRecognizer.requestAuthorization` covers SpeechAnalyzer.** If iOS 26 introduced a separate Speech framework permission, `SmartCutViewModel.requestSpeechAuthorization` and `OnboardingFlow`'s permission seed both need to call the new API on iOS 26.
+1. **SpeechAnalyzer is on-device-only with no network/cloud variant.**
+   - **If true (assumed):** Component 9 (hide the cloud toggle on iOS 26) stands as written.
+   - **If false (e.g. SpeechAnalyzer exposes a `requiresOnDeviceRecognition`-equivalent property):** keep the toggle visible on iOS 26 too, retitled "Use cloud recognition" — semantics carry over from the SF era.
 
-Both are checked by reading the iOS 26 `Speech` framework docs in the first implementation chunk; neither is expected to derail the design.
+2. **`SFSpeechRecognizer.requestAuthorization` covers SpeechAnalyzer.**
+   - **If true (assumed):** `SmartCutViewModel.requestSpeechAuthorization` (line 239) and `OnboardingFlow`'s permission seed (line 110) are unchanged. They remain in "Out of scope (no code change)" above.
+   - **If false (iOS 26 introduces a separate Speech framework permission):** both files gain an iOS-26-gated parallel auth call alongside the existing SF auth request. `OnboardingFlow` requests both; `SmartCutViewModel.analyze` checks the SpeechAnalyzer-specific status when running on iOS 26 and the SF status otherwise. The plan's first chunk addresses this.
 
 ## Migration / rollback
 
 - **No SwiftData schema migration.** `SmartCutSession.localeIdentifier` is already `String?`. The new `"auto"` value is just another string; existing rows are unaffected.
 - **TranscriptionState JSON migration is decode-side only.** The new optional fields default at decode time. No in-place file rewrites.
-- **Rollback** is removing `SpeechAnalyzerTranscriptionService.swift`, `TranscriptionServiceFactory.swift`, and the iOS-26-gated UI blocks; reverting `BackgroundTranscriptionTask` to call `TranscriptionService(locale:)` directly. No data on disk is incompatible with the rollback — `engine == .speechAnalyzer` states would resume on SF after rollback, which is a different engine but the SF resume path tolerates a non-zero `completedChunkCount` that's still 0 in those states (it'd start over from t=0). Acceptable for a rollback case.
+- **Rollback** is removing `SpeechAnalyzerTranscriptionService.swift`, `TranscriptionServiceFactory.swift`, and the iOS-26-gated UI blocks; reverting `BackgroundTranscriptionTask` to call `TranscriptionService(locale:)` directly; reverting `SmartCutService.transcriptionServiceFactory` back to `(Locale) -> any TranscriptionServicing`. No data on disk is incompatible with the rollback — `engine == .speechAnalyzer` states would resume on SF after rollback, which is a different engine but the SF resume path tolerates a non-zero `completedChunkCount` that's still 0 in those states (it'd start over from t=0).
+- **Optional rollback cleanup:** to avoid user-visible weirdness from "this session was 47% transcribed yesterday and is now 0%," the rollback PR can include a one-shot migration that deletes any `<hash>#analyzer.transcription-state.json` files at app launch. Cheap; recommended.
 
 ## Open questions
 
