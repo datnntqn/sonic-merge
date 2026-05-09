@@ -89,13 +89,13 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
 
 Internal flow inside `transcribe(input:)`:
 
-1. Compute `sourceHash = "\(rawSourceHashHex)#analyzer"` — namespaced like the SF service's `"#cloud"` / `"#local"` keys (`TranscriptionService.swift:130`) so cached SF and SpeechAnalyzer states never collide. Load or create initial `TranscriptionState`. Set `engine = .speechAnalyzer`. Write `localeIdentifier` as the **literal sentinel** `"auto"` when `locale == nil` (not a resolved identifier — the factory's resume path keys on this exact string), otherwise `locale!.identifier`.
+1. Compute `sourceHash = "\(rawSourceHashHex)#analyzer"` — namespaced like the SF service's `"#cloud"` / `"#local"` keys (`TranscriptionService.swift:130`) so cached SF and SpeechAnalyzer states never collide. Load or create initial `TranscriptionState`. The **create** branch sets `engine = .speechAnalyzer` and writes `localeIdentifier` as the **literal sentinel** `"auto"` when `locale == nil` (not a resolved identifier — the factory's resume path keys on this exact string), otherwise `locale!.identifier`. The **load** branch leaves both fields untouched; the namespaced cache key guarantees a loaded state already has `engine == .speechAnalyzer`.
 2. Build a `SpeechAnalyzer` with a `SpeechTranscriber` module configured for the requested locale (or auto-detect when `locale == nil`).
 3. Feed audio into the analyzer's input stream by reading the source asset as `AVAudioPCMBuffer`s via `AVAssetReader`, **starting at `state.completedRecognizedDuration`** (resume from snapshot). No chunked WAV export, no temp files.
 4. Subscribe to the transcriber's results `AsyncSequence`. For each finalized segment:
    - Translate to `TranscriptionState.RecognizedSegment(text, startTime, endTime, confidence)`.
    - Append to `state.recognizedSegments`.
-   - Append `text` to `state.liveTranscriptText` (joined with single spaces).
+   - Append `text` to `state.liveTranscriptText` (joined with single spaces; the first append uses no leading space so the live pane reads cleanly from segment 1).
    - Update `state.completedRecognizedDuration = max(currentValue, segment.endTime)`.
    - Yield the cumulative state.
 5. When `(now - lastSnapshotAt) >= snapshotInterval`, persist `state` via `stateStore.save(state)` and update `lastSnapshotAt`.
@@ -303,15 +303,17 @@ iOS later fires BGProcessingTask "com.dtech.cleancut.smartcut.transcribe"
   → BackgroundTranscriptionTask.handle(_:) loads newest state JSON
   → factory.make(localeIdentifier: state.localeIdentifier ?? "en-US")
         → routes to SpeechAnalyzerTranscriptionService (engine pinned in JSON)
-  → service.transcribe(input: SmartCutSourceLocator.lookupURL(forHash:))
+  → service.transcribe(input: SmartCutSourceLocator.lookupURL(forHash: rawSourceHash))
       → SpeechAnalyzer service starts AVAssetReader at state.completedRecognizedDuration
       → resumes streaming from there, snapshotting + yielding as before
   → final state → postCompletionNotification(...) [UNCHANGED]
 ```
 
+> **Note:** `SmartCutSourceLocator` is keyed by the **raw** SHA-256 hash, but `state.sourceHash` is namespaced (`<raw>#analyzer` / `<raw>#cloud` / `<raw>#local`). `BackgroundTranscriptionTask.handle(_:)` must strip the suffix before calling `SmartCutSourceLocator.lookupURL(forHash:)`. This is a pre-existing concern (today's SF cloud/local namespacing has the same issue if BG resume ever hits a non-`#local`-default state); the implementation plan addresses both engines together.
+
 ### Live-transcript channel
 
-The live transcript is **not** a separate channel — it rides on the existing `TranscriptionState` stream. The service maintains `state.liveTranscriptText` as a single space-joined `String` and yields it as part of every state update. `SmartCutViewModel` mirrors it to a `@Published` property; `LiveTranscriptPane` re-renders. No new actors, no new streams, no new `Combine` plumbing.
+The live transcript is **not** a separate channel — it rides on the existing `TranscriptionState` stream. The service maintains `state.liveTranscriptText` as a single space-joined `String` and yields it as part of every state update. `SmartCutViewModel` mirrors it to a stored `var` (auto-observed via `@Observable`); `LiveTranscriptPane` re-renders. No new actors, no new streams, no new `Combine` plumbing.
 
 ### Engine routing safety
 
