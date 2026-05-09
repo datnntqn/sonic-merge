@@ -16,11 +16,11 @@ struct SettingsView: View {
                 ProStatusCard(paywallReason: $paywallReason)
 
                 VStack(spacing: 0) {
-                    SettingsRowLink(title: "Privacy Policy", url: URL(string: "https://cleancut.app/privacy")!)
+                    SettingsRowLink(title: "Privacy Policy", url: URL(string: "https://datnntqn.github.io/clearcut-legal/privacy.html")!)
                     Divider().padding(.leading, 16)
-                    SettingsRowLink(title: "Terms of Service", url: URL(string: "https://cleancut.app/terms")!)
+                    SettingsRowLink(title: "Terms of Service", url: URL(string: "https://datnntqn.github.io/clearcut-legal/terms.html")!)
                     Divider().padding(.leading, 16)
-                    SettingsRowLink(title: "About", url: URL(string: "https://cleancut.app/about")!)
+                    SettingsRowLink(title: "About", url: URL(string: "https://datnntqn.github.io/clearcut-legal/")!)
                 }
                 .background(
                     RoundedRectangle(cornerRadius: 18, style: .continuous)
