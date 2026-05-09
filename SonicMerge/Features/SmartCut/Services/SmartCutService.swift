@@ -9,18 +9,22 @@ actor SmartCutService {
     }
 
     private let library: FillerLibrary
-    private let transcriptionService: any TranscriptionServicing
+    private let transcriptionServiceFactory: (Locale) -> any TranscriptionServicing
 
     init(library: FillerLibrary,
-         transcriptionService: any TranscriptionServicing = TranscriptionService()) {
+         transcriptionServiceFactory: @escaping (Locale) -> any TranscriptionServicing
+            = { locale in TranscriptionService(locale: locale) }) {
         self.library = library
-        self.transcriptionService = transcriptionService
+        self.transcriptionServiceFactory = transcriptionServiceFactory
     }
 
-    func analyze(input: URL, pauseThreshold: TimeInterval) -> AsyncThrowingStream<Update, Error> {
+    func analyze(input: URL,
+                 pauseThreshold: TimeInterval,
+                 locale: Locale) -> AsyncThrowingStream<Update, Error> {
         AsyncThrowingStream { continuation in
             Task {
                 do {
+                    let transcriptionService = transcriptionServiceFactory(locale)
                     var lastState: TranscriptionState?
                     for try await state in await transcriptionService.transcribe(input: input) {
                         continuation.yield(.progress(state.progressFraction))
@@ -32,7 +36,7 @@ actor SmartCutService {
                     }
                     let fillers = FillerDetector.detect(
                         in: state.recognizedSegments,
-                        words: library.allWords,
+                        words: library.allWords(for: locale),
                         enabledByDefault: { library.isEnabledByDefault($0) }
                     )
                     let pauses = PauseDetector.detect(
