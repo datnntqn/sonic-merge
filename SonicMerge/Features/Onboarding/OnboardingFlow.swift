@@ -493,7 +493,9 @@ private struct SampleStep: View {
         let service = SmartCutService(library: libraryStore.library)
         do {
             var resolvedEditList: EditList?
-            for try await update in service.analyze(input: url, pauseThreshold: 1.5) {
+            for try await update in service.analyze(input: url,
+                                                    pauseThreshold: 1.5,
+                                                    locale: Locale(identifier: "en-US")) {
                 if case .completed(let list, _, _) = update {
                     resolvedEditList = list
                 }

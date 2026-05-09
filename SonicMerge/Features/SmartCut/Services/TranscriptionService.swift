@@ -68,6 +68,20 @@ actor TranscriptionService {
     private let stateStore: TranscriptionStateStore
     private let locale: Locale
 
+    /// Returns `requested` if it's in `SFSpeechRecognizer.supportedLocales()`,
+    /// otherwise returns `Locale(identifier: "en-US")`. Pure data, safe for tests.
+    static func resolveSupportedLocale(_ requested: Locale) -> Locale {
+        let supported = SFSpeechRecognizer.supportedLocales()
+        // Match either by exact identifier OR by language code (so "es-AR" matches
+        // when Apple ships "es-ES" — recognizer accepts the variant).
+        if supported.contains(requested) { return requested }
+        if let code = requested.language.languageCode?.identifier,
+           supported.contains(where: { $0.language.languageCode?.identifier == code }) {
+            return requested
+        }
+        return Locale(identifier: "en-US")
+    }
+
     init(chunkDurationSeconds: TimeInterval = 30,
          stateStore: TranscriptionStateStore = .default,
          locale: Locale = Locale(identifier: "en-US")) {
@@ -82,7 +96,12 @@ actor TranscriptionService {
         AsyncThrowingStream { continuation in
             Task {
                 do {
-                    guard let recognizer = SFSpeechRecognizer(locale: locale) else {
+                    // Hard-validate against supportedLocales(); fall back to en-US
+                    // if the requested locale isn't supported (e.g. a session was
+                    // created on a future iOS that supported a locale a downgrade
+                    // later doesn't).
+                    let effectiveLocale = Self.resolveSupportedLocale(self.locale)
+                    guard let recognizer = SFSpeechRecognizer(locale: effectiveLocale) else {
                         throw TranscriptionError.recognizerUnavailable
                     }
                     // SFSpeechRecognizer.isAvailable can flicker false transiently —
@@ -119,7 +138,8 @@ actor TranscriptionService {
                             chunkDurationSeconds: chunkDurationSeconds,
                             completedChunkCount: 0,
                             recognizedSegments: [],
-                            isComplete: false
+                            isComplete: false,
+                            localeIdentifier: effectiveLocale.identifier
                         )
 
                     while state.nextChunkStartTime < totalDuration {

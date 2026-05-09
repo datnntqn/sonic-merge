@@ -17,12 +17,13 @@ import UIKit
 struct IdleSettingsCards: View {
     @Bindable var viewModel: SmartCutViewModel
     @Binding var library: FillerLibrary
+    let locale: Locale
     let onEditFillerList: () -> Void
 
     var body: some View {
         VStack(spacing: 12) {
             IdlePauseCard(viewModel: viewModel)
-            IdleFillerCard(library: library, onEdit: onEditFillerList)
+            IdleFillerCard(library: library, locale: locale, onEdit: onEditFillerList)
         }
     }
 }
@@ -84,10 +85,11 @@ private struct IdlePauseCard: View {
 
 private struct IdleFillerCard: View {
     let library: FillerLibrary
+    let locale: Locale
     let onEdit: () -> Void
     @Environment(\.sonicMergeSemantic) private var semantic
 
-    private var words: [String] { library.allWords }
+    private var words: [String] { library.allWords(for: locale) }
 
     var body: some View {
         StudioBentoCard(

@@ -20,10 +20,12 @@ import SwiftUI
 struct SmartCutStudioContainer: View {
     @Bindable var vm: SmartCutViewModel
     @Binding var library: FillerLibrary
+    let session: SmartCutSession
 
     @Environment(\.sonicMergeSemantic) private var semantic
     @State private var openCategory: String?
     @State private var showEditFillerList: Bool = false
+    @State private var showLocalePicker: Bool = false
     @State private var studioMode: StudioMode = .edit
 
     enum StudioMode: String, CaseIterable, Identifiable {
@@ -33,25 +35,48 @@ struct SmartCutStudioContainer: View {
     }
 
     var body: some View {
-        Group {
-            switch vm.state {
-            case .idle:
-                idleScaffold
-            case .analyzing(let progress):
-                analyzingScaffold(progress: progress)
-            case .results:
-                studioLayout(headerBanner: nil)
-            case .applied(let saved):
-                studioLayout(headerBanner: AnyView(appliedBanner(saved: saved)))
-            case .stale:
-                staleScaffold
-            case .error(let message):
-                errorScaffold(message: message)
+        VStack(spacing: 12) {
+            LanguagePill(
+                localeIdentifier: vm.currentLocale.identifier,
+                onTap: { showLocalePicker = true },
+                isDisabled: isAnalyzing
+            )
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+
+            Group {
+                switch vm.state {
+                case .idle:
+                    idleScaffold
+                case .analyzing(let progress):
+                    analyzingScaffold(progress: progress)
+                case .results:
+                    studioLayout(headerBanner: nil)
+                case .applied(let saved):
+                    studioLayout(headerBanner: AnyView(appliedBanner(saved: saved)))
+                case .stale:
+                    staleScaffold
+                case .error(let message):
+                    errorScaffold(message: message)
+                }
             }
         }
         .sheet(isPresented: $showEditFillerList) {
-            EditFillerListStudioSheet(library: $library)
+            EditFillerListStudioSheet(library: $library, locale: vm.currentLocale)
         }
+        .sheet(isPresented: $showLocalePicker) {
+            LocalePicker(
+                currentIdentifier: vm.currentLocale.identifier,
+                onPick: { identifier in
+                    vm.setLocale(identifier, on: session)
+                }
+            )
+        }
+    }
+
+    private var isAnalyzing: Bool {
+        if case .analyzing = vm.state { return true }
+        return false
     }
 
     // MARK: - Studio layout (.results / .applied)
@@ -187,6 +212,7 @@ struct SmartCutStudioContainer: View {
                 IdleSettingsCards(
                     viewModel: vm,
                     library: $library,
+                    locale: vm.currentLocale,
                     onEditFillerList: { showEditFillerList = true }
                 )
 

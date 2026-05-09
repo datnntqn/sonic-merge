@@ -13,6 +13,7 @@ import SwiftUI
 
 struct EditFillerListStudioSheet: View {
     @Binding var library: FillerLibrary
+    let locale: Locale
     @Environment(\.dismiss) private var dismiss
     @Environment(\.sonicMergeSemantic) private var semantic
     @Environment(EntitlementService.self) private var entitlements
@@ -43,7 +44,7 @@ struct EditFillerListStudioSheet: View {
                         .foregroundStyle(Color(uiColor: semantic.textSecondary))
                         .padding(.horizontal, 16)
                     StudioFlowLayout(spacing: 8) {
-                        ForEach(library.allWords, id: \.self) { word in
+                        ForEach(library.allWords(for: locale), id: \.self) { word in
                             WordCapsule(word: word) {
                                 withAnimation(.spring(response: 0.30, dampingFraction: 0.8)) {
                                     library.remove(word)
@@ -71,6 +72,7 @@ struct EditFillerListStudioSheet: View {
                     cloudRecognitionToggle
                         .padding(.horizontal, 16)
                         .padding(.top, 16)
+                    languageFooter
                 }
                 .padding(.vertical, 16)
             }
@@ -84,6 +86,25 @@ struct EditFillerListStudioSheet: View {
             .presentationBackground(.ultraThinMaterial)
             .paywall(reason: $paywallReason)
         }
+    }
+
+    private var languageFooter: some View {
+        VStack(spacing: 4) {
+            Text("Showing default words for ")
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+            + Text(Locale(identifier: "en")
+                .localizedString(forIdentifier: locale.identifier)
+                ?? locale.identifier)
+                .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                .fontWeight(.semibold)
+            Text("Switch language in the studio to see a different list.")
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
+        .font(.caption)
+        .multilineTextAlignment(.center)
+        .frame(maxWidth: .infinity)
+        .padding(.top, 16)
+        .padding(.horizontal, 16)
     }
 
     /// Toggle row sitting below the add-word input. Flips

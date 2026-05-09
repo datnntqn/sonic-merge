@@ -7,6 +7,12 @@ struct TranscriptionState: Hashable, Codable {
     /// SHA256 of the source audio file's bytes (see SourceHasher).
     let sourceHash: String
 
+    /// BCP-47 locale identifier the recognizer used for this state. Persisted
+    /// so background-resume (BackgroundTranscriptionTask) can construct the
+    /// recognizer with the same locale, avoiding a SwiftData lookup. `nil`
+    /// for pre-migration cached state JSON — read sites fall back to "en-US".
+    let localeIdentifier: String?
+
     /// Total duration of the source audio, seconds.
     let sourceDuration: TimeInterval
 
@@ -21,6 +27,22 @@ struct TranscriptionState: Hashable, Codable {
 
     /// True after all chunks are processed.
     var isComplete: Bool
+
+    init(sourceHash: String,
+         sourceDuration: TimeInterval,
+         chunkDurationSeconds: TimeInterval,
+         completedChunkCount: Int,
+         recognizedSegments: [RecognizedSegment],
+         isComplete: Bool,
+         localeIdentifier: String? = nil) {
+        self.sourceHash = sourceHash
+        self.sourceDuration = sourceDuration
+        self.chunkDurationSeconds = chunkDurationSeconds
+        self.completedChunkCount = completedChunkCount
+        self.recognizedSegments = recognizedSegments
+        self.isComplete = isComplete
+        self.localeIdentifier = localeIdentifier
+    }
 
     var progressFraction: Double {
         guard sourceDuration > 0 else { return 0 }

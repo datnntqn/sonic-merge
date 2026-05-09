@@ -34,6 +34,14 @@ final class SmartCutViewModel: PlaybackParticipant {
     }
     var pauseThreshold: TimeInterval = 1.5
 
+    /// Resolved locale used for the next analyze. Set from
+    /// `session.localeIdentifier` by the session-driven init; mutated by
+    /// `setLocale(_:on:)`. Defaults to the device's preferred language
+    /// (filtered through SFSpeechRecognizer.supportedLocales()).
+    var currentLocale: Locale = TranscriptionService.resolveSupportedLocale(
+        Locale(identifier: Locale.preferredLanguages.first ?? "en-US")
+    )
+
     /// True while the post-Apply output file is playing. Drives the studio
     /// applied-state Play/Pause button.
     private(set) var isPlayingOutput: Bool = false
@@ -113,6 +121,10 @@ final class SmartCutViewModel: PlaybackParticipant {
 
         setInput(url: sourceURL)
 
+        if let stored = session.localeIdentifier, !stored.isEmpty {
+            currentLocale = TranscriptionService.resolveSupportedLocale(Locale(identifier: stored))
+        }
+
         if let json = session.editListJSON {
             do {
                 let decoded = try JSONDecoder().decode(EditList.self, from: json)
@@ -165,6 +177,15 @@ final class SmartCutViewModel: PlaybackParticipant {
         invalidate()
     }
 
+    /// Persists a new locale onto the session and invalidates any cached
+    /// transcript / edit list. Caller is responsible for `modelContext.save()`
+    /// (matches today's `persist(to:)` shape).
+    func setLocale(_ identifier: String, on session: SmartCutSession) {
+        session.localeIdentifier = identifier
+        currentLocale = TranscriptionService.resolveSupportedLocale(Locale(identifier: identifier))
+        invalidate()
+    }
+
     // MARK: Analyze (manual trigger from UI)
 
     func analyze() {
@@ -192,7 +213,9 @@ final class SmartCutViewModel: PlaybackParticipant {
                 return
             }
             do {
-                for try await update in await service.analyze(input: inputURL, pauseThreshold: pauseThreshold) {
+                for try await update in await service.analyze(input: inputURL,
+                                                              pauseThreshold: pauseThreshold,
+                                                              locale: currentLocale) {
                     if Task.isCancelled { return }
                     switch update {
                     case .progress(let p):

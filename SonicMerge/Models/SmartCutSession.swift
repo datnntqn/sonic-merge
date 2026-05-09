@@ -18,6 +18,10 @@ final class SmartCutSession {
     var createdAt: Date
     var lastOpenedAt: Date
     var editListJSON: Data?
+    /// BCP-47 locale identifier for Smart Cut analysis (e.g. "en-US", "es-ES").
+    /// `nil` (the default for fresh sessions and pre-migration sessions) resolves
+    /// to the device's preferred language at analyze time, falling back to "en-US".
+    var localeIdentifier: String?
     var transcriptCacheRef: String?
 
     init(
@@ -25,7 +29,8 @@ final class SmartCutSession {
         name: String,
         sourceFilename: String,
         sourceHashHex: String,
-        durationSeconds: Double
+        durationSeconds: Double,
+        localeIdentifier: String? = nil
     ) {
         self.id = id
         self.name = name
@@ -34,5 +39,6 @@ final class SmartCutSession {
         self.durationSeconds = durationSeconds
         self.createdAt = .now
         self.lastOpenedAt = .now
+        self.localeIdentifier = localeIdentifier
     }
 }

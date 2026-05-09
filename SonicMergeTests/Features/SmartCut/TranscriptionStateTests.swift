@@ -57,4 +57,13 @@ struct TranscriptionStateTests {
         )
         #expect(state.nextChunkStartTime == 120)
     }
+
+    @Test func testLegacyJSONWithoutLocaleIdentifierDecodesNil() throws {
+        let json = """
+        {"sourceHash":"h","sourceDuration":60,"chunkDurationSeconds":30,
+         "completedChunkCount":0,"recognizedSegments":[],"isComplete":false}
+        """.data(using: .utf8)!
+        let decoded = try JSONDecoder().decode(TranscriptionState.self, from: json)
+        #expect(decoded.localeIdentifier == nil)
+    }
 }
