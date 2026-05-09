@@ -189,7 +189,6 @@ import Testing
 import Foundation
 @testable import SonicMerge
 
-@MainActor
 struct FillerLibraryLocaleTests {
 
     private func freshLibrary() -> FillerLibrary {
@@ -422,11 +421,31 @@ Expected: `** TEST SUCCEEDED **` with 9 tests passing.
 >
 > If you want to confirm the FillerLibrary tests pass standalone (the test target may not build because the test target depends on the main target which now has compile errors), you can temporarily add an `allWords(for:)` no-op alias for the old `allWords`, but it's cleaner to **proceed straight to Task 2.1** and let the chunk-2 cascade fix everything. The plan reviewer will catch any missed callsite.
 
-- [ ] **Step 1.3.5: Commit**
+- [ ] **Step 1.3.5: Delete the existing `FillerLibraryTests.swift`**
+
+`SonicMergeTests/Features/SmartCut/FillerLibraryTests.swift` (existing) reads `lib.defaultOffWords` and `lib.allWords` (no-arg) — both deleted in Step 1.3.3. Rather than migrate each test (their assertions are now subsumed by the new per-locale tests), delete the file:
+
+```bash
+git rm SonicMergeTests/Features/SmartCut/FillerLibraryTests.swift
+```
+
+The behavioral coverage that file provided (custom-add dedup, removal persistence, restoreAllDefaults) is preserved by the new `FillerLibraryLocaleTests` cases (`customWordsAppearAcrossAllLocales`, `removingDefaultPersistsAcrossLocales`) plus implicit coverage from integration tests.
+
+Verify no other tests reference the deleted accessors:
+
+```bash
+grep -rn "library\.allWords\b\|library\.defaultOffWords\b\|\.allWords[^(]" \
+  /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMergeTests --include="*.swift"
+```
+
+Expected: zero matches.
+
+- [ ] **Step 1.3.6: Commit**
 
 ```bash
 git add SonicMerge/Features/SmartCut/Models/FillerLibrary.swift \
-        SonicMergeTests/Features/SmartCut/FillerLibraryLocaleTests.swift
+        SonicMergeTests/Features/SmartCut/FillerLibraryLocaleTests.swift \
+        SonicMergeTests/Features/SmartCut/FillerLibraryTests.swift
 git commit -m "feat(smart-cut): per-locale FillerLibrary defaults
 
 Replace the single English default-off list with a per-language
@@ -605,7 +624,6 @@ import Foundation
 import Speech
 @testable import SonicMerge
 
-@MainActor
 struct TranscriptionServiceLocaleTests {
 
     /// Pure-data test: the helper that resolves an unsupported locale to en-US.
@@ -694,7 +712,7 @@ Then, where `TranscriptionState` is constructed (look for the `state = Transcrip
                         )
 ```
 
-(There are typically two construction sites — one for the initial state and one for the updates — but updates happen by mutating `state` so only the initial construction needs the new field.)
+(There's exactly one `TranscriptionState(...)` construction in the file, around line 116. Updates happen by mutating `state` in place — no other construction sites.)
 
 - [ ] **Step 2.2.4: Run the tests — verify they pass**
 
@@ -796,15 +814,12 @@ set -o pipefail; xcodebuild -scheme SonicMerge \
   -configuration Debug build 2>&1 | tail -10
 ```
 
-Expected: build still fails — but errors should now only be in the test files (`SmartCutServiceIntegrationTests.swift`, `SmartCutServicePauseThresholdTests.swift`) and in `EditFillerListStudioSheet.swift` (still using `library.allWords` no-arg). Production code in the main app target should compile cleanly.
+Expected: build still fails. Remaining errors after this task:
 
-If the main app target still has compile errors outside `EditFillerListStudioSheet.swift`, search for the missing callsite via:
+- **Production:** `OnboardingFlow.swift` (constructs `SmartCutService(library:)` and calls `service.analyze(input:pauseThreshold:)`); `IdleSettingsCards.swift` (reads `library.allWords` no-arg); `EditFillerListStudioSheet.swift` (reads `library.allWords` no-arg).
+- **Tests:** `SmartCutServiceIntegrationTests.swift`, `SmartCutServicePauseThresholdTests.swift` (need updated factory + `locale:` arg).
 
-```bash
-grep -rn "library\.allWords\b" /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge --include="*.swift"
-```
-
-Each match is a callsite that needs `library.allWords(for: <some locale>)`. Inside the VM, the right locale is `currentLocale`. Inside the studio sheet, it's `vm.currentLocale` — but that's Task 3.4.
+OnboardingFlow + IdleSettingsCards get fixed in **Task 2.6**. Tests get fixed in **Task 2.5**. EditFillerListStudioSheet gets fixed in Chunk 3's **Task 3.4**.
 
 - [ ] **Step 2.3.6: Run gating tests — confirm no regression**
 
@@ -970,6 +985,85 @@ analyze(input:pauseThreshold:) became analyze(input:pauseThreshold:locale:).
 Existing tests pass an en-US locale and a closure that ignores locale.
 
 Full suite at FAIL=5 baseline.
+
+Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
+```
+
+---
+
+### Task 2.6: Fix remaining production callsites of removed FillerLibrary APIs
+
+**Files:**
+- Modify: `SonicMerge/Features/Onboarding/OnboardingFlow.swift`
+- Modify: `SonicMerge/Features/SmartCut/Views/Studio/IdleSettingsCards.swift`
+
+After Task 1.3 deleted `FillerLibrary.allWords` (no-arg) and Task 2.1 changed `SmartCutService.analyze` to require `locale:` + factory closure, two production callsites still need migration. Both unrelated to UI-facing locale picking — they're internal usages that just need an explicit locale.
+
+- [ ] **Step 2.6.1: Update `OnboardingFlow.swift`**
+
+The onboarding flow analyzes a hardcoded English sample. Both lines need updating.
+
+```bash
+grep -n "SmartCutService(library:\|service\.analyze(input:" \
+  /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge/Features/Onboarding/OnboardingFlow.swift
+```
+
+Expected: 2 matches around lines 493 and 496.
+
+Edit:
+
+- The `SmartCutService(library: libraryStore.library)` callsite stays as-is — the factory has a default that constructs `TranscriptionService(locale:)` per analyze, so no caller change is needed for the constructor.
+- The `service.analyze(input: url, pauseThreshold: 1.5)` callsite needs `locale: Locale(identifier: "en-US")`:
+
+  ```swift
+  for try await update in service.analyze(input: url,
+                                          pauseThreshold: 1.5,
+                                          locale: Locale(identifier: "en-US")) {
+  ```
+
+- [ ] **Step 2.6.2: Update `IdleSettingsCards.swift`**
+
+The idle scaffold shows the user their current filler list. Find the `library.allWords` callsite:
+
+```bash
+grep -n "library\.allWords\|\.allWords" \
+  /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge/Features/SmartCut/Views/Studio/IdleSettingsCards.swift
+```
+
+Expected: 1 match around line 90.
+
+The component receives or has access to the FillerLibrary; it now also needs the active locale. Add a `locale: Locale` parameter on `IdleSettingsCards.init` and update the single call site (search `IdleSettingsCards(`):
+
+```bash
+grep -rn "IdleSettingsCards(" /Users/datnnt/Desktop/DatNNT/App/SonicMerge/SonicMerge --include="*.swift"
+```
+
+The caller is `SmartCutStudioContainer` (in `idleScaffold`). Pass `locale: vm.currentLocale`. Inside `IdleSettingsCards`, replace `library.allWords` with `library.allWords(for: locale)`.
+
+- [ ] **Step 2.6.3: Build**
+
+```bash
+set -o pipefail; xcodebuild -scheme SonicMerge \
+  -destination 'platform=iOS Simulator,name=iPhone 17' \
+  -configuration Debug build 2>&1 | tail -5
+```
+
+Expected: `** BUILD SUCCEEDED **` for the main app target. (Test target may still fail until Task 2.5 ran; if Task 2.5 completed before this task, the full build is now green.)
+
+- [ ] **Step 2.6.4: Commit**
+
+```bash
+git add SonicMerge/Features/Onboarding/OnboardingFlow.swift \
+        SonicMerge/Features/SmartCut/Views/Studio/IdleSettingsCards.swift \
+        SonicMerge/Features/SmartCut/Views/Studio/SmartCutStudioContainer.swift
+git commit -m "feat(smart-cut): migrate remaining production callsites
+
+OnboardingFlow.swift: pass locale=en-US to service.analyze() — sample
+is hardcoded English.
+
+IdleSettingsCards.swift: take a Locale parameter, read
+library.allWords(for: locale). Container's idleScaffold passes
+vm.currentLocale.
 
 Co-Authored-By: Claude Opus 4.7 (1M context) <noreply@anthropic.com>"
 ```
