@@ -128,6 +128,13 @@ struct FillerOccurrenceSheet: View {
 
     private func playWindow(around range: ClosedRange<TimeInterval>, id: String) {
         guard let inputURL else { return }
+        // Activate the shared audio session before constructing the player.
+        // Without this, on a fresh app launch where the user opens a session
+        // and taps a filler-occurrence Play before any other playback has
+        // happened, AVAudioPlayer.play() returns true but emits silence —
+        // the session has never been activated. Idempotent (early-returns
+        // after first call), so safe to call on every preview.
+        PlaybackAudioSession.activateIfNeeded()
         // Stop any in-flight preview before starting a new one. AVAudioPlayer
         // keeps playing even after its @State reference is overwritten, so
         // without this a rapid re-tap (or different occurrence tap) produces
@@ -139,8 +146,9 @@ struct FillerOccurrenceSheet: View {
         let windowStart = max(0, centerSeconds - 2)
         do {
             let player = try AVAudioPlayer(contentsOf: inputURL)
+            player.prepareToPlay()
             player.currentTime = windowStart
-            player.play()
+            guard player.play() else { return }
             previewPlayer = player
             previewingId = id
             DispatchQueue.main.asyncAfter(deadline: .now() + 4.0) {
