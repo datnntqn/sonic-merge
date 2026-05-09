@@ -747,7 +747,7 @@ private struct ResultCard: View {
     let editList: EditList
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 10) {
             Text("SMART CUT SUMMARY")
                 .font(.caption.weight(.bold))
                 .tracking(0.5)
@@ -755,20 +755,13 @@ private struct ResultCard: View {
             Text("Podcast snippet")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color(uiColor: semantic.textPrimary))
+
             HStack(spacing: 8) {
                 if !editList.fillers.isEmpty {
-                    Text("\(editList.fillers.count) fillers")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Capsule().fill(Color(uiColor: semantic.accentAction).opacity(0.14)))
-                        .foregroundStyle(Color(uiColor: semantic.accentAction))
+                    chip("\(editList.fillers.count) fillers")
                 }
                 if !editList.pauses.isEmpty {
-                    Text("\(editList.pauses.count) pauses")
-                        .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Capsule().fill(Color(uiColor: semantic.accentAction).opacity(0.14)))
-                        .foregroundStyle(Color(uiColor: semantic.accentAction))
+                    chip("\(editList.pauses.count) pauses")
                 }
                 Spacer()
                 Text("saves ~\(Int(editList.enabledSavings.rounded()))s")
@@ -777,9 +770,24 @@ private struct ResultCard: View {
                     .background(Capsule().fill(Color(uiColor: semantic.accentAI)))
                     .foregroundStyle(.white)
             }
-            .padding(.top, 4)
+            .padding(.top, 2)
+
+            // Per-category breakdown so the user sees exactly which words
+            // were caught — mirrors the main Smart Cut studio detail.
+            if !editList.categories.isEmpty || !editList.pauses.isEmpty {
+                Divider().padding(.vertical, 2)
+                VStack(spacing: 6) {
+                    ForEach(editList.categories, id: \.self) { category in
+                        let count = editList.fillers.filter { $0.matchedText == category }.count
+                        breakdownRow(label: "\u{201C}\(category)\u{201D}", count: count)
+                    }
+                    if !editList.pauses.isEmpty {
+                        breakdownRow(label: "Long pauses", count: editList.pauses.count)
+                    }
+                }
+            }
         }
-        .padding(12)
+        .padding(14)
         .background(
             RoundedRectangle(cornerRadius: 14, style: .continuous)
                 .fill(Color(uiColor: semantic.surfaceCard))
@@ -788,6 +796,26 @@ private struct ResultCard: View {
                         .strokeBorder(Color(uiColor: .systemGray5), lineWidth: 0.5)
                 )
         )
+    }
+
+    private func chip(_ text: String) -> some View {
+        Text(text)
+            .font(.caption.weight(.semibold))
+            .padding(.horizontal, 10).padding(.vertical, 4)
+            .background(Capsule().fill(Color(uiColor: semantic.accentAction).opacity(0.14)))
+            .foregroundStyle(Color(uiColor: semantic.accentAction))
+    }
+
+    private func breakdownRow(label: String, count: Int) -> some View {
+        HStack {
+            Text(label)
+                .font(.system(.subheadline, design: .rounded, weight: .medium))
+                .foregroundStyle(Color(uiColor: semantic.textPrimary))
+            Spacer()
+            Text("× \(count)")
+                .font(.system(.subheadline, design: .rounded).monospacedDigit())
+                .foregroundStyle(Color(uiColor: semantic.textSecondary))
+        }
     }
 }
 
