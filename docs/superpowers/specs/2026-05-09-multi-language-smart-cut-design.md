@@ -61,7 +61,7 @@ The recognizer locale becomes a **per-session property** persisted on `SmartCutS
                           ┌────────────────────────────┴────────────────────┐         │
                           ▼                                                 ▼         │
             TranscriptionService                            FillerDetector             │
-            (locale per-call, not init)                     .detect(words:             │
+            (constructed per-analyze with locale)           .detect(words:             │
                           │                                  library.allWords(         │
                           │                                    for: locale)            │
                           │                                  …)                        │
