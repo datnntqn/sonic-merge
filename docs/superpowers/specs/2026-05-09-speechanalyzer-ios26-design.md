@@ -203,7 +203,7 @@ Inside `analyze`, the existing `library.allWords(for: locale)` call needs a `Loc
 - `localeIdentifier != "auto"`: `library.allWords(for: Locale(identifier: localeIdentifier))` — same behavior as today.
 - `localeIdentifier == "auto"` (iOS 26 only): use a new `library.allWordsAcrossCuratedLocales()` (see Component 6) which returns the union of every curated locale's filler list. Rationale: a bilingual session legitimately contains fillers from multiple languages; users on `"auto"` should get filler detection for all of them. False positives from cross-language collisions are rare and overridable through the existing custom-word UI.
 
-`SmartCutViewModel.analyze()` (line 216) updates its call site from `service.analyze(..., locale: currentLocale)` to `service.analyze(..., localeIdentifier: session.localeIdentifier ?? currentLocale.identifier)`. `currentLocale` stays in the VM for the rest of its uses (`LanguagePill` display, `library.allWords(for:)` previews); only the analyze call site changes.
+`SmartCutViewModel.analyze()` (line 216) updates its call site from `service.analyze(..., locale: currentLocale)` to `service.analyze(..., localeIdentifier: currentLocaleIdentifier)`, where `currentLocaleIdentifier: String` is a new VM property holding the raw picked identifier. The existing `currentLocale: Locale` cannot be used for engine selection because `TranscriptionService.resolveSupportedLocale` collapses `"auto"` → `Locale(identifier: "en-US")` (since "auto" isn't in `SFSpeechRecognizer.supportedLocales()`), which silently loses the sentinel. `currentLocaleIdentifier` is seeded from `session.localeIdentifier` at init and updated by `setLocale(_:on:)` alongside `currentLocale`. `currentLocale` stays for the rest of its uses (`LanguagePill` display, `library.allWords(for:)` previews); only the analyze call site reads the new field.
 
 ### 6. `Models/FillerLibrary.swift` *(small change)*
 
@@ -220,7 +220,7 @@ Iterates the existing internal locale → words map, deduplicates (case-insensit
 
 ### 7. `Services/BackgroundTranscriptionTask.swift` *(small change)*
 
-Replace the existing `TranscriptionService(locale: resumedLocale)` call with `TranscriptionServiceFactory.make(localeIdentifier: state.localeIdentifier ?? "en-US")`. The factory routes to the same engine that wrote the snapshot (driven by `state.engine`, not `localeIdentifier`). Everything else (notification, source-locator lookup, expiration handling) unchanged.
+Replace the existing `TranscriptionService(locale: resumedLocale)` call with `TranscriptionServiceFactory.make(localeIdentifier: state.localeIdentifier ?? "en-US")`. Routing is by `#available(iOS 26, *)` + the `"auto"` sentinel — see §Engine routing safety for the invariant that makes this safe without consulting `state.engine`. Everything else (notification, source-locator lookup, expiration handling) unchanged. **Source-locator note:** `SmartCutSourceLocator` is keyed by the raw SHA-256, but `state.sourceHash` carries an engine-namespace suffix (`#cloud` / `#local` / `#analyzer`). `BackgroundTranscriptionTask.handle(_:)` strips the suffix via a new `rawHash(from:)` helper before calling `lookupURL(forHash:)`.
 
 ### 8. `Views/Studio/LocalePicker.swift` *(small change)*
 
@@ -302,7 +302,12 @@ App backgrounds mid-stream
 iOS later fires BGProcessingTask "com.dtech.cleancut.smartcut.transcribe"
   → BackgroundTranscriptionTask.handle(_:) loads newest state JSON
   → factory.make(localeIdentifier: state.localeIdentifier ?? "en-US")
-        → routes to SpeechAnalyzerTranscriptionService (engine pinned in JSON)
+        → routes by #available(iOS 26, *) + the "auto" sentinel (NOT by state.engine).
+          Safe because the engine that *wrote* a given (locale-identifier, iOS-version)
+          combination is the same engine the factory returns when given that combination:
+          SF only writes on iOS 17–25; SpeechAnalyzer only writes on iOS 26+ and writes
+          either a real identifier or the literal "auto". The state.engine field exists
+          for forensic / future use; the factory does not currently consume it.
   → service.transcribe(input: SmartCutSourceLocator.lookupURL(forHash: rawSourceHash))
       → SpeechAnalyzer service starts AVAssetReader at state.completedRecognizedDuration
       → resumes streaming from there, snapshotting + yielding as before
@@ -317,7 +322,7 @@ The live transcript is **not** a separate channel — it rides on the existing `
 
 ### Engine routing safety
 
-A session's `state.engine` discriminator is the source of truth on resume. If a session was analyzed pre-iOS-26 (`engine == .sfSpeechRecognizer`) and the user upgrades to iOS 26 mid-resume, the factory still routes to the SF engine — never silently switches mid-flight. New analyze runs after upgrade are routed by `#available` and start fresh.
+**Routing is by `#available(iOS 26, *)` + the `"auto"` sentinel, not by `state.engine`.** The two coordinates uniquely determine the engine for any given (locale-identifier, iOS-version) pair, because SF only ever runs on iOS 17–25 and SpeechAnalyzer only ever runs on iOS 26+. The one mid-flight edge case — user upgrades from iOS 17–25 to iOS 26 between snapshots on a non-`"auto"` session — is intentionally accepted: the SpeechAnalyzer service will not find a matching `<hash>#analyzer` cache (because SF wrote `<hash>#cloud` or `<hash>#local`) and will start fresh from t=0. Acceptable for a rare upgrade-during-analysis case. The `state.engine` discriminator is preserved for forensic use (logs, future migrations) but not consumed by the factory today.
 
 ## Error handling
 
