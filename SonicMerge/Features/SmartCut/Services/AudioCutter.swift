@@ -62,8 +62,19 @@ actor AudioCutter {
             }
         }
 
+        // Output as .caf, not .wav. The buffer is float32 non-interleaved
+        // (the standard processingFormat of any AVAudioFile). The WAV
+        // container does NOT natively support non-interleaved PCM — writing
+        // it produces a file that AVAudioFile can re-read (permissive) but
+        // AVAudioPlayer fails to decode (strict). That's why the onboarding
+        // result-step's "Cleaned" button silently played nothing and the
+        // user perceived both buttons as identical.
+        //
+        // CAF is Apple's flexible container: it stores any PCM layout
+        // including non-interleaved float32, and AVAudioPlayer reads it
+        // natively.
         let outURL = FileManager.default.temporaryDirectory
-            .appendingPathComponent("smartcut-output-\(UUID().uuidString).wav")
+            .appendingPathComponent("smartcut-output-\(UUID().uuidString).caf")
         let outFile = try AVAudioFile(forWriting: outURL, settings: format.settings)
         try outFile.write(from: outBuffer)
         return outURL
