@@ -39,7 +39,7 @@ struct SmartCutSessionView: View {
             Group {
                 if let viewModel, let session {
                     ScrollView {
-                        SmartCutStudioContainer(vm: viewModel, library: libraryStore.binding)
+                        SmartCutStudioContainer(vm: viewModel, library: libraryStore.binding, session: session)
                             .padding(.horizontal, 16)
                             .padding(.bottom, 96)
                     }
