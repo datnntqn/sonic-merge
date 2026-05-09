@@ -42,62 +42,91 @@ The content was approved through an interactive brainstorm; the per-section dial
 
 Full body, ~3,400 chars / 4,000 max. Section blocks below are the order they appear in the body. App Store iOS shows the first ~5–8 lines of the Description above a "more" tap — the **HERO** block is engineered to be entirely above that fold.
 
+> Each block below is in a fenced code block so you can copy the literal text without `> ` blockquote markers. The full concatenated body (paste-ready as one block) lives in the implementation plan §0.4.
+
 ### Block A — HERO (above the fold)
 
-> **Cut filler words. Clean background noise. Merge takes into one file.**
->
-> CleanCut is an audio editor for iPhone with three tools — Smart Cut, Denoise, and Merge. Every step runs on-device. **Your audio never leaves your phone.**
+```
+Cut filler words. Clean background noise. Merge takes into one file.
+
+CleanCut is an audio editor for iPhone with three tools — Smart Cut, Denoise, and Merge. Every step runs on-device. Your audio never leaves your phone.
+```
 
 ### Block B — SMART CUT — TRIM WHAT YOU DIDN'T MEAN TO SAY
 
-> Smart Cut listens for filler words ("um," "uh," "like," and any word you teach it), long silences, and dead air, then proposes an edit. Every cut shows on a waveform timeline before export — nothing is removed without your review. Supports multiple recognition languages; set the locale per session. Includes an auto-generated transcript you can copy or export as .txt, .srt, or .vtt.
+```
+SMART CUT — TRIM WHAT YOU DIDN'T MEAN TO SAY
+Smart Cut listens for filler words ("um," "uh," "like," and any word you teach it), long silences, and dead air, then proposes an edit. Every cut shows on a waveform timeline before export — nothing is removed without your review. Supports multiple recognition languages; set the locale per session. Includes an auto-generated transcript you can copy or export as .txt, .srt, or .vtt.
+```
 
 ### Block C — DENOISE — PULL VOICE OUT OF THE ROOM
 
-> Powered by DeepFilterNet3, an on-device neural network built for speech. An intensity slider lets you taste the result before committing. An A/B toggle plays the original next to the cleaned version so you can hear exactly what changed. Works on real-world audio: subway commutes, busy cafés, humming offices, the back seat of a moving car.
+```
+DENOISE — PULL VOICE OUT OF THE ROOM
+Powered by DeepFilterNet3, an on-device neural network built for speech. An intensity slider lets you taste the result before committing. An A/B toggle plays the original next to the cleaned version so you can hear exactly what changed. Works on real-world audio: subway commutes, busy cafés, humming offices, the back seat of a moving car.
+```
 
 ### Block D — MERGE — STITCH CLIPS INTO ONE FILE
 
-> Drag clips onto a timeline, set crossfades, export as M4A or WAV. Loudness is auto-normalized to broadcast standard (BS.1770 LUFS) so volume jumps between clips disappear. Drag-to-reorder, scrub-to-preview, clean export sheet — no DAW, no learning curve.
+```
+MERGE — STITCH CLIPS INTO ONE FILE
+Drag clips onto a timeline, set crossfades, export as M4A or WAV. Loudness is auto-normalized to broadcast standard (BS.1770 LUFS) so volume jumps between clips disappear. Drag-to-reorder, scrub-to-preview, clean export sheet — no DAW, no learning curve.
+```
 
 ### Block E — ON-DEVICE. ALWAYS.
 
-> CleanCut runs entirely on your iPhone. No upload. No server. No analytics SDK. No third-party tracker. The transcription model, the noise-reduction model, and every edit you make stay on the device. Turn on airplane mode — CleanCut still works.
+```
+ON-DEVICE. ALWAYS.
+CleanCut runs entirely on your iPhone. No upload. No server. No analytics SDK. No third-party tracker. The transcription model, the noise-reduction model, and every edit you make stay on the device. Turn on airplane mode — CleanCut still works.
+```
 
 ### Block F — FREE FOREVER, OR GO PRO
 
-> Everything you need to clean a daily voice memo is free: 3 Smart Cut + 3 Denoise sessions a day, files up to 5 min (Smart Cut) or 3 min (Denoise), unlimited Merge with up to 3 clips, WAV export.
->
-> CleanCut Pro removes every limit:
-> · Unlimited sessions, any length
-> · Export to M4A, MP3, or WAV
-> · No watermark
-> · Custom filler-word libraries
-> · Background processing with push notifications
+```
+FREE FOREVER, OR GO PRO
+Everything you need to clean a daily voice memo is free: 3 Smart Cut + 3 Denoise sessions a day, files up to 5 min (Smart Cut) or 3 min (Denoise), unlimited Merge with up to 3 clips, WAV export.
+
+CleanCut Pro removes every limit:
+· Unlimited sessions, any length
+· Export to M4A, MP3, or WAV
+· No watermark
+· Custom filler-word libraries
+· Background processing with push notifications
+```
 
 ### Block G — PRICING
 
-> · $4.99 / month
-> · $39.99 / year (save 33%) — 7-day free trial included
-> · $79.99 once — lifetime access, no renewal
->
-> Restore Purchases lives in Settings. Cancel anytime.
+```
+PRICING
+· $4.99 / month
+· $39.99 / year (save 33%) — 7-day free trial included
+· $79.99 once — lifetime access, no renewal
+
+Restore Purchases lives in Settings. Cancel anytime.
+```
 
 ### Block H — BUILT FOR iPHONE, NOT PORTED TO IT
 
-> · iOS Share Extension — clean a voice memo from Voice Memos or Mail without leaving the app you're in
-> · Files app and iCloud Drive support for import and export
-> · Light and dark mode, both first-class
+```
+BUILT FOR iPHONE, NOT PORTED TO IT
+· iOS Share Extension — clean a voice memo from Voice Memos or Mail without leaving the app you're in
+· Files app and iCloud Drive support for import and export
+· Light and dark mode, both first-class
 
 (Background processing with push notifications is a CleanCut Pro feature — see "Free Forever, or Go Pro" above.)
+```
 
 ### Block I — Closing
 
-> CleanCut is for iOS-first podcasters, journalists, and anyone who records voice and wants it to sound like the room sounded — minus the ums, hisses, and silences. Audio never leaves your phone. That's the only deal we make.
+```
+CleanCut is for iOS-first podcasters, journalists, and anyone who records voice and wants it to sound like the room sounded — minus the ums, hisses, and silences. Audio never leaves your phone. That's the only deal we make.
+```
 
 ### Block J — Footer disclosures (Apple-required for IAP / subscriptions)
 
-> Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage in Settings → Apple ID → Subscriptions.
+```
+Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage in Settings → Apple ID → Subscriptions.
+```
 
 **Note:** the inline `Privacy Policy · Terms of Use · Support` line that appeared in the brainstorm preview is removed from Block J because Apple surfaces those URLs via dedicated App Store Connect fields (Privacy Policy URL, Support URL, EULA). Duplicating them inline in the description body is redundant and Apple Reviewers occasionally flag inline-text-without-link as ambiguous. Implementation plan owns the dedicated ASC field URLs.
 
@@ -119,9 +148,7 @@ Full body, ~3,400 chars / 4,000 max. Section blocks below are the order they app
 ```
 Day one.
 
-Audio editing that doesn't ask for the cloud. Smart Cut, Denoise,
-and Merge — the whole pipeline runs on your iPhone. Your audio
-never leaves the device.
+Audio editing that doesn't ask for the cloud. Smart Cut, Denoise, and Merge — the whole pipeline runs on your iPhone. Your audio never leaves the device.
 
 Welcome to CleanCut.
 ```
