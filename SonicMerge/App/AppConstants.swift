@@ -11,7 +11,7 @@ import Foundation
 enum AppConstants {
     /// App Group identifier. Must match the entitlement added in Xcode
     /// Signing & Capabilities > App Groups for both the main target and any extensions.
-    static let appGroupID = "group.com.yourteam.SonicMerge"
+    static let appGroupID = "group.com.dtech.cleancut"
 
     /// Creates `Library/Application Support` under the App Group container if missing.
     ///

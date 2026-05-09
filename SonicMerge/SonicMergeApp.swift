@@ -17,7 +17,7 @@ struct SonicMergeApp: App {
     /// SwiftData ModelContainer configured with the App Group shared container.
     ///
     /// The App Group entitlement must be added in Xcode > target > Signing & Capabilities
-    /// > App Groups > "group.com.yourteam.SonicMerge" before this works on a real device
+    /// > App Groups > "group.com.dtech.cleancut" before this works on a real device
     /// or in a simulator with entitlements. Without the entitlement, `containerURL(...)` returns
     /// nil and ModelConfiguration falls back to the app sandbox — which is acceptable during
     /// development but will not be shared with the future Share Extension target.

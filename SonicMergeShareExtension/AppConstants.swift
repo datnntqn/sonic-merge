@@ -10,7 +10,7 @@ import Foundation
 enum AppConstants {
     /// App Group identifier. Must match the entitlement added in Xcode
     /// Signing & Capabilities > App Groups for both the main target and any extensions.
-    static let appGroupID = "group.com.yourteam.SonicMerge"
+    static let appGroupID = "group.com.dtech.cleancut"
 
     /// Returns the URL for the shared clips directory inside the App Group container,
     /// creating it if it does not already exist.

@@ -24,7 +24,7 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.dtech.SonicMerge</string>
+			<string>com.dtech.cleancut</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>sonicmerge</string>
@@ -70,7 +70,7 @@
 	<!-- Smart Cut: BGProcessingTask identifier — must match BackgroundTranscriptionTask.identifier (sc-t13) -->
 	<key>BGTaskSchedulerPermittedIdentifiers</key>
 	<array>
-		<string>com.dtech.SonicMerge.smartcut.transcribe</string>
+		<string>com.dtech.cleancut.smartcut.transcribe</string>
 	</array>
 	<!-- Smart Cut: enable processing background mode for BGProcessingTask (sc-t13) -->
 	<key>UIBackgroundModes</key>

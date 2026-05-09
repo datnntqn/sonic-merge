@@ -7,7 +7,7 @@ import UserNotifications
 struct BackgroundTranscriptionTaskTests {
 
     @Test func testIdentifierMatchesInfoPlistRequirement() {
-        #expect(BackgroundTranscriptionTask.identifier == "com.dtech.SonicMerge.smartcut.transcribe")
+        #expect(BackgroundTranscriptionTask.identifier == "com.dtech.cleancut.smartcut.transcribe")
     }
 
     @Test func testRequestBuilderProducesNonExternalPowerLowPriorityRequest() {

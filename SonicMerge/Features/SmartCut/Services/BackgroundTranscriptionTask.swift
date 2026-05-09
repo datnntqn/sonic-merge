@@ -6,7 +6,7 @@ import UserNotifications
 /// Identifier matches Info.plist BGTaskSchedulerPermittedIdentifiers.
 enum BackgroundTranscriptionTask {
 
-    static let identifier = "com.dtech.SonicMerge.smartcut.transcribe"
+    static let identifier = "com.dtech.cleancut.smartcut.transcribe"
 
     static func makeRequest() -> BGProcessingTaskRequest {
         let req = BGProcessingTaskRequest(identifier: identifier)

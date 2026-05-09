@@ -4,7 +4,7 @@
 <dict>
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.yourteam.SonicMerge</string>
+		<string>group.com.dtech.cleancut</string>
 	</array>
 </dict>
 </plist>

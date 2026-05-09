@@ -23,7 +23,7 @@ final class ShareExtensionViewController: UIViewController {
 
         let hudView = ShareHUDView(model: hudModel) { [weak self] in
             self?.extensionContext?.cancelRequest(withError: NSError(
-                domain: "com.dtech.SonicMerge.ShareExtension",
+                domain: "com.dtech.cleancut.ShareExtension",
                 code: 1,
                 userInfo: [NSLocalizedDescriptionKey: "User dismissed"]
             ))
@@ -69,7 +69,7 @@ final class ShareExtensionViewController: UIViewController {
                     }
                     guard let tempURL else {
                         continuation.resume(throwing: NSError(
-                            domain: "com.dtech.SonicMerge.ShareExtension",
+                            domain: "com.dtech.cleancut.ShareExtension",
                             code: 2,
                             userInfo: [NSLocalizedDescriptionKey: "No temp URL provided"]
                         ))
