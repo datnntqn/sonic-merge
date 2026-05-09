@@ -97,9 +97,10 @@ New optional `String` field on the existing `@Model` class. SwiftData handles ad
 
 A modal sheet (`.sheet(isPresented:)`) presenting `SFSpeechRecognizer.supportedLocales()` as a list:
 
-- **Sort order**: device's `Locale.preferredLanguages` first (top of the list, with a small "Suggested" header), then the rest alphabetized by localized name.
-- **Search bar**: filter by localized name. e.g. typing "españ" matches "Spanish (Spain)", "Spanish (Mexico)", etc.
-- **Row content**: localized language+region name (e.g. "Português (Brasil)") + locale identifier in caption (e.g. "pt-BR"). Checkmark on currently-selected locale.
+- **Sort order**: device's `Locale.preferredLanguages` first (top of the list, with a small "Suggested" header), then the rest alphabetized.
+- **Search bar**: filter by name. e.g. typing "españ" matches "Spanish (Spain)", "Spanish (Mexico)", etc.
+- **Row content**: language+region name + locale identifier in caption (e.g. "pt-BR"). Checkmark on currently-selected locale.
+- **Localized vs. English names**: pin name rendering to **English** for v1 (`Locale(identifier: "en").localizedString(forIdentifier: id)`). Reason: the rest of the UI is English-only per Non-Goals; a Vietnamese-device user seeing "Tiếng Anh" next to English UI elsewhere would feel inconsistent. Switch to device-localized names when full UI localization lands.
 - **Tap row**: invokes `onPick(locale.identifier)` and dismisses. Caller persists.
 - **Cancel button**: dismisses without changes.
 
@@ -109,7 +110,7 @@ File: `SonicMerge/Features/SmartCut/Views/Studio/LocalePicker.swift`.
 
 Compact tappable pill above the Smart Cut Summary card:
 
-- Renders `🌐 Language: <localized name>` with a chevron-down. Localized name comes from `Locale(identifier:).localizedString(forIdentifier:) ?? "English"`.
+- Renders `🌐 Language: <name>` with a chevron-down. Name comes from `Locale(identifier: "en").localizedString(forIdentifier: localeIdentifier) ?? "English"` — pinned to English to match the rest of the UI (see Non-Goals; revisit when UI localization lands).
 - Visual: light surface fill, `accentAction`-tinted text, rounded capsule (matches existing studio design tokens).
 - Tap → opens `LocalePicker` sheet.
 - Disabled state when the studio is in `.analyzing` (locale change mid-analyze is ignored to avoid races).
@@ -138,27 +139,66 @@ func defaultOffWords(for locale: Locale) -> [String] {
 
 `customWords` and `removedDefaults` stay global (no locale tag). Rationale documented in Non-Goals.
 
-### 5. `TranscriptionService.transcribe(input: URL, locale: Locale) -> AsyncThrowingStream` (modified)
+### 5. `TranscriptionService` — locale stays at init (no per-call refactor)
 
-Today: `locale` is fixed at init. After: `locale` is per-call.
+`TranscriptionService.init(locale: Locale = Locale(identifier: "en-US"))` already takes a locale. We keep that signature and **construct one `TranscriptionService` per analyze** with the session's locale, instead of refactoring `transcribe(input:)` to take a per-call locale. Rationale:
 
-- The `init(locale:)` parameter stays as a default fallback (used by existing tests that don't care about locale).
-- Add a new method or refactor `transcribe(input:)` to take an optional `locale: Locale?` parameter; resolve to `init(locale:)` when nil.
-- Inside `transcribe`, validate the requested locale is in `SFSpeechRecognizer.supportedLocales()`; if not, fall back to `"en-US"` and log via `print` in DEBUG.
-- The existing isAvailable retry, cloud-recognition default, and chunked transcription pipeline are unchanged.
+- Avoids two ways to do the same thing (init default + per-call override).
+- Keeps the `TranscriptionServicing` protocol's `transcribe(input:)` signature unchanged, which preserves the `StubTranscriptionService` used by existing tests (`SmartCutServicePauseThresholdTests`).
+- Matches the existing actor lifecycle — services are cheap to construct.
+
+The single change inside `TranscriptionService.transcribe(input:)`:
+
+- Validate `locale` is in `SFSpeechRecognizer.supportedLocales()` at the top of `transcribe`. If not, fall back to `"en-US"` and `print` a DEBUG warning. (Equivalent guard could live in `SmartCutService.analyze(...)` before constructing the service — either is fine; spec lands the guard inside `TranscriptionService` because that's where the locale is consumed.)
+
+The cloud-recognition default, isAvailable retry loop, and chunked pipeline are unchanged.
 
 ### 6. `SmartCutService.analyze(input:, pauseThreshold:, locale:)` (modified)
 
-Add `locale: Locale` parameter. Threads through to `TranscriptionService.transcribe(input:locale:)`. Threads through to `FillerDetector.detect(words: library.allWords(for: locale), ...)`.
+Add `locale: Locale` parameter. Constructs a per-analyze `TranscriptionService(locale:)`, passes the result of `library.allWords(for: locale)` into `FillerDetector.detect(words:)`. The shared `transcriptionService` field on `SmartCutService` becomes a factory closure (or is dropped in favor of per-call construction) — small refactor, no behavior change for callers.
 
 ### 7. `SmartCutViewModel` (modified)
 
-- New computed property `currentLocale: Locale` resolves `session.localeIdentifier ?? deviceFallback()`.
+The VM stays session-agnostic between init and explicit calls — it does **not** retain a `SmartCutSession` reference (matches today's `persist(to:)` pattern, which takes the session as a parameter). This avoids any SwiftData-managed-object lifetime concern.
+
+- New stored property `currentLocale: Locale` (defaults to `deviceFallback()` at init; overridden by the session-driven init when the session has a non-nil `localeIdentifier`).
 - `analyze()` reads `currentLocale` and passes to `service.analyze(input:pauseThreshold:locale:)`.
-- New method `setLocale(_ identifier: String)`:
-  - Persists `session.localeIdentifier = identifier` (modelContext.save handled by SwiftData on next idle).
+- New method `setLocale(_ identifier: String, on session: SmartCutSession)`:
+  - Updates `session.localeIdentifier = identifier` (caller saves via `modelContext.save()` on next idle, same as `persist(to:)`).
+  - Updates `currentLocale` on the VM.
   - Calls `invalidate()` so the cached transcript / edit list is dropped — the next analyze runs fresh in the new locale.
-- Stores the `SmartCutSession` reference on the VM (today's session-driven init reads it but doesn't keep it). This avoids re-fetching from SwiftData on every locale change.
+- The session-driven convenience initializer at line 77 reads `session.localeIdentifier` (when non-nil) into `currentLocale` once at init time. After that, `setLocale(_:on:)` is the only mutation path.
+
+### 8. `BackgroundTranscriptionTask` (modified)
+
+The background analyze path resumes by source hash, not by `SmartCutSession`. To honor the session's locale on resume, the task does a SwiftData lookup:
+
+- `BackgroundTranscriptionTask.run(...)` looks up `SmartCutSession.where { $0.sourceHashHex == hash }.first` via the shared `ModelContainer`.
+- If found and `session.localeIdentifier` is non-nil, constructs `TranscriptionService(locale: Locale(identifier: localeIdentifier))`. Otherwise falls back to `Locale(identifier: "en-US")` (matches the foreground-no-locale case).
+
+The existing source-hash → URL lookup via `SmartCutSourceLocator` stays unchanged; only the locale resolution is added.
+
+File: `SonicMerge/Features/SmartCut/Services/BackgroundTranscriptionTask.swift`.
+
+### 9. `LanguagePill` placement across studio states
+
+The pill must be **visible in `.idle` too**, since that's the state for a fresh non-English import — the user has to be able to pick the language *before* analyze runs, not just after. Specifically:
+
+- `.idle` (`idleScaffold` in `SmartCutStudioContainer.swift`): pill appears between the existing description text and `IdleSettingsCards`.
+- `.analyzing`: pill is rendered but **disabled** (locale change mid-analyze is a no-op).
+- `.results` / `.applied` / `.stale`: pill appears above `StudioSummaryCard`.
+- `.error`: pill appears above the existing error scaffold.
+
+This means the pill is part of the studio container's outer layout, not nested inside any per-state scaffold.
+
+### 10. `EditFillerListStudioSheet` per-locale defaults
+
+The sheet renders `library.allWords` to show the user their current filler list. After this spec lands, `library.allWords` becomes locale-aware (`allWords(for: Locale)`). The sheet must:
+
+- Read `vm.currentLocale` and call `library.allWords(for: currentLocale)` instead of the global accessor.
+- Display a footer line: *"Showing default words for <localized language name>. Switch language in the studio to see a different list."*
+
+Files-to-change row: ~5 LOC.
 
 ## Data flow
 
@@ -224,23 +264,27 @@ Existing English sessions: smoke-test that re-running an existing session post-m
 
 | File | Change | Approx. LOC |
 |---|---|---|
-| `SonicMerge/Features/SmartCut/Models/SmartCutSession.swift` | Add `var localeIdentifier: String?` field | +3 |
+| `SonicMerge/Models/SmartCutSession.swift` | Add `var localeIdentifier: String?` field | +3 |
 | `SonicMerge/Features/SmartCut/Models/FillerLibrary.swift` | Per-locale default-off dictionary; `defaultOffWords(for:)` accessor; `allWords(for:)` accessor; preserve global `customWords` and `removedDefaults` | ~30 |
-| `SonicMerge/Features/SmartCut/Services/TranscriptionService.swift` | Per-call locale parameter; `supportedLocales()` validation + fallback | ~10 |
-| `SonicMerge/Features/SmartCut/Services/SmartCutService.swift` | Add `locale` parameter to `analyze`; thread to TranscriptionService and to FillerDetector's word list | ~5 |
+| `SonicMerge/Features/SmartCut/Services/TranscriptionService.swift` | Inside `transcribe(input:)`, validate locale against `SFSpeechRecognizer.supportedLocales()`; fall back to `en-US` on miss. No new public parameter; init-level locale stays the only entry point. | ~5 |
+| `SonicMerge/Features/SmartCut/Services/SmartCutService.swift` | Add `locale` parameter to `analyze`; per-analyze construct a `TranscriptionService(locale:)`; thread `library.allWords(for: locale)` into FillerDetector | ~10 |
 | `SonicMerge/Features/SmartCut/Services/FillerDetector.swift` | No code change — already takes `words: [String]` parameter | 0 |
-| `SonicMerge/Features/SmartCut/SmartCutViewModel.swift` | Store `SmartCutSession`; `currentLocale` computed; `setLocale(_:)` method; pass locale to service | +25 |
-| `SonicMerge/Features/SmartCut/Views/Studio/LanguagePill.swift` | NEW component | 30 |
-| `SonicMerge/Features/SmartCut/Views/Studio/LocalePicker.swift` | NEW sheet | 80 |
-| `SonicMerge/Features/SmartCut/Views/Studio/SmartCutStudioContainer.swift` | Mount `LanguagePill` above the Summary card; bind to `vm.currentLocale` and `vm.setLocale(_:)` | +5 |
+| `SonicMerge/Features/SmartCut/Services/BackgroundTranscriptionTask.swift` | Look up `SmartCutSession` by hash; resolve `localeIdentifier`; construct `TranscriptionService(locale:)` (instead of default-locale init) | ~10 |
+| `SonicMerge/Features/SmartCut/SmartCutViewModel.swift` | `currentLocale` stored property; `setLocale(_:on:)` method (takes session as param, no SwiftData retain); session-driven init reads `session.localeIdentifier` | +20 |
+| `SonicMerge/Features/SmartCut/Views/Studio/LanguagePill.swift` | NEW component (English-pinned name) | 30 |
+| `SonicMerge/Features/SmartCut/Views/Studio/LocalePicker.swift` | NEW sheet (English-pinned names, suggested-first sort, search) | 80 |
+| `SonicMerge/Features/SmartCut/Views/Studio/SmartCutStudioContainer.swift` | Mount `LanguagePill` at outer-layout level so it appears in `.idle`, `.results`, `.applied`, `.stale`, `.error`. Disabled in `.analyzing`. | +10 |
+| `SonicMerge/Features/SmartCut/Views/Studio/EditFillerListStudioSheet.swift` | Read `library.allWords(for: vm.currentLocale)` instead of global; add footer line indicating which language's defaults are showing | ~5 |
 | `SonicMergeTests/Features/SmartCut/FillerLibraryLocaleTests.swift` | NEW | 60 |
 | `SonicMergeTests/Features/SmartCut/TranscriptionServiceLocaleTests.swift` | NEW | 40 |
 
-**Total estimated:** ~280 LOC new, ~75 LOC modified, 2 new test files.
+**Total estimated:** ~290 LOC new, ~95 LOC modified, 2 new test files.
 
 ## Risks
 
 1. **Curated filler lists may not match actual recognizer output.** SFSpeechRecognizer transcribes Spanish "este" but might split it as "es te" depending on speaker / acoustic context. Plan mitigates: implementer empirically verifies each curated word against a real clip during the manual QA step. Words that never match get removed from the default list and documented inline.
+
+   **Highest-collision words to flag specifically during QA**: Spanish `como` (also a common interrogative "how/like" used non-fillerly) and `tipo` (also "type/kind"). These are likely to produce false positives even when correctly transcribed. If false-positive rate is unacceptable, drop them from the default list and let users add them as customs.
 
 2. **SwiftData lightweight migration.** Adding an optional field on `@Model` is supported without a versioned schema. Tested by smoke-running the app on a populated session list; no data loss expected. If this somehow fails on a real device's existing data, the recovery path is the same as for any unrelated SwiftData breakage (delete + reinstall).
 
