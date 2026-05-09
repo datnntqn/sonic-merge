@@ -608,9 +608,11 @@ private struct ResultStep: View {
 
     enum Track { case original, cleaned }
 
-    @State private var selectedTrack: Track = .cleaned
+    @State private var playingTrack: Track?  // nil = nothing playing (fresh state)
     @State private var originalPlayer: AVAudioPlayer?
     @State private var cleanedPlayer: AVAudioPlayer?
+    @State private var originalDuration: TimeInterval = 0
+    @State private var cleanedDuration: TimeInterval = 0
 
     var body: some View {
         VStack(spacing: 0) {
@@ -621,7 +623,7 @@ private struct ResultStep: View {
                     .font(.system(.title2, design: .rounded, weight: .bold))
                     .foregroundStyle(Color(uiColor: semantic.textPrimary))
                 if hasResult {
-                    Text("Tap Cleaned or Original to compare.")
+                    Text("Hear the difference — tap Original, then After Smart Cut.")
                         .font(.subheadline)
                         .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 } else {
@@ -639,8 +641,10 @@ private struct ResultStep: View {
                     .padding(.bottom, 12)
 
                 ABToggle(semantic: semantic,
-                         selected: $selectedTrack,
-                         onChange: handleTrackChange)
+                         playing: playingTrack,
+                         originalDuration: originalDuration,
+                         cleanedDuration: cleanedDuration,
+                         onTap: handleTrackTap)
                     .padding(.bottom, 12)
 
                 TipKitHint(
@@ -692,14 +696,30 @@ private struct ResultStep: View {
         if let url = originalURL {
             originalPlayer = try? AVAudioPlayer(contentsOf: url)
             originalPlayer?.prepareToPlay()
+            originalDuration = originalPlayer?.duration ?? 0
         }
         if let url = cleanedURL {
             cleanedPlayer = try? AVAudioPlayer(contentsOf: url)
             cleanedPlayer?.prepareToPlay()
+            cleanedDuration = cleanedPlayer?.duration ?? 0
         }
     }
 
-    private func handleTrackChange(_ track: Track) {
+    /// Toggle behavior:
+    ///   - Tap a non-playing track → start it (and stop the other if it was playing).
+    ///   - Tap the currently-playing track → pause it.
+    /// This is more discoverable than the segmented "always one selected" pattern,
+    /// which made users think Cleaned was the only active CTA.
+    private func handleTrackTap(_ track: Track) {
+        if playingTrack == track {
+            switch track {
+            case .original: originalPlayer?.pause()
+            case .cleaned:  cleanedPlayer?.pause()
+            }
+            playingTrack = nil
+            return
+        }
+        // Switch tracks.
         switch track {
         case .original:
             cleanedPlayer?.pause()
@@ -710,11 +730,13 @@ private struct ResultStep: View {
             cleanedPlayer?.currentTime = 0
             cleanedPlayer?.play()
         }
+        playingTrack = track
     }
 
     private func stopAllPlayback() {
         originalPlayer?.stop()
         cleanedPlayer?.stop()
+        playingTrack = nil
     }
 }
 
@@ -771,50 +793,90 @@ private struct ResultCard: View {
 
 // MARK: - A/B toggle
 
+/// Two equal-weight play/pause cards stacked vertically, one per audio
+/// track. The previous segmented-control treatment (one filled, one
+/// outlined) read as "Cleaned is the primary CTA, Original is a fallback"
+/// — confusing for users who didn't realize both were playable. This
+/// layout makes the difference visible at a glance: the duration on each
+/// card shows that After-Smart-Cut is shorter, which is the whole point.
 private struct ABToggle: View {
     let semantic: SonicMergeSemantic
-    @Binding var selected: ResultStep.Track
-    let onChange: (ResultStep.Track) -> Void
+    let playing: ResultStep.Track?
+    let originalDuration: TimeInterval
+    let cleanedDuration: TimeInterval
+    let onTap: (ResultStep.Track) -> Void
 
     var body: some View {
-        HStack(spacing: 8) {
-            segment(track: .original, label: "Original")
-            segment(track: .cleaned, label: "Cleaned")
+        VStack(spacing: 10) {
+            row(track: .original,
+                label: "Original",
+                duration: originalDuration,
+                accent: false)
+            row(track: .cleaned,
+                label: "After Smart Cut",
+                duration: cleanedDuration,
+                accent: true)
         }
     }
 
-    @ViewBuilder
-    private func segment(track: ResultStep.Track, label: String) -> some View {
-        let isSelected = selected == track
-        Button {
-            selected = track
-            onChange(track)
+    private func row(track: ResultStep.Track,
+                     label: String,
+                     duration: TimeInterval,
+                     accent: Bool) -> some View {
+        let isPlaying = playing == track
+        return Button {
+            onTap(track)
         } label: {
-            HStack(spacing: 6) {
-                // Play icon — solid on the selected (currently playing) segment,
-                // outline on the unselected one. Communicates that both buttons
-                // trigger audio playback when tapped.
-                Image(systemName: isSelected ? "play.fill" : "play")
-                    .font(.system(size: 13, weight: .bold))
-                Text(label)
-                    .font(.system(.body, design: .rounded, weight: .semibold))
+            HStack(spacing: 12) {
+                Image(systemName: isPlaying ? "pause.circle.fill" : "play.circle.fill")
+                    .font(.system(size: 30, weight: .regular))
+                    .foregroundStyle(Color(uiColor: semantic.accentAction))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.system(.body, design: .rounded, weight: .semibold))
+                        .foregroundStyle(Color(uiColor: semantic.textPrimary))
+                    Text(formatDuration(duration))
+                        .font(.system(.caption, design: .rounded).monospacedDigit())
+                        .foregroundStyle(Color(uiColor: semantic.textSecondary))
+                }
+                Spacer()
+                if accent {
+                    // Subtle "After" tag so it's obvious which is the result.
+                    Text("CLEANED")
+                        .font(.system(.caption2, design: .rounded, weight: .bold))
+                        .tracking(0.5)
+                        .foregroundStyle(Color(uiColor: semantic.accentAction))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule().fill(Color(uiColor: semantic.accentAction).opacity(0.12))
+                        )
+                }
             }
-            .foregroundStyle(isSelected ? .white : Color(uiColor: semantic.textPrimary))
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 14)
             .padding(.vertical, 12)
+            .frame(maxWidth: .infinity)
             .background(
-                Capsule().fill(isSelected
-                               ? Color(uiColor: semantic.accentAction)
-                               : Color(uiColor: semantic.surfaceCard))
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .fill(Color(uiColor: semantic.surfaceCard))
             )
             .overlay(
-                Capsule().strokeBorder(
-                    isSelected ? Color.clear : Color(uiColor: .systemGray5),
-                    lineWidth: 1
-                )
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
+                    .strokeBorder(
+                        isPlaying
+                            ? Color(uiColor: semantic.accentAction)
+                            : Color(uiColor: .systemGray5),
+                        lineWidth: isPlaying ? 2 : 1
+                    )
             )
         }
-        .accessibilityAddTraits(isSelected ? [.isSelected] : [])
-        .accessibilityLabel("\(label) audio\(isSelected ? ", playing" : ", tap to play")")
+        .buttonStyle(.plain)
+        .contentShape(Rectangle())
+        .accessibilityLabel("\(label), \(formatDuration(duration))\(isPlaying ? ", playing — tap to pause" : ", tap to play")")
+    }
+
+    private func formatDuration(_ seconds: TimeInterval) -> String {
+        let total = max(0, Int(seconds.rounded()))
+        return String(format: "%d:%02d", total / 60, total % 60)
     }
 }
