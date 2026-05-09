@@ -86,9 +86,10 @@ Full body, ~3,400 chars / 4,000 max. Section blocks below are the order they app
 ### Block H — BUILT FOR iPHONE, NOT PORTED TO IT
 
 > · iOS Share Extension — clean a voice memo from Voice Memos or Mail without leaving the app you're in
-> · Background processing with system push notifications when long files finish
 > · Files app and iCloud Drive support for import and export
 > · Light and dark mode, both first-class
+
+(Background processing with push notifications is a CleanCut Pro feature — see "Free Forever, or Go Pro" above.)
 
 ### Block I — Closing
 
@@ -96,9 +97,9 @@ Full body, ~3,400 chars / 4,000 max. Section blocks below are the order they app
 
 ### Block J — Footer disclosures (Apple-required for IAP / subscriptions)
 
-> Privacy Policy · Terms of Use · Support
->
 > Subscriptions auto-renew unless cancelled at least 24 hours before the end of the current period. Manage in Settings → Apple ID → Subscriptions.
+
+**Note:** the inline `Privacy Policy · Terms of Use · Support` line that appeared in the brainstorm preview is removed from Block J because Apple surfaces those URLs via dedicated App Store Connect fields (Privacy Policy URL, Support URL, EULA). Duplicating them inline in the description body is redundant and Apple Reviewers occasionally flag inline-text-without-link as ambiguous. Implementation plan owns the dedicated ASC field URLs.
 
 **Sync requirement:** Block F (Free vs Pro) and Block G (Pricing) must EXACTLY match the in-app paywall (`PaywallView`) and the StoreKit products in `Configuration/CleanCut.storekit`. If pricing changes, this spec, the paywall, and ASC must update together. Mismatch is a common App Review rejection ("misleading metadata").
 
@@ -113,7 +114,7 @@ Full body, ~3,400 chars / 4,000 max. Section blocks below are the order they app
 
 | Field | Value | Count |
 |---|---|---|
-| **What's New** (release notes) | (see below) | 213 / 4000 |
+| **What's New** (release notes) | (see below) | 185 / 4000 |
 
 ```
 Day one.
@@ -133,7 +134,7 @@ Welcome to CleanCut.
 
 | Field | Value | Count |
 |---|---|---|
-| **Keywords** (comma-separated, no spaces) | `ai,podcast,editor,denoise,noise,filler,silence,voice,memo,transcribe,recorder,offline,interview` | 96 / 100 |
+| **Keywords** (comma-separated, no spaces) | `ai,podcast,editor,denoise,noise,filler,silence,voice,memo,transcribe,recorder,offline,interview` | 95 / 100 |
 
 **Reasoning per term:**
 
