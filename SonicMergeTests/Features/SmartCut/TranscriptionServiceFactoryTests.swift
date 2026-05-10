@@ -27,9 +27,12 @@ struct TranscriptionServiceFactoryTests {
     }
 
     /// Type-erased check that survives whether SpeechAnalyzerTranscriptionService
-    /// exists yet. Returns false in Chunk 2 where the type isn't compiled.
-    /// Chunk 3 restores the iOS-26 check once the type exists.
+    /// exists yet. On iOS 26+ the analyzer type is checked; on iOS 17–25 the
+    /// type isn't compiled, so the helper short-circuits to false.
     private func isSpeechAnalyzerService(_ service: any TranscriptionServicing) -> Bool {
+        if #available(iOS 26, *) {
+            return service is SpeechAnalyzerTranscriptionService
+        }
         return false
     }
 }
