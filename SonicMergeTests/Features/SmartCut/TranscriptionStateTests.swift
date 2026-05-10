@@ -66,4 +66,54 @@ struct TranscriptionStateTests {
         let decoded = try JSONDecoder().decode(TranscriptionState.self, from: json)
         #expect(decoded.localeIdentifier == nil)
     }
+
+    @Test func testPreMigrationJSONDecodesWithDefaultEngine() throws {
+        // Hand-rolled pre-migration JSON: NO engine, NO completedRecognizedDuration,
+        // NO liveTranscriptText. Mirrors the shape of cached state files written by
+        // pre-SpeechAnalyzer builds.
+        let json = """
+        {
+          "sourceHash": "abc123",
+          "localeIdentifier": "en-US",
+          "sourceDuration": 1800,
+          "chunkDurationSeconds": 30,
+          "completedChunkCount": 4,
+          "recognizedSegments": [],
+          "isComplete": false
+        }
+        """.data(using: .utf8)!
+
+        let decoded = try JSONDecoder().decode(TranscriptionState.self, from: json)
+        #expect(decoded.engine == .sfSpeechRecognizer)
+        #expect(decoded.completedRecognizedDuration == 0)
+        #expect(decoded.liveTranscriptText == "")
+    }
+
+    @Test func testProgressFractionAnalyzerEngineUsesCompletedRecognizedDuration() {
+        let state = TranscriptionState(
+            sourceHash: "abc",
+            sourceDuration: 100,
+            chunkDurationSeconds: 0,             // analyzer engine ignores chunks
+            completedChunkCount: 0,
+            recognizedSegments: [],
+            isComplete: false,
+            engine: .speechAnalyzer,
+            completedRecognizedDuration: 30
+        )
+        #expect(abs(state.progressFraction - 0.3) < 0.0001)
+    }
+
+    @Test func testProgressFractionAnalyzerEngineCapsAtOne() {
+        let state = TranscriptionState(
+            sourceHash: "abc",
+            sourceDuration: 100,
+            chunkDurationSeconds: 0,
+            completedChunkCount: 0,
+            recognizedSegments: [],
+            isComplete: true,
+            engine: .speechAnalyzer,
+            completedRecognizedDuration: 150     // floating-point overshoot
+        )
+        #expect(state.progressFraction == 1.0)
+    }
 }
