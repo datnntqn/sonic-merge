@@ -49,6 +49,11 @@ final class SmartCutViewModel: PlaybackParticipant {
     /// auto-detect correctly. Kept in sync by `setLocale(_:on:)`.
     var currentLocaleIdentifier: String = "en-US"
 
+    /// SpeechAnalyzer-engine live transcript text. Populated from each
+    /// yielded `state.liveTranscriptText` during analyze(). Empty for the
+    /// SF chunked engine. The studio's `LiveTranscriptPane` reads this.
+    var liveTranscriptText: String = ""
+
     /// True while the post-Apply output file is playing. Drives the studio
     /// applied-state Play/Pause button.
     private(set) var isPlayingOutput: Bool = false
@@ -201,6 +206,7 @@ final class SmartCutViewModel: PlaybackParticipant {
         guard let inputURL else { return }
         analysisTask?.cancel()
         state = .analyzing(progress: 0)
+        liveTranscriptText = ""
         analysisTask = Task {
             // Speech-recognition authorization gate. SFSpeechRecognizer.isAvailable returns
             // true even before the user has granted permission; on first use, the recognition
@@ -229,6 +235,8 @@ final class SmartCutViewModel: PlaybackParticipant {
                     switch update {
                     case .progress(let p):
                         state = .analyzing(progress: p)
+                    case .liveTranscript(let text):
+                        liveTranscriptText = text
                     case .completed(let list, let segments, let duration):
                         editList = list
                         cachedSegments = segments

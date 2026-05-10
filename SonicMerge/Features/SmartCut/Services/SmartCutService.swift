@@ -5,6 +5,7 @@ actor SmartCutService {
     /// Streamed updates from `analyze`.
     enum Update: Sendable {
         case progress(Double)        // 0...1
+        case liveTranscript(String)  // SpeechAnalyzer engine only; cumulative text
         case completed(EditList, segments: [TranscriptionState.RecognizedSegment], duration: TimeInterval)
     }
 
@@ -27,6 +28,9 @@ actor SmartCutService {
                     let transcriptionService = transcriptionServiceFactory(localeIdentifier)
                     var lastState: TranscriptionState?
                     for try await state in await transcriptionService.transcribe(input: input) {
+                        if !state.liveTranscriptText.isEmpty {
+                            continuation.yield(.liveTranscript(state.liveTranscriptText))
+                        }
                         continuation.yield(.progress(state.progressFraction))
                         lastState = state
                     }
