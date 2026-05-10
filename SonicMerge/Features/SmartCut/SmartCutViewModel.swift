@@ -42,6 +42,13 @@ final class SmartCutViewModel: PlaybackParticipant {
         Locale(identifier: Locale.preferredLanguages.first ?? "en-US")
     )
 
+    /// Raw picked locale identifier (BCP-47 string OR the literal sentinel
+    /// "auto" on iOS 26). Distinct from `currentLocale` because
+    /// `resolveSupportedLocale` collapses "auto" → en-US — fine for SF runtime
+    /// usage, but the SpeechAnalyzer factory needs the raw value to route
+    /// auto-detect correctly. Kept in sync by `setLocale(_:on:)`.
+    var currentLocaleIdentifier: String = "en-US"
+
     /// True while the post-Apply output file is playing. Drives the studio
     /// applied-state Play/Pause button.
     private(set) var isPlayingOutput: Bool = false
@@ -123,6 +130,7 @@ final class SmartCutViewModel: PlaybackParticipant {
 
         if let stored = session.localeIdentifier, !stored.isEmpty {
             currentLocale = TranscriptionService.resolveSupportedLocale(Locale(identifier: stored))
+            currentLocaleIdentifier = stored
         }
 
         if let json = session.editListJSON {
@@ -183,6 +191,7 @@ final class SmartCutViewModel: PlaybackParticipant {
     func setLocale(_ identifier: String, on session: SmartCutSession) {
         session.localeIdentifier = identifier
         currentLocale = TranscriptionService.resolveSupportedLocale(Locale(identifier: identifier))
+        currentLocaleIdentifier = identifier
         invalidate()
     }
 
@@ -215,7 +224,7 @@ final class SmartCutViewModel: PlaybackParticipant {
             do {
                 for try await update in await service.analyze(input: inputURL,
                                                               pauseThreshold: pauseThreshold,
-                                                              locale: currentLocale) {
+                                                              localeIdentifier: currentLocaleIdentifier) {
                     if Task.isCancelled { return }
                     switch update {
                     case .progress(let p):
