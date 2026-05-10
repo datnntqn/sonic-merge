@@ -8,6 +8,19 @@ enum BackgroundTranscriptionTask {
 
     static let identifier = "com.dtech.cleancut.smartcut.transcribe"
 
+    /// Strips a known engine-namespace suffix from a TranscriptionState.sourceHash
+    /// so it can be passed to SmartCutSourceLocator.lookupURL (which is keyed by
+    /// raw SHA-256 only). Known suffixes: "#cloud", "#local" (SF chunked engine),
+    /// "#analyzer" (SpeechAnalyzer engine). Unknown suffixes are left untouched.
+    static func rawHash(from sourceHash: String) -> String {
+        for suffix in ["#cloud", "#local", "#analyzer"] {
+            if sourceHash.hasSuffix(suffix) {
+                return String(sourceHash.dropLast(suffix.count))
+            }
+        }
+        return sourceHash
+    }
+
     static func makeRequest() -> BGProcessingTaskRequest {
         let req = BGProcessingTaskRequest(identifier: identifier)
         req.requiresExternalPower = false
@@ -69,16 +82,16 @@ enum BackgroundTranscriptionTask {
                     return
                 }
 
-                guard let inputURL = SmartCutSourceLocator.lookupURL(forHash: state.sourceHash) else {
+                guard let inputURL = SmartCutSourceLocator.lookupURL(
+                    forHash: rawHash(from: state.sourceHash)
+                ) else {
                     try? schedule()
                     completeIfNotExpired(success: true)
                     return
                 }
 
-                let resumedLocale: Locale = state.localeIdentifier
-                    .flatMap { Locale(identifier: $0) }
-                    ?? Locale(identifier: "en-US")
-                let service = TranscriptionService(locale: resumedLocale)
+                let resumedIdentifier = state.localeIdentifier ?? "en-US"
+                let service = TranscriptionServiceFactory.make(localeIdentifier: resumedIdentifier)
                 for try await update in await service.transcribe(input: inputURL) {
                     state = update
                     if cancelBox.isCancelled { return }
