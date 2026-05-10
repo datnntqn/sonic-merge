@@ -408,3 +408,35 @@ Per the Karpathy "surface assumptions" rule, two assumptions to confirm in the v
 ## Open questions
 
 None blocking. The two assumptions above are verifiable during implementation, not during review.
+
+## Implementation amendment (2026-05-10)
+
+During Chunk 3 SDK reconciliation, two material divergences from the iOS 26
+Speech.framework as shipped (Xcode 26.3 / iOS 26.2 SDK) required scope
+reduction:
+
+1. **Auto-detect dropped.** `SpeechTranscriber.init` requires a non-optional
+   `Locale` and exposes no nil-locale or multi-locale auto-detect path. The
+   spec's bilingual auto-detect promise (Components 6, 8, 11; LocalePicker
+   "Auto-detect" row; FillerLibrary auto-locale union) is not implementable
+   on this SDK and was dropped per user decision. iOS 26 still gets the
+   long-form streaming engine, live transcript pane, and on-device
+   disfluence preservation; users explicitly pick a locale via the existing
+   per-locale picker rows.
+
+2. **Result shape differs.** `SpeechTranscriber.Result` has no `tokens` /
+   `isFinal` / per-token confidence — instead it exposes `range: CMTimeRange`
+   and `text: AttributedString` (with optional `audioTimeRange` /
+   `transcriptionConfidence` attributes via the SpeechAttributes scope).
+   The implementation uses `Preset.progressiveTranscription` (finalized-only
+   stream, no volatile results) and treats each result's `range` as the
+   segment boundary. Per-segment confidence is set to 1.0 since
+   `FillerDetector` propagates but doesn't gate on it.
+
+3. **Audio input via `init(inputAudioFile:modules:finishAfterFile:)`** — the
+   SDK accepts an `AVAudioFile` directly, bypassing the manual
+   `AVAssetReader` + feeder-task loop in the original plan. Resume cursor
+   is implemented via `audioFile.framePosition`.
+
+The protocol contract, factory routing, BG resume routing, and namespaced
+cache key strategy (`<rawHash>#analyzer`) all remain as written.
