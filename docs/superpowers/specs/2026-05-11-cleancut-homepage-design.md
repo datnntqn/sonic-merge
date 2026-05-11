@@ -227,7 +227,7 @@ Text color: white at 0.92 opacity for body, white at 1.0 for emphasized phrases.
 
 ### Section 5 — Pricing
 
-Three-card grid. Free / Pro Yearly (highlighted, default) / Pro Monthly / Lifetime → actually four cards (Free is the leftmost, then three Pro tiers); grid is `auto-fit` so it wraps cleanly on narrow widths.
+Four-card grid: Free / Pro Monthly / Pro Yearly (highlighted) / Lifetime. Grid is `repeat(auto-fit, minmax(200px, 1fr))` so it wraps cleanly on narrow widths (4 → 2 → 1 columns).
 
 Card structure:
 
@@ -247,7 +247,7 @@ Card structure:
 └──────────────────────────┘
 ```
 
-The **Yearly card** is highlighted with a `--action` 2px border and a "MOST POPULAR" ribbon at top-right. Yearly card displays:
+The **Yearly card** is highlighted with a `--action` 2px border and a "BEST VALUE" ribbon at top-right (rationale in §11 — no sales data at launch, but the 58% savings vs monthly is mathematically true). Yearly card displays:
 
 ```
 PRO YEARLY
@@ -262,7 +262,36 @@ per year (Save 58%)
 • Background processing
 ```
 
-Monthly + Lifetime cards mirror Yearly's content with appropriate price/period swaps. All Pro CTAs are filled burnt-orange buttons.
+**Monthly card:**
+```
+PRO MONTHLY
+$3.99
+per month
+[ 7-day trial, then $3.99/mo ]
+
+• Everything in Free, unlimited
+• Export to M4A, MP3, WAV
+• No watermark
+• Custom filler libraries
+• Background processing
+```
+
+**Lifetime card:**
+```
+LIFETIME
+$39.99
+once · no subscription
+[ Buy Lifetime ]
+
+• Everything in Pro, forever
+• One-time purchase
+• Never billed again
+• Same features as Pro Yearly
+```
+
+(Canonical bullet copy: `docs/marketing/cleancut-v1-marketing-copy.md` §5.)
+
+All Pro CTAs are filled burnt-orange buttons.
 
 **Pre-launch note:** all 4 CTAs point at `href="#"` until App Store URL exists; the hero's CTA-disclaimer covers all of them ("App Store link goes live at launch").
 
@@ -395,7 +424,7 @@ When a real Smart Cut results screenshot is available:
 </div>
 ```
 
-The `.phone-screen` container handles `border-radius` clipping; the `<img>` fills the screen. Resolution: 540×1170 (2.25× the rendered 240×520 to handle Retina).
+The `.phone-screen` container handles `border-radius` clipping; the `<img>` fills the screen. The phone-frame outer dimensions are 260×530 (CSS px), so the inner screen renders at ~240×510 (after the 10px bezel padding). Ship the screenshot at **480×1020 (2× retina)** or **720×1530 (3× retina)** to handle modern iPhones. 3× is preferred for cleancut.app's hero where it's the centerpiece.
 
 ---
 
@@ -476,16 +505,23 @@ The implementation plan (next step, via `superpowers:writing-plans`) needs to de
    - FAQ `<details>` opens/closes correctly
    - Phone-frame renders correctly at 260px and at the mobile 220px
    - Hero stacks vertically below 720px
-6. **Commit + push to GitHub Pages:** the cleancut-legal repo is a separate Git working tree from the main app repo. Commit messages should describe the homepage rewrite + the legal-page cascade.
+   - White-on-burnt-orange CTA passes WCAG AA contrast (use the WebAIM contrast checker; 4.5:1 for body text, 3:1 for large/bold)
+6. **Lighthouse pass:** run Lighthouse against the local file (or after pushing, against the GitHub Pages URL). Target 100/100/100/100 across Performance / Accessibility / Best Practices / SEO. Any single sub-100 metric is a real bug given how little there is on the page.
+7. **Phone-frame SVG geometry:** the waveform bar positions and the magenta/orange overlay placements are already drafted in `.superpowers/brainstorm/8973-1778513837/hero-with-logo.html` — lift the exact SVG markup from there into the new `index.html` rather than redrawing. Avoids visual drift from the approved mockup.
+8. **Commit + push to GitHub Pages:** the cleancut-legal repo is a separate Git working tree from the main app repo. Commit messages should describe the homepage rewrite + the legal-page cascade.
 
 ---
 
 ## 11. Open questions
 
-None blocking. Two minor items to surface to the plan author:
+Two items the plan author needs to decide; neither blocks writing the plan.
 
-- **OQ-1: Mobile breakpoint exact value.** Spec says 720px (the current `style.css` breakpoint). The hero column-stack behavior should be retested at 720px on a real device to confirm the phone-frame mockup doesn't crowd the column. If it does, raise breakpoint to 760px.
-- **OQ-2: "MOST POPULAR" ribbon vs. "BEST VALUE" copy.** Spec uses "MOST POPULAR" on the Yearly pricing card. Pre-launch, "most popular" is technically inaccurate (no purchases yet). Implementation plan can choose "BEST VALUE" instead — same UI slot, different copy. Recommend "BEST VALUE" for the pre-launch period; switch to "MOST POPULAR" 30 days post-launch once the data backs it.
+- **OQ-1: GitHub repo name typo "clearcut-legal" vs the brand "cleancut-legal".** The on-disk directory is `cleancut-legal/`, but the actual GitHub remote is `git@github.com:datnntqn/clearcut-legal.git` (note: **clear**cut, not **clean**cut — a typo at the repo-name level). The public GitHub Pages URL is therefore `https://datnntqn.github.io/clearcut-legal/`, which mismatches the user-facing brand. Two paths: **(a)** ship as-is, accept the URL mismatch (almost no user will land here directly — they'll come via App Store deep-link or `cleancut.app` redirect if you buy that domain); **(b)** rename the GitHub repo `clearcut-legal → cleancut-legal` *before* the App Store listing's Privacy Policy URL gets locked in. Recommend (b) since the App Store's Privacy Policy URL is reviewed by Apple and updating it post-launch is friction. Plan author should pick before the App Store submission step.
+- **OQ-2: Mobile breakpoint exact value.** Spec says 720px (the current `style.css` breakpoint). The hero column-stack behavior should be retested at 720px on a real device to confirm the phone-frame mockup doesn't crowd the column. If it does, raise breakpoint to 760px.
+
+Pre-launch pricing-card ribbon copy is **resolved**: use "BEST VALUE" on the Yearly card (not "MOST POPULAR"). Reason: "most popular" requires sales data we don't have at launch; "best value" is mathematically true given the 58% savings vs monthly.
+
+OG image format trade-off is **noted**: a 1024×1024 square `og:image` is what's available (we ship the app icon, not a 1200×630 marketing banner). Twitter `summary` cards display it cleanly; LinkedIn / Facebook letterbox / center-crop it. Acceptable trade-off pre-launch — the priority is consistency with the App Store icon, not OG-banner polish. Plan a 1200×630 banner asset post-launch.
 
 ---
 
@@ -494,6 +530,6 @@ None blocking. Two minor items to surface to the plan author:
 - Marketing copy (anchor for body text): `docs/marketing/cleancut-v1-marketing-copy.md`
 - Brand color tokens (source of truth): `SonicMerge/DesignSystem/SonicMergeTheme.swift` + `SonicMergeTheme+Appearance.swift`
 - App icon source: `SonicMerge/Assets.xcassets/AppIcon.appiconset/AppIcon-1024.png`
-- Legal site repo: `~/Desktop/DatNNT/App/cleancut-legal/` (remote: `github.com:datnntqn/clearcut-legal.git`)
-- App Store listing spec (sibling content): `docs/superpowers/specs/2026-05-09-app-store-listing-design.md`
-- Brainstorm mockups (visual companion preview, gitignored): `.superpowers/brainstorm/8973-1778513837/`
+- Legal site repo: `~/Desktop/DatNNT/App/cleancut-legal/` (remote: `github.com:datnntqn/clearcut-legal.git` — see OQ-1 about the `clearcut` vs `cleancut` typo)
+- App Store listing spec (sibling content): `docs/superpowers/specs/2026-05-09-app-store-listing-design.md` — **note:** that spec's OQ-1 still references $4.99/$79.99 pricing; this homepage spec follows the canonical $3.99/$19.99/$39.99 prices from `Configuration/CleanCut.storekit` + `docs/marketing/cleancut-v1-marketing-copy.md`. The App Store listing spec will converge to these prices when it's updated.
+- Brainstorm mockups (visual companion preview, gitignored): `.superpowers/brainstorm/8973-1778513837/` — `hero-with-logo.html` is the canonical mockup that the implementation should match pixel-for-pixel.
