@@ -188,7 +188,7 @@ struct PaywallView: View {
         )
         .overlay(alignment: .topTrailing) {
             if product.tier == .yearly {
-                Text("SAVE 83%")
+                Text("SAVE 58%")
                     .font(.caption2.weight(.heavy))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
@@ -343,12 +343,12 @@ struct PaywallView: View {
             if selected?.isEligibleForIntroOffer == true {
                 return "Start 7-day free trial"
             }
-            return "Subscribe \u{2014} \(selected?.displayPrice ?? "$19.99")/mo"
+            return "Subscribe \u{2014} \(selected?.displayPrice ?? "$3.99")/mo"
         case .yearly:
             if selected?.isEligibleForIntroOffer == true {
                 return "Start 7-day free trial"
             }
-            return "Subscribe \u{2014} \(selected?.displayPrice ?? "$39.99")/yr"
+            return "Subscribe \u{2014} \(selected?.displayPrice ?? "$19.99")/yr"
         case .lifetime:
             return "Buy Lifetime \u{2014} \(selected?.displayPrice ?? "$39.99")"
         }

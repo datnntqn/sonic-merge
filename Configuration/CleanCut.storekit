@@ -33,7 +33,7 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "19.99",
+          "displayPrice" : "3.99",
           "familyShareable" : true,
           "groupNumber" : 1,
           "internalID" : "com.cleancut.pro.monthly.v2",
@@ -58,7 +58,7 @@
         {
           "adHocOffers" : [],
           "codeOffers" : [],
-          "displayPrice" : "39.99",
+          "displayPrice" : "19.99",
           "familyShareable" : true,
           "groupNumber" : 2,
           "internalID" : "com.cleancut.pro.yearly.v2",
@@ -69,7 +69,7 @@
           },
           "localizations" : [
             {
-              "description" : "Unlimited Smart Cut and Denoise. Save 83% vs monthly. 7-day free trial.",
+              "description" : "Unlimited Smart Cut and Denoise. Save 58% vs monthly. 7-day free trial.",
               "displayName" : "CleanCut Pro · Yearly",
               "locale" : "en_US"
             }
