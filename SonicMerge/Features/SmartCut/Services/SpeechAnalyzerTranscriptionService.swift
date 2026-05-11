@@ -18,17 +18,11 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
 
     enum AnalyzerError: LocalizedError {
         case audioFileFailed(Error)
-        case modelDownloadRequired
-        case localeNotSupported(String)
 
         var errorDescription: String? {
             switch self {
             case .audioFileFailed:
                 return "Couldn't read this audio file. Try re-importing."
-            case .modelDownloadRequired:
-                return "Language model is downloading. Please try again in a moment."
-            case .localeNotSupported(let identifier):
-                return "Speech recognition isn't available for \(identifier) on this device."
             }
         }
     }
@@ -60,6 +54,15 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
 
     private func runTranscription(input: URL,
                                   continuation: AsyncThrowingStream<TranscriptionState, Error>.Continuation) async throws {
+        // Probe whether SpeechAnalyzer can actually run on this device for this
+        // locale. Simulators and freshly-set-up devices often lack the model;
+        // when that's the case we fall back to chunked SFSpeechRecognizer so the
+        // user can still use Smart Cut while the analyzer model downloads.
+        guard let supportedLocale = await prepareAnalyzerModel(for: locale) else {
+            try await delegateToSF(input: input, continuation: continuation)
+            return
+        }
+
         let rawHash = try await SourceHasher.sha256Hex(of: input)
         // Namespaced key (mirrors TranscriptionService's "#cloud" / "#local")
         // so SF and SpeechAnalyzer caches never collide for the same source.
@@ -76,12 +79,6 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
         let totalDuration = format.sampleRate > 0
             ? Double(audioFile.length) / format.sampleRate
             : 0
-
-        // Resolve the requested locale against what's actually supported. If
-        // not, surface a typed error so the UI can show a sensible message.
-        guard let supportedLocale = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
-            throw AnalyzerError.localeNotSupported(locale.identifier)
-        }
 
         var state: TranscriptionState
         if let existing = try? await stateStore.load(sourceHash) {
@@ -124,21 +121,6 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
             locale: supportedLocale,
             preset: .progressiveTranscription
         )
-
-        // Verify the model is installed. If the locale is supported but the
-        // model isn't on this device, surface a typed error so the caller can
-        // either trigger a download or show a "still downloading" message.
-        let inventoryStatus = await AssetInventory.status(forModules: [transcriber])
-        switch inventoryStatus {
-        case .installed:
-            break
-        case .supported, .downloading:
-            throw AnalyzerError.modelDownloadRequired
-        case .unsupported:
-            throw AnalyzerError.localeNotSupported(locale.identifier)
-        @unknown default:
-            throw AnalyzerError.modelDownloadRequired
-        }
 
         let analyzer: SpeechAnalyzer
         do {
@@ -199,5 +181,56 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
         }
 
         state.completedRecognizedDuration = max(state.completedRecognizedDuration, endTime)
+    }
+
+    /// Determines whether SpeechAnalyzer + SpeechTranscriber can transcribe in
+    /// `locale` on this device, downloading the language model if needed.
+    /// Returns the supported `Locale` to construct the transcriber with, or
+    /// `nil` if the engine isn't usable (locale truly unsupported, simulator
+    /// without model assets, model still downloading on another flow, etc.).
+    /// Callers fall back to SFSpeechRecognizer on `nil`.
+    private func prepareAnalyzerModel(for locale: Locale) async -> Locale? {
+        guard let supportedLocale = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
+            return nil
+        }
+        let probe = SpeechTranscriber(locale: supportedLocale, preset: .progressiveTranscription)
+        let status = await AssetInventory.status(forModules: [probe])
+        switch status {
+        case .installed:
+            return supportedLocale
+        case .supported:
+            // Model is shippable but not on this device yet — try to fetch it.
+            // If the request returns nil or download fails (e.g., simulator
+            // doesn't carry the asset), surface `nil` so the caller falls back.
+            do {
+                guard let request = try await AssetInventory.assetInstallationRequest(supporting: [probe]) else {
+                    return nil
+                }
+                try await request.downloadAndInstall()
+                return supportedLocale
+            } catch {
+                return nil
+            }
+        case .downloading:
+            // Another flow is already downloading; don't queue a second request.
+            // Fall back this run; next analyze likely hits `.installed`.
+            return nil
+        case .unsupported:
+            return nil
+        @unknown default:
+            return nil
+        }
+    }
+
+    /// Delegate the transcribe-stream to the chunked SFSpeechRecognizer engine.
+    /// Used when SpeechAnalyzer isn't usable on this device. State carries
+    /// `engine == .sfSpeechRecognizer` (and a `#cloud`/`#local` namespaced
+    /// sourceHash), so downstream cache/BG-resume paths Just Work.
+    private func delegateToSF(input: URL,
+                              continuation: AsyncThrowingStream<TranscriptionState, Error>.Continuation) async throws {
+        let fallback = TranscriptionService(locale: locale)
+        for try await state in await fallback.transcribe(input: input) {
+            continuation.yield(state)
+        }
     }
 }
