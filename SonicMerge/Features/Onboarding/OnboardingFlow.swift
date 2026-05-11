@@ -495,7 +495,7 @@ private struct SampleStep: View {
             var resolvedEditList: EditList?
             for try await update in service.analyze(input: url,
                                                     pauseThreshold: 1.5,
-                                                    locale: Locale(identifier: "en-US")) {
+                                                    localeIdentifier: "en-US") {
                 if case .completed(let list, _, _) = update {
                     resolvedEditList = list
                 }

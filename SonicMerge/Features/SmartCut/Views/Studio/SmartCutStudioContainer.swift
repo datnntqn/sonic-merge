@@ -243,6 +243,9 @@ struct SmartCutStudioContainer: View {
                 .tint(.green)
             Text("Transcribing \(Int(progress * 100))%")
             ProgressView(value: progress)
+            if #available(iOS 26, *) {
+                LiveTranscriptPane(text: vm.liveTranscriptText)
+            }
             HStack {
                 Button("Cancel") { vm.cancelAnalyze() }
                     .buttonStyle(PillButtonStyle(variant: .outline, size: .regular, tint: .accent))

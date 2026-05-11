@@ -312,11 +312,11 @@ struct PaywallView: View {
                     try await client?.restore()
                 }
                 Text("·").foregroundStyle(Color(uiColor: semantic.textSecondary))
-                Link("Terms", destination: URL(string: "https://cleancut.app/terms")!)
+                Link("Terms", destination: URL(string: "https://datnntqn.github.io/clearcut-legal/terms.html")!)
                     .font(.footnote)
                     .foregroundStyle(Color(uiColor: semantic.textSecondary))
                 Text("·").foregroundStyle(Color(uiColor: semantic.textSecondary))
-                Link("Privacy", destination: URL(string: "https://cleancut.app/privacy")!)
+                Link("Privacy", destination: URL(string: "https://datnntqn.github.io/clearcut-legal/privacy.html")!)
                     .font(.footnote)
                     .foregroundStyle(Color(uiColor: semantic.textSecondary))
             }

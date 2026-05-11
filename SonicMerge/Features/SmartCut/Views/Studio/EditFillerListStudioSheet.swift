@@ -69,9 +69,11 @@ struct EditFillerListStudioSheet: View {
                     addInputCapsule
                         .padding(.horizontal, 16)
                         .padding(.top, 8)
-                    cloudRecognitionToggle
-                        .padding(.horizontal, 16)
-                        .padding(.top, 16)
+                    if #unavailable(iOS 26) {
+                        cloudRecognitionToggle
+                            .padding(.horizontal, 16)
+                            .padding(.top, 16)
+                    }
                     languageFooter
                 }
                 .padding(.vertical, 16)

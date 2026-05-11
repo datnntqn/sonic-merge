@@ -51,7 +51,7 @@ struct SmartCutServicePauseThresholdTests {
         var resolvedEditList: EditList?
         for try await update in await service.analyze(input: URL(fileURLWithPath: "/dev/null"),
                                                       pauseThreshold: 1.5,
-                                                      locale: Locale(identifier: "en-US")) {
+                                                      localeIdentifier: "en-US") {
             if case .completed(let list, _, _) = update {
                 resolvedEditList = list
             }
@@ -73,7 +73,7 @@ struct SmartCutServicePauseThresholdTests {
         var resolvedEditList: EditList?
         for try await update in await service.analyze(input: URL(fileURLWithPath: "/dev/null"),
                                                       pauseThreshold: 2.5,
-                                                      locale: Locale(identifier: "en-US")) {
+                                                      localeIdentifier: "en-US") {
             if case .completed(let list, _, _) = update {
                 resolvedEditList = list
             }

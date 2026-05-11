@@ -393,12 +393,10 @@ Seed a `TranscriptionState` JSON with `engine == .speechAnalyzer` and verify the
 Per the Karpathy "surface assumptions" rule, two assumptions to confirm in the very first implementation step (literally: read the iOS 26 `Speech` framework headers / Apple docs before writing any new Swift). Both have a defined fallback in this spec, so neither blocks the design — but both are load-bearing for the iOS 26 path and must be settled before the rest of the plan is executed.
 
 1. **SpeechAnalyzer is on-device-only with no network/cloud variant.**
-   - **If true (assumed):** Component 9 (hide the cloud toggle on iOS 26) stands as written.
-   - **If false (e.g. SpeechAnalyzer exposes a `requiresOnDeviceRecognition`-equivalent property):** keep the toggle visible on iOS 26 too, retitled "Use cloud recognition" — semantics carry over from the SF era.
+   - **Confirmed 2026-05-10:** `SpeechAnalyzer` (iOS 26+) runs fully on-device by design; the legacy `requiresOnDeviceRecognition` flag is specific to `SFSpeechRecognitionRequest` and has no analogue on `SpeechAnalyzer` / `SpeechTranscriber`. Apple's WWDC25 session 277 ("Bring advanced speech-to-text to your app with SpeechAnalyzer") and the developer documentation confirm there is no cloud/server variant for the new framework. Component 9 (hide the cloud toggle on iOS 26) proceeds as written. Cite: `https://developer.apple.com/videos/play/wwdc2025/277/`, `https://developer.apple.com/documentation/speech/speechanalyzer`.
 
 2. **`SFSpeechRecognizer.requestAuthorization` covers SpeechAnalyzer.**
-   - **If true (assumed):** `SmartCutViewModel.requestSpeechAuthorization` (line 239) and `OnboardingFlow`'s permission seed (line 110) are unchanged. They remain in "Out of scope (no code change)" above.
-   - **If false (iOS 26 introduces a separate Speech framework permission):** both files gain an iOS-26-gated parallel auth call alongside the existing SF auth request. `OnboardingFlow` requests both; `SmartCutViewModel.analyze` checks the SpeechAnalyzer-specific status when running on iOS 26 and the SF status otherwise. The plan's first chunk addresses this.
+   - **Confirmed 2026-05-10:** SpeechAnalyzer-using apps still call `SFSpeechRecognizer.requestAuthorization`; the user prompt, the Settings entry, and the App Store privacy nutrition label all use the same `Speech` authorization mechanism for both APIs. `SmartCutViewModel.requestSpeechAuthorization` and `OnboardingFlow`'s permission seed remain unchanged — no parallel iOS-26 auth call needed. Cite: `https://developer.apple.com/documentation/speech/sfspeechrecognizer`, `https://developer.apple.com/videos/play/wwdc2025/277/`.
 
 ## Migration / rollback
 
@@ -410,3 +408,35 @@ Per the Karpathy "surface assumptions" rule, two assumptions to confirm in the v
 ## Open questions
 
 None blocking. The two assumptions above are verifiable during implementation, not during review.
+
+## Implementation amendment (2026-05-10)
+
+During Chunk 3 SDK reconciliation, two material divergences from the iOS 26
+Speech.framework as shipped (Xcode 26.3 / iOS 26.2 SDK) required scope
+reduction:
+
+1. **Auto-detect dropped.** `SpeechTranscriber.init` requires a non-optional
+   `Locale` and exposes no nil-locale or multi-locale auto-detect path. The
+   spec's bilingual auto-detect promise (Components 6, 8, 11; LocalePicker
+   "Auto-detect" row; FillerLibrary auto-locale union) is not implementable
+   on this SDK and was dropped per user decision. iOS 26 still gets the
+   long-form streaming engine, live transcript pane, and on-device
+   disfluence preservation; users explicitly pick a locale via the existing
+   per-locale picker rows.
+
+2. **Result shape differs.** `SpeechTranscriber.Result` has no `tokens` /
+   `isFinal` / per-token confidence — instead it exposes `range: CMTimeRange`
+   and `text: AttributedString` (with optional `audioTimeRange` /
+   `transcriptionConfidence` attributes via the SpeechAttributes scope).
+   The implementation uses `Preset.progressiveTranscription` (finalized-only
+   stream, no volatile results) and treats each result's `range` as the
+   segment boundary. Per-segment confidence is set to 1.0 since
+   `FillerDetector` propagates but doesn't gate on it.
+
+3. **Audio input via `init(inputAudioFile:modules:finishAfterFile:)`** — the
+   SDK accepts an `AVAudioFile` directly, bypassing the manual
+   `AVAssetReader` + feeder-task loop in the original plan. Resume cursor
+   is implemented via `audioFile.framePosition`.
+
+The protocol contract, factory routing, BG resume routing, and namespaced
+cache key strategy (`<rawHash>#analyzer`) all remain as written.

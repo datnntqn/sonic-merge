@@ -231,10 +231,12 @@ Alternates: Notion published page, Carrd, your own domain.
 
 A bare-minimum Privacy Policy + Terms template suitable for "we collect nothing" is provided in §3.1 and §3.2 below — copy, host, and paste the resulting URLs here:
 ```
-Privacy Policy URL: __________________________
-Terms of Use URL:   __________________________
-Support URL:        __________________________  (can be a mailto: like mailto:support@yourdomain.com OR a static page)
+Privacy Policy URL: https://datnntqn.github.io/clearcut-legal/privacy.html
+Terms of Use URL:   https://datnntqn.github.io/clearcut-legal/terms.html
+Support URL:        https://datnntqn.github.io/clearcut-legal/support.html
 ```
+
+> Resolved 2026-05-09: hosted at `github.com/datnntqn/clearcut-legal` (repo named `clearcut-legal` rather than `cleancut-legal`; URL stays as-is — the page content already says "CleanCut" and end-users only see the rendered page, not the URL). The site source lives at `../cleancut-legal/` (sibling to this repo).
 
 ### Decision 1.3 — Launch path
 

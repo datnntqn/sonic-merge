@@ -19,7 +19,7 @@ struct SmartCutServiceIntegrationTests {
         let service = SmartCutService(library: library)
 
         var finalEditList: EditList?
-        for try await update in service.analyze(input: url, pauseThreshold: 1.5, locale: Locale(identifier: "en-US")) {
+        for try await update in service.analyze(input: url, pauseThreshold: 1.5, localeIdentifier: "en-US") {
             if case .completed(let list, _, _) = update {
                 finalEditList = list
             }
