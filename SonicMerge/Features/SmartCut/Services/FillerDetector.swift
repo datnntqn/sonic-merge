@@ -77,6 +77,14 @@ enum FillerDetector {
             : .infinity
         let paddedStart = max(leftBound, originalStart - timeRangePaddingSeconds)
         let paddedEnd = min(rightBound, originalEnd + timeRangePaddingSeconds)
+        // Recognizer can emit non-monotonic segments (cross-chunk boundary
+        // overlap in SFSpeechRecognizer's chunked path; LM rescoring on long
+        // audio). When neighbors invert paddedStart vs. paddedEnd, skip the
+        // cross-segment pad and use the segment's own bounds — those are
+        // always self-consistent (endTime = startTime + duration, duration ≥ 0).
+        guard paddedStart <= paddedEnd else {
+            return originalStart...originalEnd
+        }
         return paddedStart...paddedEnd
     }
 

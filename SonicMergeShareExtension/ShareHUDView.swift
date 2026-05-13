@@ -13,6 +13,11 @@ struct ShareHUDView: View {
     private let backgroundGray = Color(red: 0.973, green: 0.976, blue: 0.980)
     private let accentBlue = Color(red: 0, green: 0.478, blue: 1.0)
     private let primaryText = Color(red: 0.110, green: 0.110, blue: 0.118)
+    // CleanCut's "accentAction" indigo (#5856D6). Inlined here because the
+    // Share Extension is a separate process and does not have access to the
+    // main app's `\.sonicMergeSemantic` environment value. Keep in sync with
+    // SonicMergeTheme palette.
+    private let accentIndigo = Color(red: 0x58 / 255, green: 0x56 / 255, blue: 0xD6 / 255)
 
     var body: some View {
         ZStack {
@@ -21,11 +26,19 @@ struct ShareHUDView: View {
             VStack(spacing: 20) {
                 Image(systemName: iconName)
                     .font(.system(size: 32))
-                    .foregroundStyle(accentBlue)
+                    .foregroundStyle(iconColor)
 
                 Text(statusText)
                     .font(.system(.body))
                     .foregroundStyle(primaryText)
+
+                if let subtitle {
+                    Text(subtitle)
+                        .font(.system(.subheadline))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal, 8)
+                }
 
                 if !model.filename.isEmpty && model.state == .copying {
                     Text(model.filename)
@@ -40,12 +53,13 @@ struct ShareHUDView: View {
                         .tint(accentBlue)
                 }
 
-                if model.state == .error {
-                    Button(role: .destructive) {
+                if showsDismissButton {
+                    Button {
                         onDismiss()
                     } label: {
-                        Text("Dismiss")
+                        Text("Done")
                             .font(.system(.body, weight: .semibold))
+                            .foregroundStyle(dismissTint)
                     }
                 }
             }
@@ -65,6 +79,14 @@ struct ShareHUDView: View {
         case .copying: return "doc.badge.plus"
         case .success: return "checkmark.circle.fill"
         case .error: return "xmark.circle.fill"
+        case .freeLimitReached: return "exclamationmark.triangle.fill"
+        }
+    }
+
+    private var iconColor: Color {
+        switch model.state {
+        case .freeLimitReached: return accentIndigo
+        default: return accentBlue
         }
     }
 
@@ -73,6 +95,31 @@ struct ShareHUDView: View {
         case .copying: return "Adding to CleanCut..."
         case .success: return "Added!"
         case .error: return "Could not add file"
+        case .freeLimitReached: return "Free limit reached"
+        }
+    }
+
+    private var subtitle: String? {
+        if case .freeLimitReached(let seconds) = model.state {
+            let total = Int(seconds.rounded(.down))
+            let mmss = String(format: "%d:%02d", total / 60, total % 60)
+            return "This \(mmss) clip exceeds the Free 5-min cap. Open CleanCut to upgrade."
+        }
+        return nil
+    }
+
+    private var showsDismissButton: Bool {
+        switch model.state {
+        case .error, .freeLimitReached: return true
+        default: return false
+        }
+    }
+
+    private var dismissTint: Color {
+        switch model.state {
+        case .freeLimitReached: return accentIndigo
+        case .error: return .red
+        default: return accentBlue
         }
     }
 }

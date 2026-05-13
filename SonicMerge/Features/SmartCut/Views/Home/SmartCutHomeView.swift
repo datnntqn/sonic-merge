@@ -31,6 +31,7 @@ struct SmartCutHomeView: View {
     @State private var pendingAction: ImportSourceAction?
     @State private var importErrorMessage: String?
     @State private var paywallReason: PaywallReason?
+    @State private var toastMessage: ToastMessage?
 
     var body: some View {
         ZStack {
@@ -122,7 +123,7 @@ struct SmartCutHomeView: View {
                 .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 18))
             }
         }
-        .paywall(reason: $paywallReason)
+        .paywall(reason: $paywallReason, toast: $toastMessage)
         .alert(
             "Couldn't import this file",
             isPresented: Binding(
@@ -162,6 +163,7 @@ struct SmartCutHomeView: View {
                 .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
             CircularImportButton(size: .hero) { showSourceSheet = true }
+            FreeCapCaption(feature: .smartCut, paywallReason: $paywallReason)
         }
     }
 
@@ -169,8 +171,9 @@ struct SmartCutHomeView: View {
 
     private var loadedState: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 12) {
                 Spacer()
+                FreeCapCaption(feature: .smartCut, paywallReason: $paywallReason)
                 CircularImportButton(size: .pinned) { showSourceSheet = true }
             }
             .padding(.horizontal, 16)
@@ -279,6 +282,18 @@ struct SmartCutHomeView: View {
         // copied so we don't leak storage on rejected imports.
         if let reason = ImportDecision.gate(durationSeconds: duration, entitlements: entitlements) {
             try? FileManager.default.removeItem(at: dir)
+            // Assign toast BEFORE the reason — the modifier's onChange(reason)
+            // makes the keep-or-clear decision and a pre-staged toast lets
+            // the .fallbackToast branch show feedback when throttled.
+            switch reason {
+            case .hitLengthCap:
+                toastMessage = .lengthCap(seconds: duration,
+                                          capSeconds: AppConstants.FreeCap.smartCutMaxSeconds)
+            case .hitDailyCap:
+                toastMessage = .dailyCap
+            default:
+                toastMessage = nil
+            }
             paywallReason = reason
             return
         }

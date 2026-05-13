@@ -59,7 +59,16 @@
       "Bash(tee /tmp/sm-p10.log)",
       "Bash(tee /tmp/sm-p10b.log)",
       "Read(//tmp/**)",
-      "Bash(tee /tmp/sm-p10c.log)"
+      "Bash(tee /tmp/sm-p10c.log)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -parallel-testing-enabled NO -only-testing:SonicMergeTests/TranscriptionStateTests test)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -configuration Debug -only-testing:SonicMergeTests/TranscriptionStateTests test)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -only-testing:SonicMergeTests/TranscriptionStateTests test)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -parallel-testing-enabled NO -only-testing:SonicMergeTests/FillerLibraryLocaleTests test)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -parallel-testing-enabled NO -only-testing:SonicMergeTests/TranscriptionServiceLocaleTests test)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -parallel-testing-enabled NO -only-testing:SonicMergeTests/SmartCutHomeViewGatingTests test)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -parallel-testing-enabled NO -only-testing:SonicMergeTests/BackgroundTranscriptionTaskTests test)",
+      "Bash(xcodebuild -scheme SonicMerge -destination 'platform=iOS Simulator,name=iPhone 17' -parallel-testing-enabled NO build-for-testing)",
+      "Bash(tee /tmp/build.log)"
     ]
   }
 }

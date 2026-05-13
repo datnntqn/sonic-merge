@@ -6,6 +6,13 @@
 import UIKit
 import SwiftUI
 import UniformTypeIdentifiers
+import AVFoundation
+
+/// Key the main app writes whenever `EntitlementService.setEntitlement(_:)`
+/// runs. Hardcoded here because the Share Extension is a separate target and
+/// cannot import the main app's `EntitlementService`. Keep in sync with
+/// `EntitlementService.isProMirrorKey`.
+private let isProMirrorKey = "EntitlementService.isPro"
 
 private struct ShareImportPayload {
     let filename: String
@@ -102,6 +109,38 @@ final class ShareExtensionViewController: UIViewController {
             // Update HUD with the user-friendly basename.
             await MainActor.run {
                 hudModel.filename = payload.originalBasename
+            }
+
+            // Free-tier length gate. The Share Extension is a separate process
+            // and cannot reach `EntitlementService` directly, so it reads the
+            // mirrored `isPro` flag that the main app writes on every state
+            // transition. The cap used here is `smartCutMaxSeconds` (the more
+            // permissive of Smart Cut and Denoise) because the extension
+            // doesn't know which workspace the user will route to — if they
+            // pick the stricter workspace inside the app, the in-app gate
+            // catches it on open.
+            let sharedDefaults = UserDefaults(suiteName: AppConstants.appGroupID)
+            let isPro = sharedDefaults?.bool(forKey: isProMirrorKey) ?? false
+            if !isPro {
+                // Probe the file we just copied. If `load(.duration)` throws
+                // (corrupt file, unsupported codec), treat as 0 and let the
+                // import through — the in-app validation would catch it.
+                let dir = try AppConstants.smartCutSessionDirectory(for: payload.sessionId)
+                let dest = dir.appending(path: payload.filename)
+                let asset = AVURLAsset(url: dest)
+                var duration: TimeInterval = 0
+                do {
+                    duration = try await asset.load(.duration).seconds
+                } catch {
+                    duration = 0
+                }
+                if duration > AppConstants.FreeCap.smartCutMaxSeconds {
+                    try? FileManager.default.removeItem(at: dir)
+                    await MainActor.run {
+                        hudModel.state = .freeLimitReached(durationSeconds: duration)
+                    }
+                    return
+                }
             }
 
             // Write routing keys so the main app picks up on next scenePhase .active.

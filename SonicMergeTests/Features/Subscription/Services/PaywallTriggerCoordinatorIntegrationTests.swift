@@ -13,33 +13,32 @@ struct PaywallTriggerCoordinatorIntegrationTests {
 
     @Test func firstReasonPresents() {
         let coord = freshCoordinator()
-        #expect(coord.shouldPresent(.hitDailyCap) == true)
-        coord.markPresented(.hitDailyCap)
+        #expect(coord.decide(.hitDailyCap) == .present)
         #expect(coord.hasShownPaywallThisSession == true)
     }
 
-    @Test func secondReasonInSessionSuppressed() {
+    @Test func secondCapHitInSessionFallsBackToToast() {
         let coord = freshCoordinator()
-        coord.markPresented(.hitDailyCap)
-        #expect(coord.shouldPresent(.hitLengthCap) == false)
+        _ = coord.decide(.hitDailyCap)
+        #expect(coord.decide(.hitLengthCap) == .fallbackToast)
     }
 
     @Test func settingsUpgradeBypassesSessionThrottle() {
         let coord = freshCoordinator()
-        coord.markPresented(.hitDailyCap)
-        #expect(coord.shouldPresent(.settingsUpgrade) == true)
+        _ = coord.decide(.hitDailyCap)
+        #expect(coord.decide(.settingsUpgrade) == .present)
     }
 
-    @Test func endOfOnboardingDoesNotBypassSessionThrottle() {
+    @Test func endOfOnboardingIsSuppressedAfterThrottle() {
         let coord = freshCoordinator()
-        coord.markPresented(.hitDailyCap)
-        #expect(coord.shouldPresent(.endOfOnboarding) == false)
+        _ = coord.decide(.hitDailyCap)
+        #expect(coord.decide(.endOfOnboarding) == .suppress)
     }
 
-    @Test func dismissThresholdReachedSuppresses() {
+    @Test func dismissThresholdReachedFallsBackToToast() {
         let coord = freshCoordinator()
         for _ in 0..<5 { coord.recordDismiss(.hitDailyCap) }
-        #expect(coord.shouldPresent(.hitDailyCap) == false)
+        #expect(coord.decide(.hitDailyCap) == .fallbackToast)
     }
 
     @Test func dismissCounterPersistsAcrossInstances() {
@@ -48,14 +47,14 @@ struct PaywallTriggerCoordinatorIntegrationTests {
         let coord1 = PaywallTriggerCoordinator(defaults: defaults)
         for _ in 0..<5 { coord1.recordDismiss(.hitDailyCap) }
         let coord2 = PaywallTriggerCoordinator(defaults: defaults)
-        #expect(coord2.shouldPresent(.hitDailyCap) == false)
+        #expect(coord2.decide(.hitDailyCap) == .fallbackToast)
     }
 
     @Test func resetSessionRehydratesPresentation() {
         let coord = freshCoordinator()
-        coord.markPresented(.hitDailyCap)
-        #expect(coord.shouldPresent(.hitLengthCap) == false)
+        _ = coord.decide(.hitDailyCap)
+        #expect(coord.decide(.hitLengthCap) == .fallbackToast)
         coord.resetSession()
-        #expect(coord.shouldPresent(.hitLengthCap) == true)
+        #expect(coord.decide(.hitLengthCap) == .present)
     }
 }

@@ -88,6 +88,25 @@ struct FillerDetectorTests {
         #expect(edits[0].isEnabled == false)
     }
 
+    @Test func testNonMonotonicNeighborsDoNotCrash() {
+        // Long audio crash repro: SFSpeechRecognizer's chunked path can emit
+        // segments where segments[i].endTime > segments[i+1].startTime —
+        // the last word of chunk N extends past the boundary, while the
+        // next chunk's first word starts at exactly the boundary. The
+        // padded range for the i+1 segment must not invert (lowerBound >
+        // upperBound), which would trip ClosedRange's precondition.
+        let segments = [
+            seg("hello", 29.5, 30.3),   // last word of chunk 0 — extends past 30s
+            seg("um", 30.0, 30.1),      // first word of chunk 1 — overlaps "hello"
+            seg("world", 30.5, 31.0),
+        ]
+        let edits = FillerDetector.detect(in: segments,
+                                          words: ["um"],
+                                          enabledByDefault: { _ in true })
+        #expect(edits.count == 1)
+        #expect(edits[0].timeRange.lowerBound <= edits[0].timeRange.upperBound)
+    }
+
     @Test func testContextExcerptIncludesNeighbors() {
         let segments = [
             seg("so", 0.5, 0.8),

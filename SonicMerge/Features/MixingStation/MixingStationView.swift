@@ -26,6 +26,7 @@ struct MixingStationView: View {
     @State private var photoLoading = false
     @State private var showExportSheet = false
     @State private var paywallReason: PaywallReason?
+    @State private var toastMessage: ToastMessage?
     @State private var showMoodCheckSheet = false
 
     // POL-01: one trigger @State per toolbar button — prevents cross-firing
@@ -40,8 +41,9 @@ struct MixingStationView: View {
                     emptyState
                 } else {
                     VStack(spacing: 0) {
-                        HStack {
+                        HStack(spacing: 12) {
                             Spacer()
+                            FreeCapCaption(feature: .merge, paywallReason: $paywallReason)
                             CircularImportButton(size: .pinned) { showSourceSheet = true }
                         }
                         .padding(.horizontal, 16)
@@ -103,6 +105,7 @@ struct MixingStationView: View {
                     Task {
                         // Merge has no per-tab gate; importFiles handles paywall reasons.
                         if let reason = viewModel.importFiles([url]) {
+                            toastMessage = .mergeClipCount
                             paywallReason = reason
                         }
                         try? FileManager.default.removeItem(at: url)
@@ -149,6 +152,7 @@ struct MixingStationView: View {
                 switch result {
                 case .success(let urls):
                     if let reason = viewModel.importFiles(urls) {
+                        toastMessage = .mergeClipCount
                         paywallReason = reason
                     }
                 case .failure: break
@@ -161,6 +165,7 @@ struct MixingStationView: View {
                     guard !urls.isEmpty else { return }
                     await MainActor.run {
                         if let reason = viewModel.importFiles(urls) {
+                            toastMessage = .mergeClipCount
                             paywallReason = reason
                         }
                     }
@@ -168,7 +173,7 @@ struct MixingStationView: View {
                 return true
             }
         }
-        .paywall(reason: $paywallReason)
+        .paywall(reason: $paywallReason, toast: $toastMessage)
         .moodCheckSheet(isPresented: $showMoodCheckSheet) { mood in
             handleMood(mood)
         }
@@ -198,6 +203,7 @@ struct MixingStationView: View {
             let fileURL = clipsDir.appending(path: filename)
             guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
             if let reason = viewModel.importFiles([fileURL]) {
+                toastMessage = .mergeClipCount
                 paywallReason = reason
             }
         }
@@ -226,6 +232,7 @@ struct MixingStationView: View {
                 .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
             CircularImportButton(size: .hero) { showSourceSheet = true }
+            FreeCapCaption(feature: .merge, paywallReason: $paywallReason)
         }
     }
 
@@ -265,6 +272,7 @@ struct MixingStationView: View {
             do {
                 let audioURL = try await VideoAudioExtractor.extractAudio(from: videoURL)
                 if let reason = viewModel.importFiles([audioURL]) {
+                    toastMessage = .mergeClipCount
                     paywallReason = reason
                 }
                 try? FileManager.default.removeItem(at: audioURL)

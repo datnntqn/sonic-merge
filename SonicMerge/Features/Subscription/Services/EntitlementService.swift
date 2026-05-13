@@ -16,31 +16,49 @@ final class EntitlementService {
     /// test-injected tracker on the @Environment instance.
     static let shared = EntitlementService()
 
-    /// Free-tier caps. Single source of truth — gate() compares against
-    /// these and nothing else hardcodes the values.
-    enum FreeCap {
-        static let smartCutSessionsPerDay = 3
-        static let denoiseSessionsPerDay = 3
-        static let smartCutMaxSeconds: TimeInterval = 300  // 5:00
-        static let denoiseMaxSeconds: TimeInterval = 180   // 3:00
-        static let mergeMaxClips = 3
-    }
+    /// Free-tier caps. Moved to `AppConstants.FreeCap` so the Share Extension
+    /// target can read the same values (extensions are separate processes and
+    /// cannot import this type). The typealias keeps existing call sites
+    /// (`FreeCap.smartCutMaxSeconds`, etc.) source-compatible.
+    typealias FreeCap = AppConstants.FreeCap
 
     private(set) var currentEntitlement: Entitlement = .free
 
     var isPro: Bool { currentEntitlement.isPro }
 
-    private let usageTracker: DailyUsageTracker
+    /// App Group `UserDefaults` key the Share Extension reads to decide
+    /// whether to gate over-cap imports. Mirrored on every state transition.
+    static let isProMirrorKey = "EntitlementService.isPro"
 
-    init(usageTracker: DailyUsageTracker = DailyUsageTracker()) {
+    private let usageTracker: DailyUsageTracker
+    private let sharedDefaults: UserDefaults?
+
+    init(usageTracker: DailyUsageTracker = DailyUsageTracker(),
+         sharedDefaults: UserDefaults? = nil) {
         self.usageTracker = usageTracker
+        // Default to the real App Group suite; tests can inject a private suite
+        // so they don't pollute the shared one.
+        self.sharedDefaults = sharedDefaults ?? UserDefaults(suiteName: AppConstants.appGroupID)
     }
 
     /// Called by `StoreKitClient` when `Transaction.currentEntitlements`
     /// resolves or when `Transaction.updates` emits a new state.
     /// Public so tests can inject states without StoreKit.
+    ///
+    /// Mirrors the Pro flag to App Group defaults on every transition (both
+    /// Pro→Free and Free→Pro) so the Share Extension — a separate process
+    /// that can't import this type — can read the current Pro state
+    /// synchronously when deciding whether to admit an over-cap import.
     func setEntitlement(_ entitlement: Entitlement) {
         currentEntitlement = entitlement
+        sharedDefaults?.set(entitlement.isPro, forKey: Self.isProMirrorKey)
+    }
+
+    /// Read-only access to the daily-usage counter. Exposed so views (e.g.
+    /// `FreeCapCaption`) can render "N of 3 today" without taking a
+    /// dependency on the private `DailyUsageTracker` instance.
+    func dailyCount(for feature: DailyUsageTracker.Feature) -> Int {
+        usageTracker.count(for: feature)
     }
 
     /// Maps a `ProFeature` to a `GateResult`. Pro users always pass; Free

@@ -16,7 +16,10 @@ struct ReviewPromptCoordinatorTests {
         let earlier = Date().addingTimeInterval(-86400 * Double(installedDaysAgo))
         defaults.set(earlier, forKey: "ReviewMetrics.installDate")
         let paywall = PaywallTriggerCoordinator(defaults: defaults)
-        if paywallShown { paywall.markPresented(.hitDailyCap) }
+        // Simulate "a paywall has already been shown this session" by issuing
+        // a decision; this is the fixture-setup pattern after `markPresented`
+        // was made private and `decide` became the only API that sets the flag.
+        if paywallShown { _ = paywall.decide(.hitDailyCap) }
         let coord = ReviewPromptCoordinator(metrics: store, paywallCoordinator: paywall)
         return (coord, store, paywall)
     }

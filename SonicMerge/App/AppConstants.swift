@@ -13,6 +13,18 @@ enum AppConstants {
     /// Signing & Capabilities > App Groups for both the main target and any extensions.
     static let appGroupID = "group.com.dtech.cleancut"
 
+    /// Free-tier caps. Single source of truth shared across the main app and
+    /// the Share Extension target. The Share Extension mirror in
+    /// `SonicMergeShareExtension/AppConstants.swift` must stay in sync —
+    /// extensions are separate processes and cannot import the main target.
+    enum FreeCap {
+        static let smartCutSessionsPerDay = 3
+        static let denoiseSessionsPerDay = 3
+        static let smartCutMaxSeconds: TimeInterval = 300  // 5:00
+        static let denoiseMaxSeconds: TimeInterval = 180   // 3:00
+        static let mergeMaxClips = 3
+    }
+
     /// Creates `Library/Application Support` under the App Group container if missing.
     ///
     /// SwiftData stores `default.store` there. If the directory does not exist yet, Core Data

@@ -32,4 +32,15 @@ enum PaywallReason: String, Sendable {
         default: return false
         }
     }
+
+    /// True when a throttled trigger should still surface a toast so the user
+    /// isn't silently rejected. Cap-hits qualify; proactive reasons
+    /// (onboarding, trial-expired) do not — those are by-design quiet.
+    var requiresFallbackFeedback: Bool {
+        switch self {
+        case .hitLengthCap, .hitDailyCap: return true
+        case .endOfOnboarding, .trialExpired, .watermarkExport, .settingsUpgrade:
+            return false
+        }
+    }
 }

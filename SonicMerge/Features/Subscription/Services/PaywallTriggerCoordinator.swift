@@ -14,9 +14,22 @@ import Foundation
 ///    only when the user upgrades to Pro (next sub-project).
 ///
 /// `.settingsUpgrade` bypasses both — the user explicitly tapped Upgrade.
+///
+/// Cap-hit reasons (`.hitLengthCap`, `.hitDailyCap`) that are throttled
+/// downgrade to `.fallbackToast` so the import isn't silently rejected.
+/// Proactive reasons (onboarding, trial-expired) downgrade to `.suppress`.
 @MainActor
 @Observable
 final class PaywallTriggerCoordinator {
+
+    /// Outcome of a single `decide(_:)` call. The `paywall(reason:)` modifier
+    /// branches on this: `.present` opens the sheet, `.fallbackToast` raises
+    /// the in-app toast, `.suppress` does nothing.
+    enum PresentDecision: Equatable, Sendable {
+        case present
+        case fallbackToast
+        case suppress
+    }
 
     /// 5 dismissals of the same reason → stop offering it.
     static let dismissThreshold = 5
@@ -28,15 +41,21 @@ final class PaywallTriggerCoordinator {
         self.defaults = defaults
     }
 
-    func shouldPresent(_ reason: PaywallReason) -> Bool {
-        if reason.bypassesThrottle { return true }
-        if hasShownPaywallThisSession { return false }
-        if dismissCount(for: reason) >= Self.dismissThreshold { return false }
-        return true
-    }
-
-    func markPresented(_ reason: PaywallReason) {
-        hasShownPaywallThisSession = true
+    /// Single API for the modifier. Returns the routing decision and, when
+    /// returning `.present`, marks the session flag internally so callers
+    /// don't have to remember to call a separate `markPresented`.
+    func decide(_ reason: PaywallReason) -> PresentDecision {
+        if reason.bypassesThrottle {
+            hasShownPaywallThisSession = true
+            return .present
+        }
+        let throttled = hasShownPaywallThisSession
+                     || dismissCount(for: reason) >= Self.dismissThreshold
+        if !throttled {
+            hasShownPaywallThisSession = true
+            return .present
+        }
+        return reason.requiresFallbackFeedback ? .fallbackToast : .suppress
     }
 
     func recordDismiss(_ reason: PaywallReason) {

@@ -12,6 +12,17 @@ enum AppConstants {
     /// Signing & Capabilities > App Groups for both the main target and any extensions.
     static let appGroupID = "group.com.dtech.cleancut"
 
+    /// Free-tier caps. Mirror of the main app's `AppConstants.FreeCap`.
+    /// Extensions are separate processes and cannot import the main target,
+    /// so values must be kept in sync with `SonicMerge/App/AppConstants.swift`.
+    enum FreeCap {
+        static let smartCutSessionsPerDay = 3
+        static let denoiseSessionsPerDay = 3
+        static let smartCutMaxSeconds: TimeInterval = 300  // 5:00
+        static let denoiseMaxSeconds: TimeInterval = 180   // 3:00
+        static let mergeMaxClips = 3
+    }
+
     /// Returns the URL for the shared clips directory inside the App Group container,
     /// creating it if it does not already exist.
     ///

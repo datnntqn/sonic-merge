@@ -28,6 +28,7 @@ struct DenoiseHomeView: View {
     @State private var photoLoading = false
     @State private var importErrorMessage: String?
     @State private var paywallReason: PaywallReason?
+    @State private var toastMessage: ToastMessage?
 
     var body: some View {
         ZStack {
@@ -112,7 +113,7 @@ struct DenoiseHomeView: View {
         ) { result in
             Task { await handleImport(result: result) }
         }
-        .paywall(reason: $paywallReason)
+        .paywall(reason: $paywallReason, toast: $toastMessage)
         .alert(
             "Couldn't import this file",
             isPresented: Binding(
@@ -147,13 +148,15 @@ struct DenoiseHomeView: View {
                 .frame(maxWidth: 240)
                 .padding(.horizontal, 32)
             CircularImportButton(size: .hero) { showSourceSheet = true }
+            FreeCapCaption(feature: .denoise, paywallReason: $paywallReason)
         }
     }
 
     private var loadedState: some View {
         VStack(spacing: 0) {
-            HStack {
+            HStack(spacing: 12) {
                 Spacer()
+                FreeCapCaption(feature: .denoise, paywallReason: $paywallReason)
                 CircularImportButton(size: .pinned) { showSourceSheet = true }
             }
             .padding(.horizontal, 16)
@@ -231,6 +234,15 @@ struct DenoiseHomeView: View {
         // copied so we don't leak storage on rejected imports.
         if let reason = ImportDecision.gate(durationSeconds: duration, entitlements: entitlements) {
             try? FileManager.default.removeItem(at: dir)
+            switch reason {
+            case .hitLengthCap:
+                toastMessage = .lengthCap(seconds: duration,
+                                          capSeconds: AppConstants.FreeCap.denoiseMaxSeconds)
+            case .hitDailyCap:
+                toastMessage = .dailyCap
+            default:
+                toastMessage = nil
+            }
             paywallReason = reason
             return
         }

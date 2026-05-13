@@ -1,20 +1,32 @@
 import SwiftUI
 
-/// Coordinator-aware paywall presenter. Same call signature as before
-/// (`view.paywall(reason: $paywallReason)`) — but every presentation now
-/// goes through `PaywallTriggerCoordinator.shouldPresent(_:)` so session
-/// throttling and dismiss-count limits actually apply.
+/// Coordinator-aware paywall presenter. Routes a `PaywallReason?` binding
+/// through `PaywallTriggerCoordinator.decide(_:)` so session throttling and
+/// dismiss-count limits apply.
 ///
-/// Sub-project 2 sites that just write `paywallReason = .X` get the new
-/// behavior for free; no callsite change required.
+/// Two call shapes:
+/// - `paywall(reason:)` — sheet only. Used by views that don't need a
+///   toast fallback (Settings, sub-views that surface paywall-from-tap).
+/// - `paywall(reason:toast:)` — sheet + top-anchored toast fallback. Used
+///   by home views where a cap-hit must always feedback to the user; the
+///   caller is responsible for assigning the toast content alongside the
+///   reason. When `decide(_:)` returns `.fallbackToast`, the modifier
+///   clears `reason` and keeps `toast` so the toast renders; on `.present`
+///   it clears `toast` and lets the sheet open.
 extension View {
     func paywall(reason: Binding<PaywallReason?>) -> some View {
-        modifier(PaywallTriggerModifier(reason: reason))
+        modifier(PaywallTriggerModifier(reason: reason, toast: .constant(nil)))
+    }
+
+    func paywall(reason: Binding<PaywallReason?>,
+                 toast: Binding<ToastMessage?>) -> some View {
+        modifier(PaywallTriggerModifier(reason: reason, toast: toast))
     }
 }
 
 private struct PaywallTriggerModifier: ViewModifier {
     @Binding var reason: PaywallReason?
+    @Binding var toast: ToastMessage?
     @Environment(\.paywallCoordinator) private var coordinator
     @Environment(EntitlementService.self) private var entitlementService
 
@@ -22,10 +34,18 @@ private struct PaywallTriggerModifier: ViewModifier {
         content
             .onChange(of: reason) { _, newValue in
                 guard let candidate = newValue else { return }
-                if !coordinator.shouldPresent(candidate) {
+                switch coordinator.decide(candidate) {
+                case .present:
+                    // Sheet replaces the toast — drop any pending toast
+                    // content the caller assigned alongside the reason.
+                    toast = nil
+                case .fallbackToast:
+                    // Throttled cap-hit — clear the reason so .sheet doesn't
+                    // fire; keep the caller-supplied toast content visible.
                     reason = nil
-                } else {
-                    coordinator.markPresented(candidate)
+                case .suppress:
+                    reason = nil
+                    toast = nil
                 }
             }
             .sheet(item: $reason) { actual in
@@ -41,6 +61,17 @@ private struct PaywallTriggerModifier: ViewModifier {
                         coordinator.recordDismiss(actual)
                     }
             }
+            .overlay(alignment: .top) {
+                if let current = toast {
+                    CapLimitToast(
+                        message: current,
+                        onUpgrade: { reason = .settingsUpgrade },
+                        onDismiss: { toast = nil }
+                    )
+                    .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.spring(response: 0.4, dampingFraction: 0.85), value: toast)
     }
 }
 
