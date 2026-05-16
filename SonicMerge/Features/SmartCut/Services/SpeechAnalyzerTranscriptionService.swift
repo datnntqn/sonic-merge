@@ -117,9 +117,17 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
             audioFile.framePosition = min(resumeFrame, audioFile.length)
         }
 
+        // The `.progressiveTranscription` preset does NOT enable per-word
+        // audioTimeRange reporting — runs[\.audioTimeRange] returns a single
+        // run covering the whole phrase, which collapses to the result.range
+        // bounds and makes downstream filler/pause detection impossible.
+        // Construct the transcriber explicitly with .audioTimeRange in
+        // attributeOptions so each word carries its own time range.
         let transcriber = SpeechTranscriber(
             locale: supportedLocale,
-            preset: .progressiveTranscription
+            transcriptionOptions: [],
+            reportingOptions: [.volatileResults],
+            attributeOptions: [.audioTimeRange]
         )
 
         let analyzer: SpeechAnalyzer
@@ -136,7 +144,7 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
         // The analyzer above starts on construction. Consume finalized results.
         var lastSnapshotAt = state.completedRecognizedDuration
         do {
-            for try await result in transcriber.results {
+            for try await result in transcriber.results where result.isFinal {
                 appendResult(result, into: &state)
                 if state.completedRecognizedDuration - lastSnapshotAt >= snapshotInterval {
                     try await stateStore.save(state)
@@ -159,28 +167,47 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
     /// first append), and bump `completedRecognizedDuration`.
     private func appendResult(_ result: SpeechTranscriber.Result,
                               into state: inout TranscriptionState) {
-        let plainText = String(result.text.characters)
-        let startTime = result.range.start.seconds
-        let endTime = result.range.end.seconds
+        // Split the finalized result into per-word RecognizedSegments using
+        // the per-character `audioTimeRange` attribute. FillerDetector and
+        // PauseDetector both assume one-segment-per-spoken-word with tight
+        // start/end timestamps; the whole-result `range` is the bounding box
+        // of the entire phrase, which makes single-token filler matching
+        // ("like") impossible and collapses inter-segment gaps to ~0.
+        let attributed = result.text
+        var perWord: [TranscriptionState.RecognizedSegment] = []
+        for (cmRange, charRange) in attributed.runs[\.audioTimeRange] {
+            guard let cmRange else { continue }
+            let token = String(attributed[charRange].characters)
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !token.isEmpty else { continue }
+            perWord.append(.init(
+                text: token,
+                startTime: cmRange.start.seconds,
+                endTime: cmRange.end.seconds,
+                confidence: 1.0
+            ))
+        }
+        // Fallback: if the SDK didn't attach audioTimeRange (some locales or
+        // future SDK changes), emit the whole result as one segment so we
+        // still advance completedRecognizedDuration and live-transcript.
+        if perWord.isEmpty {
+            perWord = [.init(
+                text: String(attributed.characters),
+                startTime: result.range.start.seconds,
+                endTime: result.range.end.seconds,
+                confidence: 1.0
+            )]
+        }
+        state.recognizedSegments.append(contentsOf: perWord)
 
-        state.recognizedSegments.append(.init(
-            text: plainText,
-            startTime: startTime,
-            endTime: endTime,
-            // SpeechTranscriber exposes per-character transcriptionConfidence on
-            // the AttributedString, but FillerDetector only propagates the value
-            // (doesn't gate on it), so a constant 1.0 here is equivalent and
-            // avoids the AttributedString-attribute walk.
-            confidence: 1.0
-        ))
-
+        let plainText = String(attributed.characters)
         if state.liveTranscriptText.isEmpty {
             state.liveTranscriptText = plainText
         } else {
             state.liveTranscriptText += " \(plainText)"
         }
 
-        state.completedRecognizedDuration = max(state.completedRecognizedDuration, endTime)
+        state.completedRecognizedDuration = max(state.completedRecognizedDuration, result.range.end.seconds)
     }
 
     /// Determines whether SpeechAnalyzer + SpeechTranscriber can transcribe in

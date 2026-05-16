@@ -360,7 +360,7 @@ private struct TrustRow: View {
 // MARK: - Step 4: Hands-on first cut
 
 private struct SampleStep: View {
-    enum Phase { case ready, analyzing, cutting, error(String) }
+    enum Phase { case ready, analyzing, cutting, denoising, error(String) }
 
     let semantic: SonicMergeSemantic
     let libraryStore: FillerLibraryStore
@@ -441,6 +441,9 @@ private struct SampleStep: View {
         case .cutting:
             ProgressView("Applying cuts…").tint(Color(uiColor: semantic.accentAI))
                 .padding(.vertical, 14)
+        case .denoising:
+            ProgressView("Reducing noise…").tint(Color(uiColor: semantic.accentAI))
+                .padding(.vertical, 14)
         case .error(let message):
             VStack(spacing: 8) {
                 Text(message)
@@ -490,7 +493,18 @@ private struct SampleStep: View {
         }
         attemptCount += 1
         phase = .analyzing
-        let service = SmartCutService(library: libraryStore.library)
+        // Onboarding uses SFSpeechRecognizer directly (bypassing the iOS 26+
+        // SpeechAnalyzer factory routing) because SpeechAnalyzer in iOS 26.2
+        // does not expose per-word audioTimeRange even with explicit
+        // attributeOptions: [.audioTimeRange] — every result collapses to one
+        // phrase-level segment that FillerDetector cannot match. SF cloud
+        // recognition returns per-word timestamps reliably and is adequate for
+        // the 30s bundled sample. The main Smart Cut flow keeps factory
+        // routing so iOS 26 still gets long-form SpeechAnalyzer.
+        let service = SmartCutService(
+            library: libraryStore.library,
+            transcriptionServiceFactory: { TranscriptionService(locale: Locale(identifier: $0)) }
+        )
         do {
             var resolvedEditList: EditList?
             for try await update in service.analyze(input: url,
@@ -504,9 +518,36 @@ private struct SampleStep: View {
                 bumpError("Couldn't analyze the sample. Tap to try again or skip.")
                 return
             }
+            // Onboarding-only: force every detected filler ON so the demo
+            // sample produces an audibly shorter "After Smart Cut" preview.
+            // The main Smart Cut flow keeps fillers off-by-default (see
+            // FillerLibrary.defaultOnWords comment) — this override is
+            // scoped to the bundled onboarding sample and doesn't touch
+            // library state or any user-imported session.
+            var demoEditList = editList
+            for i in demoEditList.fillers.indices {
+                demoEditList.fillers[i].isEnabled = true
+            }
             phase = .cutting
-            let cleanedURL = try await AudioCutter().apply(input: url, editList: editList)
-            onCompleted(editList, cleanedURL)
+            let cleanedURL = try await AudioCutter().apply(input: url, editList: demoEditList)
+            // Best-effort denoise: also showcase the noise-reduction pipeline in
+            // the demo. If denoise fails (Core ML model unavailable, OOM, etc.)
+            // fall back to the cuts-only output so the user still sees a working
+            // result step rather than an error.
+            phase = .denoising
+            let denoisedURL = FileManager.default.temporaryDirectory
+                .appendingPathComponent("onboarding-final-\(UUID().uuidString).wav")
+            var finalURL = cleanedURL
+            do {
+                let denoiser = NoiseReductionService()
+                for try await _ in denoiser.denoise(inputURL: cleanedURL, outputURL: denoisedURL) {}
+                finalURL = denoisedURL
+            } catch {
+                #if DEBUG
+                print("[Onboarding] denoise failed, falling back to cleaned-only: \(error)")
+                #endif
+            }
+            onCompleted(demoEditList, finalURL)
         } catch {
             #if DEBUG
             print("[Onboarding] analyze failed: \(error)")
@@ -571,6 +612,7 @@ private extension SampleStep.Phase {
     var busy: Bool {
         if case .analyzing = self { return true }
         if case .cutting = self { return true }
+        if case .denoising = self { return true }
         return false
     }
 }
