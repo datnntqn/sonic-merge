@@ -493,18 +493,7 @@ private struct SampleStep: View {
         }
         attemptCount += 1
         phase = .analyzing
-        // Onboarding uses SFSpeechRecognizer directly (bypassing the iOS 26+
-        // SpeechAnalyzer factory routing) because SpeechAnalyzer in iOS 26.2
-        // does not expose per-word audioTimeRange even with explicit
-        // attributeOptions: [.audioTimeRange] — every result collapses to one
-        // phrase-level segment that FillerDetector cannot match. SF cloud
-        // recognition returns per-word timestamps reliably and is adequate for
-        // the 30s bundled sample. The main Smart Cut flow keeps factory
-        // routing so iOS 26 still gets long-form SpeechAnalyzer.
-        let service = SmartCutService(
-            library: libraryStore.library,
-            transcriptionServiceFactory: { TranscriptionService(locale: Locale(identifier: $0)) }
-        )
+        let service = SmartCutService(library: libraryStore.library)
         do {
             var resolvedEditList: EditList?
             for try await update in service.analyze(input: url,

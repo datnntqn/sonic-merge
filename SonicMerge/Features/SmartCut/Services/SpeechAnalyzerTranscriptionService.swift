@@ -117,17 +117,16 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
             audioFile.framePosition = min(resumeFrame, audioFile.length)
         }
 
-        // The `.progressiveTranscription` preset does NOT enable per-word
-        // audioTimeRange reporting — runs[\.audioTimeRange] returns a single
-        // run covering the whole phrase, which collapses to the result.range
-        // bounds and makes downstream filler/pause detection impossible.
-        // Construct the transcriber explicitly with .audioTimeRange in
-        // attributeOptions so each word carries its own time range.
+        // `.timeIndexedProgressiveTranscription` is the only preset that
+        // attaches per-word `audioTimeRange` attributes on the result's
+        // AttributedString. Setting `attributeOptions: [.audioTimeRange]`
+        // alone on `.progressiveTranscription` is NOT enough — the SDK
+        // gates per-word timing on the preset, not on the attribute option.
+        // FillerDetector/PauseDetector both assume per-word segmentation,
+        // so this preset is load-bearing for downstream filler/pause work.
         let transcriber = SpeechTranscriber(
             locale: supportedLocale,
-            transcriptionOptions: [],
-            reportingOptions: [.volatileResults],
-            attributeOptions: [.audioTimeRange]
+            preset: .timeIndexedProgressiveTranscription
         )
 
         let analyzer: SpeechAnalyzer
@@ -141,7 +140,11 @@ actor SpeechAnalyzerTranscriptionService: TranscriptionServicing {
             throw AnalyzerError.audioFileFailed(error)
         }
 
-        // The analyzer above starts on construction. Consume finalized results.
+        // The analyzer above starts on construction. Consume finalized results
+        // only. With `.timeIndexedProgressiveTranscription` the stream also
+        // emits volatile partial results (cumulative growing snapshots); the
+        // `where result.isFinal` filter drops those so `appendResult` sees
+        // each segment exactly once with its tight per-word audioTimeRange.
         var lastSnapshotAt = state.completedRecognizedDuration
         do {
             for try await result in transcriber.results where result.isFinal {
